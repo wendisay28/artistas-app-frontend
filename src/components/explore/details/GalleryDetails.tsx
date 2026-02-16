@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // GalleryDetails.tsx — Full scrollable detail view for a GalleryItem (artwork)
-// Sections: tags · description · artwork specs · stats · tabs (info/gallery/reviews) · CTA
+// Alineado con EventDetails.tsx y ArtistDetails.tsx
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -100,25 +100,29 @@ export default function GalleryDetails({
 
       <View style={styles.container}>
 
-        {/* ══════════ TAGS ROW ══════════ */}
-        <View style={styles.tagsRow}>
-          {item.tags.map((tag: string, i: number) => {
-            const c = TAG_COLORS[tag] ?? defaultTag;
-            return (
-              <View key={i} style={[styles.tag, { backgroundColor: c.bg, borderColor: c.border }]}>
-                <Text style={[styles.tagText, { color: c.text }]}>{tag}</Text>
-              </View>
-            );
-          })}
-          {item.forSale && (
-            <View style={[styles.tag, {
-              backgroundColor: 'rgba(16,185,129,.12)',
-              borderColor: 'rgba(16,185,129,.3)',
-            }]}>
-              <Ionicons name="pricetag-outline" size={11} color="#6ee7b7" />
-              <Text style={[styles.tagText, { color: '#6ee7b7', marginLeft: 4 }]}>En venta</Text>
+        {/* ══════════ ARTISTA CREADOR ══════════ */}
+        <View style={styles.miniHeader}>
+          <View style={[styles.avatar, styles.avatarFallback]}>
+            <Ionicons name="person" size={22} color={colors.textSecondary} />
+          </View>
+
+          <View style={styles.headerMeta}>
+            <Text style={styles.creatorLabel}>Artista creador</Text>
+            <View style={styles.creatorNameRow}>
+              <Text style={styles.creatorName} numberOfLines={1}>{item.artistName}</Text>
+              {item.verified && <Ionicons name="checkmark-circle" size={14} color="#818cf8" />}
             </View>
-          )}
+            <Text style={styles.creatorUsername} numberOfLines={1}>
+              @{item.artistName.toLowerCase().replace(/\s+/g, '')}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={onContact}
+            style={({ pressed }) => [styles.viewProfileBtn, pressed && { opacity: 0.7 }]}
+          >
+            <Text style={styles.viewProfileText}>Ver perfil</Text>
+          </Pressable>
         </View>
 
         {/* ══════════ ABOUT THE WORK ══════════ */}
@@ -145,38 +149,17 @@ export default function GalleryDetails({
           </Pressable>
         </View>
 
-        {/* ══════════ ARTIST STRIP ══════════ */}
-        <View style={styles.artistStrip}>
-          <View style={styles.artistAvatarCircle}>
-            <Ionicons name="person" size={20} color={colors.primary} />
-          </View>
-          <View style={styles.artistMeta}>
-            <Text style={styles.artistLabel}>Artista</Text>
-            <Text style={styles.artistName}>{item.artistName}</Text>
-          </View>
-          {item.verified && (
-            <Ionicons name="checkmark-circle" size={18} color="#818cf8" />
-          )}
-          <Pressable
-            onPress={onContact}
-            style={({ pressed }) => [styles.contactArtistBtn, pressed && { opacity: 0.7 }]}
-          >
-            <Text style={styles.contactArtistText}>Ver perfil</Text>
-            <Ionicons name="arrow-forward" size={13} color={colors.primary} />
-          </Pressable>
-        </View>
-
         {/* ══════════ ARTWORK SPECS ══════════ */}
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Ficha técnica</Text>
           <View style={styles.infoPairs}>
-            <InfoPair label="Técnica"      value={item.medium} />
+            <InfoPair label="Técnica"       value={item.medium} />
             <View style={styles.divider} />
-            <InfoPair label="Dimensiones"  value={item.dimensions} />
+            <InfoPair label="Dimensiones"   value={item.dimensions} />
             <View style={styles.divider} />
-            <InfoPair label="Año"          value={String(item.year)} />
+            <InfoPair label="Año"           value={String(item.year)} />
             <View style={styles.divider} />
-            <InfoPair label="Ubicación"    value={item.location} />
+            <InfoPair label="Ubicación"     value={item.location} />
             <View style={styles.divider} />
             <InfoPair
               label="Disponibilidad"
@@ -219,7 +202,6 @@ export default function GalleryDetails({
         {/* ══════════ TABS ══════════ */}
         <View style={styles.tabsCard}>
 
-          {/* tab bar */}
           <View style={styles.tabBar}>
             {(
               [
@@ -253,10 +235,10 @@ export default function GalleryDetails({
             <View style={styles.tabContent}>
               <View style={styles.specsChipsGrid}>
                 {[
-                  { icon: 'brush-outline',   label: 'Técnica',     value: item.medium      },
-                  { icon: 'resize-outline',  label: 'Dimensiones', value: item.dimensions  },
-                  { icon: 'time-outline',    label: 'Año',         value: String(item.year)},
-                  { icon: 'location-outline',label: 'Origen',      value: item.location    },
+                  { icon: 'brush-outline',    label: 'Técnica',     value: item.medium       },
+                  { icon: 'resize-outline',   label: 'Dimensiones', value: item.dimensions   },
+                  { icon: 'time-outline',     label: 'Año',         value: String(item.year) },
+                  { icon: 'location-outline', label: 'Origen',      value: item.location     },
                 ].map((spec, i) => (
                   <View key={i} style={styles.specChip}>
                     <View style={styles.specIconCircle}>
@@ -285,7 +267,7 @@ export default function GalleryDetails({
                       style={({ pressed }) => [
                         styles.galleryThumb,
                         { width: thumbSize, height: thumbSize },
-                        pressed && { opacity: 0.8 },
+                        pressed && { opacity: 0.75 },
                       ]}
                     >
                       <Image
@@ -294,7 +276,7 @@ export default function GalleryDetails({
                         contentFit="cover"
                         transition={200}
                       />
-                      <View style={styles.galleryThumbOverlay}>
+                      <View style={styles.galleryOverlay}>
                         <Ionicons name="expand-outline" size={18} color="#fff" />
                       </View>
                     </Pressable>
@@ -317,19 +299,6 @@ export default function GalleryDetails({
 
         {/* ══════════ BOTTOM CTA ══════════ */}
         <View style={styles.ctaRow}>
-          {/* price block */}
-          <View style={styles.priceBlock}>
-            {item.price > 0 ? (
-              <>
-                <Text style={styles.priceValue}>
-                  ${item.price.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
-                </Text>
-                <Text style={styles.priceLabel}>COP</Text>
-              </>
-            ) : (
-              <Text style={styles.priceConsult}>Consultar</Text>
-            )}
-          </View>
 
           {/* share */}
           <Pressable
@@ -347,7 +316,7 @@ export default function GalleryDetails({
             <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
           </Pressable>
 
-          {/* buy / inquire CTA */}
+          {/* buy CTA */}
           <Pressable
             onPress={() => {
               if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -376,13 +345,75 @@ export default function GalleryDetails({
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles — alineados con ArtistDetails y EventDetails ──────────────────────
 
 const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     gap: 12,
     paddingBottom: 8,
+  },
+
+  // ── mini header ───────────────────────────────────────────────────────────
+  miniHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  avatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,             // círculo — es el artista, igual que ArtistDetails
+    backgroundColor: colors.background,
+  },
+  avatarFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerMeta: { flex: 1, gap: 2 },
+  creatorLabel: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
+  },
+  creatorNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  creatorName: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+    flexShrink: 1,
+  },
+  creatorUsername: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
+  },
+  viewProfileBtn: {
+    backgroundColor: colors.background,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  viewProfileText: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.text,
   },
 
   // tags
@@ -405,7 +436,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 
-  // shared card
+  // card compartido
   card: {
     backgroundColor: '#fff',
     borderRadius: 18,
@@ -443,56 +474,6 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
 
-  // artist strip
-  artistStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  artistAvatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary + '18',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  artistMeta: { flex: 1 },
-  artistLabel: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
-  },
-  artistName: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-  },
-  contactArtistBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.primary + '12',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.primary + '30',
-  },
-  contactArtistText: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.primary,
-  },
-
   // info pairs
   infoPairs: { gap: 2 },
   divider: {
@@ -523,7 +504,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.text,
     textAlign: 'center',
@@ -534,7 +515,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
 
-  // tabs card
+  // tabs
   tabsCard: {
     backgroundColor: '#fff',
     borderRadius: 18,
@@ -574,10 +555,10 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     padding: 14,
-    gap: 10,
+    gap: 8,
   },
 
-  // specs chips grid (info tab)
+  // specs chips (info tab)
   specsChipsGrid: {
     gap: 8,
   },
@@ -623,9 +604,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.background,
   },
-  galleryThumbOverlay: {
+  galleryOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -634,35 +615,14 @@ const styles = StyleSheet.create({
   ctaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingTop: 4,
   },
-  priceBlock: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 3,
-    minWidth: 70,
-  },
-  priceValue: {
-    fontSize: 16,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-  },
-  priceLabel: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
-  },
-  priceConsult: {
-    fontSize: 13,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.textSecondary,
-  },
   iconBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
-    backgroundColor: colors.background,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#f9fafb',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -670,13 +630,13 @@ const styles = StyleSheet.create({
   },
   buyBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 13,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

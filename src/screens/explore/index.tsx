@@ -119,16 +119,6 @@ export default function ExploreScreen() {
     outputRange: [0, 0.08],
     extrapolate: 'clamp',
   });
-  const cardScale = scrollY.interpolate({
-    inputRange:  [0, 260],
-    outputRange: [1, 0.6],
-    extrapolate: 'clamp',
-  });
-  const cardOpacity = scrollY.interpolate({
-    inputRange:  [200, 300],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
 
   const handleCategoryChange = useCallback((cat: CategoryId) => {
     if (Platform.OS !== 'web') Haptics.selectionAsync();
@@ -286,8 +276,6 @@ export default function ExploreScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
         scrollEventThrottle={16}
-        snapToOffsets={[0, CARD_HEIGHT + 80]}
-        decelerationRate="fast"
       >
         <View style={{ height: (insets.top || webTopInset) + 60 }} />
 
@@ -304,13 +292,13 @@ export default function ExploreScreen() {
               </Pressable>
             </View>
           ) : (
-            <Animated.View style={{ transform: [{ scale: cardScale }], opacity: cardOpacity }}>
+            <View>
               {[...stack].reverse().map((card, i) => (
                 <SwipeCard key={card.id} card={card} zIndex={stack.length - i} onDismiss={handleDismiss}>
                   {renderCardContent(card)}
                 </SwipeCard>
               ))}
-            </Animated.View>
+            </View>
           )}
         </View>
 

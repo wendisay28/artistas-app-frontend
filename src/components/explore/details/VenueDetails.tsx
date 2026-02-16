@@ -120,16 +120,38 @@ export default function VenueDetails({
 
       <View style={styles.container}>
 
-        {/* ══════════ TAGS ROW ══════════ */}
-        <View style={styles.tagsRow}>
-          {venue.tags.map((tag: string, i: number) => {
-            const c = TAG_COLORS[tag] ?? defaultTag;
-            return (
-              <View key={i} style={[styles.tag, { backgroundColor: c.bg, borderColor: c.border }]}>
-                <Text style={[styles.tagText, { color: c.text }]}>{tag}</Text>
-              </View>
-            );
-          })}
+        {/* ══════════ MINI HEADER ══════════ */}
+        <View style={styles.miniHeader}>
+          {venue.image ? (
+            <Image
+              source={{ uri: venue.image }}
+              style={styles.venueThumb}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[styles.venueThumb, styles.venueThumbFallback]}>
+              <Ionicons name="business" size={22} color={colors.primary} />
+            </View>
+          )}
+
+          <View style={styles.headerMeta}>
+            <View style={styles.nameRow}>
+              <Text style={styles.venueName} numberOfLines={1}>{venue.name}</Text>
+              {venue.verified && <Ionicons name="checkmark-circle" size={15} color="#818cf8" />}
+            </View>
+            <Text style={styles.venueCategory} numberOfLines={1}>{venue.category}</Text>
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
+              <Text style={styles.locationText} numberOfLines={1}>{venue.location}</Text>
+            </View>
+          </View>
+
+          <View style={[styles.availPill, { backgroundColor: isAvailable ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' }]}>
+            <View style={[styles.availDot, { backgroundColor: isAvailable ? colors.success : '#f59e0b' }]} />
+            <Text style={[styles.availText, { color: isAvailable ? colors.success : '#f59e0b' }]}>
+              {isAvailable ? 'Disponible' : 'Reservado'}
+            </Text>
+          </View>
         </View>
 
         {/* ══════════ ABOUT ══════════ */}
@@ -399,6 +421,62 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 8,
   },
+
+  // mini header
+  miniHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  venueThumb: {
+    width: 54,
+    height: 54,
+    borderRadius: 14,
+    backgroundColor: colors.background,
+  },
+  venueThumbFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerMeta: { flex: 1, gap: 2 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  venueName: {
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+    flex: 1,
+  },
+  venueCategory: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: colors.textSecondary,
+  },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 1 },
+  locationText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
+  },
+  availPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  availDot: { width: 7, height: 7, borderRadius: 4 },
+  availText: { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold' },
 
   // tags
   tagsRow: {

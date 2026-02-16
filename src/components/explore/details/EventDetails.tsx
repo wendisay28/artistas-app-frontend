@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // EventDetails.tsx — Full scrollable detail view for an Event
-// Sections: tags · about · event info · stats · tabs (info/gallery/reviews) · CTA
+// Alineado con ArtistDetails.tsx — mismos estilos, proporciones y patrones
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -43,14 +43,14 @@ const MOCK_REVIEWS: Review[] = [
 // ── Tag color map ─────────────────────────────────────────────────────────────
 
 const TAG_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  Concierto:    { bg: 'rgba(99,102,241,.12)',  text: '#a5b4fc', border: 'rgba(99,102,241,.3)' },
-  Jazz:         { bg: 'rgba(99,102,241,.12)',  text: '#a5b4fc', border: 'rgba(99,102,241,.3)' },
-  Flamenco:     { bg: 'rgba(239,68,68,.12)',   text: '#fca5a5', border: 'rgba(239,68,68,.3)'  },
-  Exposición:   { bg: 'rgba(16,185,129,.12)',  text: '#6ee7b7', border: 'rgba(16,185,129,.3)' },
-  Teatro:       { bg: 'rgba(245,158,11,.12)',  text: '#fcd34d', border: 'rgba(245,158,11,.3)' },
-  Fotografía:   { bg: 'rgba(236,72,153,.12)',  text: '#f9a8d4', border: 'rgba(236,72,153,.3)' },
-  Arte:         { bg: 'rgba(16,185,129,.12)',  text: '#6ee7b7', border: 'rgba(16,185,129,.3)' },
-  Gratuito:     { bg: 'rgba(16,185,129,.12)',  text: '#6ee7b7', border: 'rgba(16,185,129,.3)' },
+  Concierto:  { bg: 'rgba(99,102,241,.12)',  text: '#a5b4fc', border: 'rgba(99,102,241,.3)' },
+  Jazz:       { bg: 'rgba(99,102,241,.12)',  text: '#a5b4fc', border: 'rgba(99,102,241,.3)' },
+  Flamenco:   { bg: 'rgba(239,68,68,.12)',   text: '#fca5a5', border: 'rgba(239,68,68,.3)'  },
+  Exposición: { bg: 'rgba(16,185,129,.12)',  text: '#6ee7b7', border: 'rgba(16,185,129,.3)' },
+  Teatro:     { bg: 'rgba(245,158,11,.12)',  text: '#fcd34d', border: 'rgba(245,158,11,.3)' },
+  Fotografía: { bg: 'rgba(236,72,153,.12)',  text: '#f9a8d4', border: 'rgba(236,72,153,.3)' },
+  Arte:       { bg: 'rgba(16,185,129,.12)',  text: '#6ee7b7', border: 'rgba(16,185,129,.3)' },
+  Gratuito:   { bg: 'rgba(16,185,129,.12)',  text: '#6ee7b7', border: 'rgba(16,185,129,.3)' },
 };
 const defaultTag = { bg: colors.background, text: colors.textSecondary, border: colors.border };
 
@@ -76,8 +76,8 @@ export default function EventDetails({
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
 
-  const isFree  = event.price === 0;
-  const soldOut = event.ticketsLeft !== undefined && event.ticketsLeft === 0;
+  const isFree   = event.price === 0;
+  const soldOut  = event.ticketsLeft !== undefined && event.ticketsLeft === 0;
   const lowStock = event.ticketsLeft !== undefined
     && event.ticketsLeft > 0
     && event.ticketsLeft <= 20;
@@ -106,16 +106,51 @@ export default function EventDetails({
 
       <View style={styles.container}>
 
-        {/* ══════════ TAGS ROW ══════════ */}
-        <View style={styles.tagsRow}>
-          {event.tags.map((tag: string, i: number) => {
-            const c = TAG_COLORS[tag] ?? defaultTag;
-            return (
-              <View key={i} style={[styles.tag, { backgroundColor: c.bg, borderColor: c.border }]}>
-                <Text style={[styles.tagText, { color: c.text }]}>{tag}</Text>
-              </View>
-            );
-          })}
+        {/* ══════════ MINI HEADER — igual que ArtistDetails ══════════ */}
+        <View style={styles.miniHeader}>
+          {/* Imagen del evento en miniatura */}
+          {event.image ? (
+            <Image
+              source={{ uri: event.image }}
+              style={styles.eventThumb}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={[styles.eventThumb, styles.eventThumbFallback]}>
+              <Ionicons name="calendar" size={22} color={colors.primary} />
+            </View>
+          )}
+
+          <View style={styles.headerMeta}>
+            <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
+            <View style={styles.headerMetaRow}>
+              <Ionicons name="calendar-outline" size={11} color={colors.textSecondary} />
+              <Text style={styles.headerMetaText} numberOfLines={1}>
+                {event.date}{event.time ? ` · ${event.time}` : ''}
+              </Text>
+            </View>
+            <View style={styles.headerMetaRow}>
+              <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
+              <Text style={styles.headerMetaText} numberOfLines={1}>
+                {event.city ?? event.venue}
+              </Text>
+            </View>
+          </View>
+
+          {/* Pill de precio / gratuito */}
+          <View style={[
+            styles.pricePill,
+            { backgroundColor: isFree ? 'rgba(16,185,129,0.1)' : `${colors.primary}15` },
+          ]}>
+            <Text style={[
+              styles.pricePillText,
+              { color: isFree ? colors.success : colors.primary },
+            ]}>
+              {isFree
+                ? 'Gratis'
+                : `$${event.price.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`}
+            </Text>
+          </View>
         </View>
 
         {/* ══════════ DESCRIPTION ══════════ */}
@@ -146,31 +181,25 @@ export default function EventDetails({
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Detalles del evento</Text>
           <View style={styles.infoPairs}>
-            <InfoPair label="Fecha"        value={event.date} />
+            <InfoPair label="Fecha"   value={event.date} />
             <View style={styles.divider} />
             {event.time && (
               <>
-                <InfoPair label="Hora"     value={event.time} />
+                <InfoPair label="Hora"  value={event.time} />
                 <View style={styles.divider} />
               </>
             )}
-            <InfoPair label="Lugar"        value={event.venue} />
+            <InfoPair label="Lugar"   value={event.venue} />
             <View style={styles.divider} />
             {event.city && (
               <>
-                <InfoPair label="Ciudad"   value={event.city} />
+                <InfoPair label="Ciudad" value={event.city} />
                 <View style={styles.divider} />
               </>
             )}
-            <InfoPair
-              label="Ubicación"
-              value={event.location}
-            />
+            <InfoPair label="Ubicación"          value={event.location} />
             <View style={styles.divider} />
-            <InfoPair
-              label="Tiempo de respuesta"
-              value={event.responseTime}
-            />
+            <InfoPair label="Tiempo de respuesta" value={event.responseTime} />
           </View>
         </View>
 
@@ -194,10 +223,7 @@ export default function EventDetails({
               size={22}
               color={soldOut ? colors.primary : colors.success}
             />
-            <Text style={[
-              styles.statValue,
-              soldOut && { color: colors.primary },
-            ]}>
+            <Text style={[styles.statValue, soldOut && { color: colors.primary }]}>
               {soldOut
                 ? 'Agotado'
                 : event.ticketsLeft !== undefined
@@ -225,9 +251,9 @@ export default function EventDetails({
           <View style={styles.tabBar}>
             {(
               [
-                { id: 'info',    label: 'Info',       icon: 'information-circle' },
-                { id: 'gallery', label: 'Galería',    icon: 'images'             },
-                { id: 'reviews', label: 'Reseñas',    icon: 'chatbubbles'        },
+                { id: 'info',    label: 'Info',    icon: 'information-circle' },
+                { id: 'gallery', label: 'Galería', icon: 'images'             },
+                { id: 'reviews', label: 'Reseñas', icon: 'chatbubbles'        },
               ] as const
             ).map(t => (
               <Pressable
@@ -267,10 +293,10 @@ export default function EventDetails({
 
               <View style={styles.infoChipsGrid}>
                 {[
-                  { icon: 'calendar-outline',  text: event.date },
-                  { icon: 'time-outline',      text: event.time ?? 'Por confirmar' },
-                  { icon: 'location-outline',  text: event.city ?? 'Por confirmar' },
-                  { icon: 'walk-outline',      text: '2.5 km' },
+                  { icon: 'calendar-outline', text: event.date },
+                  { icon: 'time-outline',     text: event.time ?? 'Por confirmar' },
+                  { icon: 'location-outline', text: event.city ?? 'Por confirmar' },
+                  { icon: 'walk-outline',     text: '2.5 km' },
                 ].map((item, i) => (
                   <View key={i} style={styles.infoChip}>
                     <Ionicons name={item.icon as any} size={15} color={colors.primary} />
@@ -294,7 +320,7 @@ export default function EventDetails({
                       style={({ pressed }) => [
                         styles.galleryThumb,
                         { width: thumbSize, height: thumbSize },
-                        pressed && { opacity: 0.8 },
+                        pressed && { opacity: 0.75 },
                       ]}
                     >
                       <Image
@@ -303,8 +329,8 @@ export default function EventDetails({
                         contentFit="cover"
                         transition={200}
                       />
-                      <View style={styles.galleryThumbOverlay}>
-                        <Ionicons name="expand-outline" size={18} color="#fff" />
+                      <View style={styles.galleryOverlay}>
+                        <Ionicons name="expand-outline" size={20} color="#fff" />
                       </View>
                     </Pressable>
                   );
@@ -326,21 +352,8 @@ export default function EventDetails({
 
         {/* ══════════ BOTTOM CTA ══════════ */}
         <View style={styles.ctaRow}>
-          {/* price block */}
-          <View style={styles.priceBlock}>
-            {isFree ? (
-              <Text style={styles.priceFree}>Gratis</Text>
-            ) : (
-              <>
-                <Text style={styles.priceValue}>
-                  ${event.price.toLocaleString('es-CO', { maximumFractionDigits: 0 })}
-                </Text>
-                <Text style={styles.priceLabel}>/entrada</Text>
-              </>
-            )}
-          </View>
 
-          {/* share button */}
+          {/* share */}
           <Pressable
             onPress={onShare}
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
@@ -348,7 +361,7 @@ export default function EventDetails({
             <Ionicons name="share-social-outline" size={20} color={colors.text} />
           </Pressable>
 
-          {/* detail button */}
+          {/* detail */}
           <Pressable
             onPress={onViewDetails}
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
@@ -356,7 +369,7 @@ export default function EventDetails({
             <Ionicons name="information-circle-outline" size={20} color={colors.text} />
           </Pressable>
 
-          {/* buy ticket CTA */}
+          {/* buy ticket */}
           <Pressable
             onPress={() => {
               if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -371,7 +384,7 @@ export default function EventDetails({
           >
             <Ionicons name="ticket-outline" size={16} color="#fff" />
             <Text style={styles.buyBtnText}>
-              {soldOut ? 'Agotado' : 'Conseguir entrada'}
+              {soldOut ? 'Agotado' : isFree ? 'Reservar gratis' : 'Conseguir entrada'}
             </Text>
           </Pressable>
         </View>
@@ -381,13 +394,69 @@ export default function EventDetails({
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles — alineados 1:1 con ArtistDetails ─────────────────────────────────
 
 const styles = StyleSheet.create({
   container: {
     width: CARD_WIDTH,
     gap: 12,
     paddingBottom: 8,
+  },
+
+  // ── mini header ───────────────────────────────────────────────────────────
+  miniHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  eventThumb: {
+    width: 54,
+    height: 54,
+    borderRadius: 14,           // rect redondeado en vez de círculo — diferencia visual de Artist
+    backgroundColor: colors.background,
+  },
+  eventThumbFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  headerMeta: {
+    flex: 1,
+    gap: 3,
+  },
+  eventName: {
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+  },
+  headerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  headerMetaText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
+    flexShrink: 1,
+  },
+  pricePill: {
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  pricePillText: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_700Bold',
   },
 
   // tags
@@ -408,7 +477,7 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_600SemiBold',
   },
 
-  // shared card
+  // card compartido
   card: {
     backgroundColor: '#fff',
     borderRadius: 18,
@@ -476,7 +545,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.border,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: colors.text,
   },
@@ -504,7 +573,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // tabs card
+  // tabs
   tabsCard: {
     backgroundColor: '#fff',
     borderRadius: 18,
@@ -544,7 +613,7 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     padding: 14,
-    gap: 10,
+    gap: 8,
   },
 
   // organizer row (info tab)
@@ -615,9 +684,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.background,
   },
-  galleryThumbOverlay: {
+  galleryOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0)',
+    backgroundColor: 'rgba(0,0,0,0.28)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -626,35 +695,14 @@ const styles = StyleSheet.create({
   ctaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingTop: 4,
   },
-  priceBlock: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 2,
-    minWidth: 70,
-  },
-  priceValue: {
-    fontSize: 17,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-  },
-  priceLabel: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
-  },
-  priceFree: {
-    fontSize: 16,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.success,
-  },
   iconBtn: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
-    backgroundColor: colors.background,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#f9fafb',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -662,13 +710,13 @@ const styles = StyleSheet.create({
   },
   buyBtn: {
     flex: 1,
-    height: 46,
-    borderRadius: 13,
+    height: 48,
+    borderRadius: 14,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
     shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
