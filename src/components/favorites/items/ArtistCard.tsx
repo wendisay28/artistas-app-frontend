@@ -1,371 +1,367 @@
-import React from 'react';
+// ─────────────────────────────────────────────────────────────────────────────
+// ArtistCard.tsx — Card horizontal para lista de Favoritos
+// Estilo Airbnb Saved: imagen compacta izquierda + info densa derecha
+// ─────────────────────────────────────────────────────────────────────────────
+
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
-  Image,
+  Pressable,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
+import { colors } from '../../../constants/colors';
+import type { FavoriteArtist } from '../../../data/favorites-mock';
 
-interface Artist {
-  id: number;
-  name: string;
-  type: string; // profession en tu web es 'type'
-  rating: number;
-  price: number;
-  image: string;
-  fans: number;
-  city: string;
-  description: string;
-  verified?: boolean;
-  availability?: string;
-}
+// ── Props ─────────────────────────────────────────────────────────────────────
 
 interface ArtistCardProps {
-  artist: Artist;
-  isSelected?: boolean;
-  onToggleSelect?: (id: number) => void;
-  onToggleFavorite?: (id: number) => void;
+  artist: FavoriteArtist;
   onPress?: () => void;
-  listMode?: boolean;
+  onContact?: (id: string) => void;
+  onToggleFavorite?: (id: string) => void;
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const formatCOP = (price: number) =>
+  `$${(price * 1000).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export const ArtistCard: React.FC<ArtistCardProps> = ({
   artist,
-  isSelected = false,
-  onToggleSelect,
-  onToggleFavorite,
   onPress,
-  listMode = false,
+  onContact,
+  onToggleFavorite,
 }) => {
-  const formattedPrice = (artist.price * 1000).toLocaleString('es-CO', {
-    maximumFractionDigits: 0
-  });
+  const [saved, setSaved] = useState(true);
+  const isAvail = artist.availability === 'Disponible';
+
+  const handleToggleFavorite = () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSaved(p => !p);
+    onToggleFavorite?.(artist.id);
+  };
+
+  const handleContact = () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onContact?.(artist.id);
+  };
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.card,
-        listMode && styles.listCard,
-        isSelected && styles.selectedCard,
-      ]}
+    <Pressable
       onPress={onPress}
-      activeOpacity={0.9}
+      style={({ pressed }) => [
+        styles.card,
+        pressed && styles.cardPressed,
+      ]}
     >
-      {/* --- SECCIÓN IMAGEN --- */}
-      <View style={[styles.imageWrapper, listMode && styles.listImageWrapper]}>
+      {/* ── IMAGEN IZQUIERDA ── */}
+      <View style={styles.imageWrapper}>
         <Image
           source={{ uri: artist.image || 'https://via.placeholder.com/150' }}
-          style={[styles.image, listMode && styles.listImage]}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={200}
         />
-        
-        {!listMode && (
-          <>
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.7)']}
-              style={styles.imageGradient}
-            />
-            {/* Badges superiores estilo web */}
-            <View style={styles.topBadges}>
-              {artist.verified && (
-                <View style={[styles.badge, styles.verifiedBadge]}>
-                  <Text style={styles.badgeText}>Verificado</Text>
-                </View>
-              )}
-              <LinearGradient
-                colors={artist.availability === "Disponible" ? ['#9333ea', '#2563eb'] : ['#6b7280', '#4b5563']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={styles.badge}
-              >
-                <Text style={styles.badgeText}>{artist.availability}</Text>
-              </LinearGradient>
-            </View>
-          </>
-        )}
-
-        {/* Checkbox de selección personalizado */}
-        {onToggleSelect && (
-          <TouchableOpacity
-            style={[styles.checkbox, isSelected && styles.checkboxChecked]}
-            onPress={() => onToggleSelect(artist.id)}
-          >
-            {isSelected && <View style={styles.checkboxInner} />}
-          </TouchableOpacity>
-        )}
+        {/* dot de disponibilidad */}
+        <View style={styles.dotOuter}>
+          <View style={[
+            styles.dotInner,
+            { backgroundColor: isAvail ? '#10b981' : '#f59e0b' },
+          ]} />
+        </View>
       </View>
 
-      {/* --- SECCIÓN INFO --- */}
-      <View style={[styles.infoContainer, listMode && styles.listInfoContainer]}>
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
+      {/* ── CONTENIDO DERECHA ── */}
+      <View style={styles.content}>
+
+        {/* nombre + verificado + corazón */}
+        <View style={styles.topRow}>
+          <View style={styles.nameBlock}>
             <Text style={styles.name} numberOfLines={1}>{artist.name}</Text>
-            <Text style={styles.type}>{artist.type}</Text>
+            {artist.verified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark" size={9} color="#fff" />
+              </View>
+            )}
           </View>
-          <View style={styles.ratingContainer}>
-            <Ionicons name="star" size={12} color="#ffd700" />
-            <Text style={styles.ratingText}>{artist.rating}</Text>
+          <Pressable
+            onPress={handleToggleFavorite}
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.heartBtn,
+              pressed && { opacity: 0.6 },
+            ]}
+          >
+            <Ionicons
+              name={saved ? 'heart' : 'heart-outline'}
+              size={18}
+              color={saved ? '#ef4444' : colors.textSecondary}
+            />
+          </Pressable>
+        </View>
+
+        {/* categoría */}
+        <Text style={styles.category} numberOfLines={1}>{artist.type}</Text>
+
+        {/* rating + reseñas + disponibilidad */}
+        <View style={styles.metaRow}>
+          <Ionicons name="star" size={11} color="#fbbf24" />
+          <Text style={styles.ratingText}>{artist.rating}</Text>
+          <Text style={styles.reviewsText}>({artist.reviews})</Text>
+          <View style={styles.metaSep} />
+          <View style={[
+            styles.availPill,
+            { backgroundColor: isAvail ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' },
+          ]}>
+            <View style={[
+              styles.availDot,
+              { backgroundColor: isAvail ? '#10b981' : '#f59e0b' },
+            ]} />
+            <Text style={[
+              styles.availText,
+              { color: isAvail ? '#10b981' : '#f59e0b' },
+            ]}>
+              {isAvail ? 'Disponible' : 'Ocupado'}
+            </Text>
           </View>
         </View>
 
-        {!listMode && (
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Ionicons name="location-outline" size={12} color="#6b7280" />
-              <Text style={styles.metaText}>{artist.city}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Ionicons name="people-outline" size={12} color="#6b7280" />
-              <Text style={styles.metaText}>{artist.fans} fans</Text>
-            </View>
-          </View>
-        )}
+        {/* separador */}
+        <View style={styles.divider} />
 
-        <Text style={styles.description} numberOfLines={listMode ? 1 : 2}>
-          {artist.description}
-        </Text>
-
+        {/* precio + botón */}
         <View style={styles.footer}>
           <View>
             <Text style={styles.priceLabel}>Desde</Text>
-            <Text style={styles.priceValue}>
-              <Text style={styles.priceSymbol}>$</Text>
-              {formattedPrice}
+            <View style={styles.priceRow}>
+              <Text style={styles.priceValue}>{formatCOP(artist.price)}</Text>
               <Text style={styles.priceUnit}>/h</Text>
-            </Text>
+            </View>
           </View>
 
-          <View style={styles.actions}>
-            <TouchableOpacity 
-              style={styles.iconBtn} 
-              onPress={() => onToggleFavorite?.(artist.id)}
-            >
-              <Ionicons
-                name={isSelected ? "heart" : "heart-outline"}
-                size={18}
-                color={isSelected ? "#ef4444" : "#9333ea"}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity>
-              <LinearGradient
-                colors={['#9333ea', '#2563eb']}
-                style={styles.contactBtn}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="chatbubble-outline" size={14} color="white" />
-                {!listMode && <Text style={styles.contactText}>Contactar</Text>}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          <Pressable
+            onPress={handleContact}
+            style={({ pressed }) => [
+              styles.contactBtn,
+              pressed && styles.contactBtnPressed,
+            ]}
+          >
+            <Ionicons name="briefcase-outline" size={13} color="#fff" />
+            <Text style={styles.contactText}>Contratar</Text>
+          </Pressable>
         </View>
+
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#f3e8ff', // purple-200
-    ...Platform.select({
-      ios: { shadowColor: '#9333ea', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
-  },
-  listCard: {
     flexDirection: 'row',
-    padding: 10,
-  },
-  selectedCard: {
-    borderColor: '#9333ea',
-    borderWidth: 2,
-  },
-  imageWrapper: {
-    height: 180,
-    width: '100%',
-    position: 'relative',
-    overflow: 'hidden',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  listImageWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-  },
-  listImage: {
-    borderRadius: 12,
-  },
-  imageGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 60,
-  },
-  topBadges: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    gap: 5,
-    alignItems: 'flex-end',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-  },
-  verifiedBadge: {
-    backgroundColor: '#a855f7',
-  },
-  badgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  checkbox: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    backgroundColor: '#9333ea',
-    borderColor: '#9333ea',
-  },
-  checkboxInner: {
-    width: 10,
-    height: 10,
     backgroundColor: '#fff',
-    borderRadius: 2,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.07)',
+    overflow: 'hidden',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  infoContainer: {
-    padding: 15,
+  cardPressed: {
+    opacity: 0.93,
+    elevation: 1,
   },
-  listInfoContainer: {
-    flex: 1,
-    paddingVertical: 0,
-    paddingHorizontal: 15,
+
+  // imagen
+  imageWrapper: {
+    width: 108,
+    alignSelf: 'stretch',
+    backgroundColor: colors.background,
+  },
+  dotOuter: {
+    position: 'absolute',
+    top: 10, left: 10,
+    width: 14, height: 14,
+    borderRadius: 7,
+    backgroundColor: '#fff',
+    alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  dotInner: {
+    width: 8, height: 8,
+    borderRadius: 4,
+  },
+
+  // contenido
+  content: {
+    flex: 1,
+    paddingHorizontal: 13,
+    paddingTop: 12,
+    paddingBottom: 11,
+  },
+
+  // top
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  nameBlock: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+    marginRight: 6,
   },
   name: {
-    fontSize: 17,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_700Bold',
     color: '#111827',
+    flexShrink: 1,
   },
-  type: {
-    fontSize: 14,
-    color: '#9333ea',
-    fontWeight: '600',
-    marginTop: 2,
+  verifiedBadge: {
+    width: 16, height: 16,
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
   },
-  ratingContainer: {
+  heartBtn: {
+    width: 30, height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+
+  // categoría
+  category: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.primary,
+    marginBottom: 6,
+  },
+
+  // meta
+  metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f5f3ff',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 10,
     gap: 4,
   },
   ratingText: {
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#1f2937',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#111827',
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+  reviewsText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
   },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 15,
-    marginTop: 8,
+  metaSep: {
+    width: 3, height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#d1d5db',
+    marginHorizontal: 2,
   },
-  metaItem: {
+  availPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    borderRadius: 20,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
-  metaText: {
-    fontSize: 12,
-    color: '#6b7280',
+  availDot: {
+    width: 6, height: 6,
+    borderRadius: 3,
   },
-  description: {
-    fontSize: 13,
-    color: '#4b5563',
-    marginVertical: 10,
-    lineHeight: 18,
+  availText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
   },
+
+  // divisor
+  divider: {
+    height: 1,
+    backgroundColor: '#f3f4f6',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+
+  // footer
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 5,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    justifyContent: 'space-between',
   },
   priceLabel: {
     fontSize: 10,
-    color: '#6b7280',
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
     textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
   },
   priceValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#7e22ce',
-  },
-  priceSymbol: {
-    fontSize: 14,
+    fontSize: 16,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.primary,
+    lineHeight: 20,
   },
   priceUnit: {
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: 'normal',
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
   },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f5f3ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
+  // botón — morado suavizado con opacity
   contactBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
     gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    opacity: 0.80,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  contactBtnPressed: {
+    opacity: 0.60,
+    elevation: 1,
   },
   contactText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
   },
 });

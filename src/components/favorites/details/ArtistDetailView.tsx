@@ -14,35 +14,16 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { colors } from '../../../constants/colors';
+import type { Artist } from '../../../types/explore';
 
 const { width } = Dimensions.get('window');
-
-// Tipos (Simplificados para el ejemplo)
-interface Artist {
-  id: number;
-  name: string;
-  category: string;
-  type: string;
-  image: string;
-  rating: number;
-  city: string;
-  price: number;
-  fans: number;
-  description: string;
-  verified: boolean;
-  availability?: string;
-  specialties?: string[];
-  instruments?: string[];
-  equipment?: string;
-  members?: number;
-  groupType?: string;
-}
 
 interface ArtistDetailViewProps {
   artist: Artist | null;
   open: boolean;
   onClose: () => void;
-  onToggleFavorite: (id: number) => void;
+  onToggleFavorite: (id: string) => void;
   isFavorite?: boolean;
 }
 
@@ -79,8 +60,8 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
     ...artist,
     ...fullData,
     // Aseguramos que existan arrays para evitar crash
-    specialties: fullData?.details?.tags || artist.specialties || ['Bodas', 'Eventos'],
-    gallery: fullData?.details?.gallery || [artist.image, artist.image], // Mock gallery
+    services: fullData?.details?.services || artist.services || ['Murales', 'Retratos'],
+    gallery: fullData?.details?.gallery || artist.gallery || [artist.image], // Mock gallery
   };
 
   const renderBadge = (icon: React.ReactNode, text: string, colorClass: 'purple' | 'blue' | 'green' | 'gray') => {
@@ -165,11 +146,11 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
             <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
                     <View style={[styles.statIcon, { backgroundColor: '#7e22ce' }]}>
-                        <Ionicons name="people-outline" size={16} color="#fff" />
+                        <Ionicons name="star-outline" size={16} color="#fff" />
                     </View>
                     <View>
-                        <Text style={styles.statLabel}>Fans</Text>
-                        <Text style={styles.statValue}>{displayData.fans || '2k'}</Text>
+                        <Text style={styles.statLabel}>Rating</Text>
+                        <Text style={styles.statValue}>{displayData.rating}</Text>
                     </View>
                 </View>
                 <View style={styles.statCard}>
@@ -178,7 +159,7 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
                     </View>
                     <View>
                         <Text style={styles.statLabel}>Ubicación</Text>
-                        <Text style={styles.statValue} numberOfLines={1}>{displayData.city}</Text>
+                        <Text style={styles.statValue} numberOfLines={1}>{displayData.location || 'Ciudad'}</Text>
                     </View>
                 </View>
                 <View style={[styles.statCard, { width: '100%', marginTop: 8, flexDirection: 'row', alignItems: 'center' }]}>
@@ -256,20 +237,20 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
             <View style={styles.section}>
                  <View style={styles.sectionHeader}>
                     <Ionicons name="briefcase-outline" color="#7e22ce" size={20} />
-                    <Text style={styles.sectionTitle}>Información Técnica</Text>
+                    <Text style={styles.sectionTitle}>Información del Artista</Text>
                 </View>
                 <View style={styles.techGrid}>
                     <View style={styles.techItem}>
-                        <Text style={styles.techLabel}>Formato</Text>
-                        <Text style={styles.techValue}>{displayData.groupType || 'Solista'}</Text>
+                        <Text style={styles.techLabel}>Experiencia</Text>
+                        <Text style={styles.techValue}>{displayData.experience || '5 años'}</Text>
                     </View>
                     <View style={styles.techItem}>
-                        <Text style={styles.techLabel}>Miembros</Text>
-                        <Text style={styles.techValue}>{displayData.members || 1} personas</Text>
+                        <Text style={styles.techLabel}>Estilo</Text>
+                        <Text style={styles.techValue}>{displayData.style || 'Contemporáneo'}</Text>
                     </View>
                     <View style={styles.techItemFull}>
-                        <Text style={styles.techLabel}>Equipo</Text>
-                        <Text style={styles.techValue}>{displayData.equipment || 'Equipo estándar incluido'}</Text>
+                        <Text style={styles.techLabel}>Servicios</Text>
+                        <Text style={styles.techValue}>{displayData.services?.join(', ') || 'Servicios varios'}</Text>
                     </View>
                 </View>
             </View>

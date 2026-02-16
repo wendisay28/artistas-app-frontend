@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { Event } from '../../../types/explore';
 
 const { width } = Dimensions.get('window');
 
@@ -49,7 +50,13 @@ const SectionHeader = ({ iconName, title }: any) => (
 
 // --- VISTA PRINCIPAL ---
 
-export default function EventDetailViewNative({ event, onToggleFavorite, isFavorite }: any) {
+interface EventDetailViewProps {
+  event: Event | null;
+  onToggleFavorite: (id: string) => void;
+  isFavorite?: boolean;
+}
+
+export default function EventDetailViewNative({ event, onToggleFavorite, isFavorite = false }: EventDetailViewProps) {
   const [fullEventData, setFullEventData] = useState<any>(null);
   const [isReminderSet, setIsReminderSet] = useState(false);
 
@@ -58,6 +65,7 @@ export default function EventDetailViewNative({ event, onToggleFavorite, isFavor
   }, [event]);
 
   const fetchEventDetails = async () => {
+    if (!event) return;
     try {
       const response = await fetch(`http://localhost:3001/api/v1/events/${event.id}`);
       if (response.ok) setFullEventData(await response.json());
@@ -70,17 +78,16 @@ export default function EventDetailViewNative({ event, onToggleFavorite, isFavor
   // Handlers
   const handleShare = async () => {
     try {
-      await Share.share({ message: `¡Mira este evento!: ${displayData.title}`, url: 'https://tuapp.com' });
+      await Share.share({ message: `¡Mira este evento!: ${displayData.name}`, url: 'https://tuapp.com' });
     } catch (e) { console.log(e); }
   };
 
   const handleOpenMap = () => {
-    const lat = displayData.coordinates?.lat;
-    const lng = displayData.coordinates?.lng;
-    const label = displayData.venue;
+    const venue = displayData.venue || 'Ubicación del evento';
+    const city = displayData.city || '';
     const url = Platform.select({
-      ios: `maps:0,0?q=${label}@${lat},${lng}`,
-      android: `geo:0,0?q=${lat},${lng}(${label})`
+      ios: `maps:0,0?q=${venue}@${city}`,
+      android: `geo:0,0?q=${city}(${venue})`
     });
     if (url) Linking.openURL(url);
   };
@@ -89,7 +96,7 @@ export default function EventDetailViewNative({ event, onToggleFavorite, isFavor
     <ScrollView style={styles.container} bounces={false}>
       {/* HEADER HERO */}
       <View style={styles.heroContainer}>
-        <Image source={{ uri: displayData.image || displayData.featuredImage }} style={styles.heroImage} />
+        <Image source={{ uri: displayData.image }} style={styles.heroImage} />
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.9)']} style={styles.overlay} />
         
         {/* Floating Actions */}
@@ -107,14 +114,14 @@ export default function EventDetailViewNative({ event, onToggleFavorite, isFavor
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryBadgeText}>{displayData.category || 'Evento'}</Text>
             </View>
-            {displayData.viewCount > 100 && (
+            {displayData.reviews > 100 && (
               <View style={styles.trendingBadge}>
                 <Ionicons name="trending-up-outline" size={12} color="#FFF" />
                 <Text style={styles.trendingText}>Popular</Text>
               </View>
             )}
           </View>
-          <Text style={styles.title}>{displayData.title}</Text>
+          <Text style={styles.title}>{displayData.name}</Text>
           <Text style={styles.subtitle}>{displayData.venue} • {displayData.city}</Text>
         </View>
       </View>

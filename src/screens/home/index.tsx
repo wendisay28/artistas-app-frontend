@@ -1,177 +1,284 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { View, FlatList, StyleSheet, RefreshControl, TouchableOpacity, Text, Animated, StatusBar, ActivityIndicator } from 'react-native';
+// src/screens/home/index.tsx — Pantalla temporal de bienvenida
+import { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import { auth } from '../../services/firebase/config';
 import TopBar from '../../components/shared/TopBar';
 
-// Components & Services
-import { FeedPost } from '../../components/home/feed/FeedPost';
-import { CreatePostBox } from '../../components/home/feed/CreatePostBox';
-import { SearchBar } from '../../components/home/common/SearchBar';
-import { CreatePostModal } from '../../components/home/modals/CreatePostModal';
-import { SharePostModal } from '../../components/home/modals/SharePostModal';
-import { postService, Post } from '../../components/home/services/post.service';
-import { blogService } from '../../components/home/services/blog.service';
-
-const CATEGORY_LABELS: Record<string, string> = { music: 'Música en Vivo', photography: 'Fotografía', design: 'Diseño Gráfico', video: 'Video & Producción', voice: 'Locución & Audio', art: 'Arte & Decoración', performance: 'Performance & Show' };
-const SEARCH_SUGGESTIONS = ['Artistas en mi ciudad', 'Eventos este fin de semana', 'Fotografía para evento', 'Música en vivo', 'Diseño gráfico', 'Ideas para mi próximo post'];
-
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const user = auth.currentUser;
-  const firstName = useMemo(() => user?.displayName?.split(' ')[0] ?? 'Artista', [user]);
+  const firstName = auth.currentUser?.displayName?.split(' ')[0] ?? 'Artista';
+  const [idea, setIdea] = useState('');
+  const [submitted, setSubmitted] = useState(false);
 
-  // States unificados para reducir líneas
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [ui, setUi] = useState({ loading: false, refreshing: false, loadingMore: false });
-  const [activeTab, setActiveTab] = useState<'for-you' | 'following'>('for-you');
-  const [page, setPage] = useState({ current: 1, hasMore: true });
-  const [search, setSearch] = useState({ query: '', visible: false });
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [modals, setModals] = useState({ create: false, sharing: null as Post | null });
-
-  const searchAnim = useRef(new Animated.Value(0)).current;
-  const tabIndicatorAnim = useRef(new Animated.Value(0)).current;
-
-  // Helper de mapeo corregido para evitar errores de TS
-  const mapBlogPost = (b: any): Post => ({
-    id: b.id,
-    type: 'blog',
-    content: b.content || b.excerpt || '',
-    author: {
-      id: b.author?.id || '',
-      name: b.author?.name || b.author?.displayName || 'Usuario',
-      avatar: b.author?.profileImageUrl || b.author?.avatar,
-    },
-    likeCount: b.likeCount || 0,
-    commentCount: b.commentCount || 0,
-    shareCount: b.shareCount || 0,
-    createdAt: b.publishedAt || b.createdAt || new Date().toISOString(),
-    // Para evitar el error "excerpt no existe", pasamos los datos extra como metadata si tu tipo Post lo permite
-    // o simplemente omitimos lo que no sea necesario para FeedPost.
-  } as Post);
-
-  const loadPosts = useCallback(async (pageNum = 1, isRefresh = false) => {
-    setUi(prev => ({ ...prev, [isRefresh ? 'refreshing' : pageNum > 1 ? 'loadingMore' : 'loading']: true }));
-    
-    try {
-      const [regRes, blogRes] = await Promise.allSettled([
-        postService.getPosts(undefined, pageNum, 10, activeTab === 'following', selectedCategory || undefined),
-        blogService.getAllPosts({ page: pageNum, limit: 10 }),
-      ]);
-
-      let newPosts: Post[] = [];
-      if (regRes.status === 'fulfilled') newPosts = regRes.value.posts;
-      if (blogRes.status === 'fulfilled') newPosts = [...newPosts, ...blogRes.value.data.map(mapBlogPost)];
-
-      newPosts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-      setPosts(prev => {
-        const combined = isRefresh || pageNum === 1 ? newPosts : [...prev, ...newPosts];
-        return Array.from(new Map(combined.map(p => [p.id, p])).values()); // Elimina duplicados
-      });
-      setPage({ current: pageNum, hasMore: newPosts.length > 0 });
-    } finally {
-      setUi({ loading: false, refreshing: false, loadingMore: false });
-    }
-  }, [activeTab, selectedCategory]);
-
-  useEffect(() => { loadPosts(1); }, [activeTab, selectedCategory]);
-
-  // Filtrado local para búsqueda instantánea
-  const filteredPosts = useMemo(() => {
-    const q = search.query.toLowerCase();
-    return !q ? posts : posts.filter(p => 
-      p.content?.toLowerCase().includes(q) || p.author.name?.toLowerCase().includes(q)
-    );
-  }, [posts, search.query]);
-
-  const handleTabChange = (tab: 'for-you' | 'following') => {
-    setActiveTab(tab);
-    Animated.spring(tabIndicatorAnim, { toValue: tab === 'for-you' ? 0 : 1, useNativeDriver: true }).start();
-  };
-
-  const toggleSearch = () => {
-    const isVisible = !search.visible;
-    setSearch(p => ({ ...p, visible: isVisible, query: isVisible ? p.query : '' }));
-    Animated.spring(searchAnim, { toValue: isVisible ? 1 : 0, useNativeDriver: false }).start();
-  };
-
-  const handleLike = async (postId: number, isLiked: boolean) => {
-    setPosts(prev => prev.map(p => p.id === postId ? { ...p, likeCount: p.likeCount + (isLiked ? -1 : 1) } : p));
-    try { isLiked ? await postService.unlikePost(postId) : await postService.likePost(postId); } catch { loadPosts(1); }
+  const handleSubmit = () => {
+    if (idea.trim().length === 0) return;
+    setSubmitted(true);
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <TopBar title={`Hola, ${firstName}`} topInset={insets.top} />
-
-      <View style={styles.header}>
-        <View style={styles.tabs}>
-          {['for-you', 'following'].map((t, i) => (
-            <TouchableOpacity key={t} style={styles.tab} onPress={() => handleTabChange(t as any)}>
-              <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
-                {t === 'for-you' ? 'Para ti' : 'Siguiendo'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={styles.searchButton} onPress={toggleSearch}>
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
-          </TouchableOpacity>
-          <Animated.View style={[styles.tabIndicator, { transform: [{ translateX: tabIndicatorAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 170] }) }] }]} />
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <TopBar title="BuscArt" topInset={insets.top} />
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { paddingTop: 20, paddingBottom: insets.bottom + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Saludo */}
+        <View style={styles.greetingSection}>
+          <Text style={styles.greeting}>Hola, {firstName}</Text>
+          <Text style={styles.wave}>👋</Text>
         </View>
 
-        <Animated.View style={[styles.searchContainer, { height: searchAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 70] }), opacity: searchAnim }]}>
-          <SearchBar value={search.query} onChangeText={(t) => setSearch(p => ({ ...p, query: t }))} suggestions={SEARCH_SUGGESTIONS} />
-        </Animated.View>
-
-        {selectedCategory && (
-          <View style={styles.categoryFilter}>
-            <Text style={styles.categoryFilterText}>Filtrando por: <Text style={styles.categoryFilterLabel}>{CATEGORY_LABELS[selectedCategory] || selectedCategory}</Text></Text>
-            <TouchableOpacity onPress={() => setSelectedCategory(null)}><Ionicons name="close" size={16} color={colors.textSecondary} /></TouchableOpacity>
+        {/* Mensaje principal */}
+        <View style={styles.heroCard}>
+          <View style={styles.iconCircle}>
+            <Ionicons name="sparkles" size={32} color={colors.primary} />
           </View>
-        )}
-      </View>
+          <Text style={styles.heroTitle}>
+            Estamos trabajando en algo{'\n'}especial para ti
+          </Text>
+          <Text style={styles.heroSubtitle}>
+            Muy pronto vas a poder descubrir artistas, eventos y espacios
+            creativos cerca de ti. Mientras tanto, explora lo que ya tenemos
+            disponible.
+          </Text>
+        </View>
 
-      <FlatList
-        data={filteredPosts}
-        keyExtractor={(item) => `${item.type}-${item.id}`}
-        renderItem={({ item }) => <FeedPost post={item} onLike={() => handleLike(item.id, false)} onShare={() => setModals(m => ({ ...m, sharing: item }))} />}
-        ListHeaderComponent={<CreatePostBox onPress={() => setModals(m => ({ ...m, create: true }))} userAvatar={user?.photoURL ?? undefined} userName={firstName} />}
-        ListFooterComponent={ui.loadingMore ? <ActivityIndicator style={{ margin: 20 }} color={colors.primary} /> : null}
-        refreshControl={<RefreshControl refreshing={ui.refreshing} onRefresh={() => loadPosts(1, true)} tintColor={colors.primary} />}
-        onEndReached={() => page.hasMore && !ui.loadingMore && loadPosts(page.current + 1)}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 90, flexGrow: 1 }}
-        ListEmptyComponent={!ui.loading ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyTitle}>No hay publicaciones aún</Text>
-          </View>
-        ) : null}
-      />
+        {/* Caja de ideas */}
+        <View style={styles.ideaCard}>
+          <Text style={styles.ideaTitle}>
+            <Ionicons name="bulb-outline" size={16} color={colors.text} />
+            {'  '}Puedes darnos ideas
+          </Text>
+          <Text style={styles.ideaSubtitle}>
+            Tu opinión nos ayuda a construir la mejor experiencia para la
+            comunidad creativa.
+          </Text>
 
-      <CreatePostModal visible={modals.create} onClose={() => setModals(m => ({ ...m, create: false }))} onPost={loadPosts as any} userAvatar={user?.photoURL ?? undefined} userName={firstName} />
-      {modals.sharing && <SharePostModal visible={!!modals.sharing} onClose={() => setModals(m => ({ ...m, sharing: null }))} post={modals.sharing} onShare={async () => {}} userAvatar={user?.photoURL ?? undefined} userName={firstName} />}
-    </View>
+          {!submitted ? (
+            <>
+              <TextInput
+                style={styles.ideaInput}
+                placeholder="Cuéntanos qué te gustaría ver aquí..."
+                placeholderTextColor={colors.textLight}
+                multiline
+                value={idea}
+                onChangeText={setIdea}
+                textAlignVertical="top"
+              />
+              <Pressable
+                onPress={handleSubmit}
+                disabled={idea.trim().length === 0}
+                style={({ pressed }) => [
+                  styles.submitBtn,
+                  idea.trim().length === 0 && styles.submitBtnDisabled,
+                  pressed && idea.trim().length > 0 && { opacity: 0.9, transform: [{ scale: 0.97 }] },
+                ]}
+              >
+                <Ionicons name="send" size={16} color="#fff" />
+                <Text style={styles.submitBtnText}>Enviar idea</Text>
+              </Pressable>
+            </>
+          ) : (
+            <View style={styles.thankYou}>
+              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+              <Text style={styles.thankYouText}>
+                Gracias por tu idea, la tendremos en cuenta.
+              </Text>
+              <Pressable
+                onPress={() => { setSubmitted(false); setIdea(''); }}
+                style={styles.anotherBtn}
+              >
+                <Text style={styles.anotherBtnText}>Enviar otra idea</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        {/* Hint para explorar */}
+        <Pressable style={styles.exploreHint}>
+          <Ionicons name="compass-outline" size={18} color={colors.primary} />
+          <Text style={styles.exploreHintText}>
+            Mientras tanto, ve a Explorar para descubrir artistas
+          </Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+        </Pressable>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-// Estilos se mantienen igual para no alterar la UI...
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: { backgroundColor: colors.white, borderBottomWidth: 1, borderBottomColor: colors.border },
-  tabs: { flexDirection: 'row', alignItems: 'center', position: 'relative' },
-  tab: { flex: 1, paddingVertical: 16, alignItems: 'center' },
-  tabText: { fontSize: 15, fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.textSecondary },
-  tabTextActive: { color: colors.text, fontFamily: 'PlusJakartaSans_700Bold' },
-  searchButton: { position: 'absolute', right: 16, padding: 12 },
-  tabIndicator: { position: 'absolute', bottom: 0, left: 0, width: '50%', height: 2, backgroundColor: colors.primary },
-  searchContainer: { overflow: 'hidden', paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: colors.border, justifyContent: 'center' },
-  categoryFilter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.border },
-  categoryFilterText: { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.textSecondary },
-  categoryFilterLabel: { fontFamily: 'PlusJakartaSans_600SemiBold', color: colors.text },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
-  emptyTitle: { fontSize: 16, color: colors.textSecondary },
+  root: { flex: 1, backgroundColor: colors.background },
+  container: {
+    paddingHorizontal: 20,
+    gap: 20,
+  },
+
+  // greeting
+  greetingSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  greeting: {
+    fontSize: 26,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+  },
+  wave: { fontSize: 26 },
+
+  // hero
+  heroCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    gap: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 28,
+  },
+  heroSubtitle: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+
+  // idea card
+  ideaCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  ideaTitle: {
+    fontSize: 16,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+  },
+  ideaSubtitle: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary,
+    lineHeight: 20,
+  },
+  ideaInput: {
+    backgroundColor: colors.background,
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.text,
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: 4,
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    height: 48,
+    marginTop: 4,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  submitBtnDisabled: {
+    backgroundColor: colors.textLight,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
+  },
+
+  // thank you state
+  thankYou: {
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 16,
+  },
+  thankYouText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
+  anotherBtn: {
+    marginTop: 4,
+  },
+  anotherBtnText: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: colors.primary,
+  },
+
+  // explore hint
+  exploreHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.primary + '0a',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.primary + '20',
+  },
+  exploreHintText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: colors.text,
+  },
 });

@@ -13,27 +13,47 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import type { GalleryItem } from '../../../types/explore';
 
 const { width } = Dimensions.get('window');
 
 // --- COMPONENTES DE APOYO ---
 
-const SpecItem = ({ iconName, label, value }: any) => (
+const SpecItemComponent = ({
+  iconName,
+  label,
+  value
+}: {
+  iconName: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: any;
+}) => (
   <View style={styles.specBox}>
-    <Ionicons name={iconName} size={16} color="#7c3aed" />
-    <View style={styles.specTextContent}>
+    <View style={styles.infoIconBox}>
+      <Ionicons name={iconName} size={16} color="#7c3aed" />
+    </View>
+    <View>
       <Text style={styles.specLabel}>{label}</Text>
       <Text style={styles.specValue}>{value || 'N/A'}</Text>
     </View>
   </View>
 );
 
+// --- VISTA PRINCIPAL ---
+
+interface ProductDetailViewProps {
+  product: GalleryItem | null;
+  onClose: () => void;
+  onToggleFavorite: (id: string) => void;
+  isFavorite?: boolean;
+}
+
 export default function ProductDetailViewNative({ 
   product, 
   onClose, 
   onToggleFavorite, 
-  isFavorite 
-}: any) {
+  isFavorite = false 
+}: ProductDetailViewProps) {
   const [quantity, setQuantity] = useState(1);
 
   if (!product) return null;
@@ -41,8 +61,8 @@ export default function ProductDetailViewNative({
   const handleShare = async () => {
     try {
       await Share.share({ 
-        message: `Mira este producto: ${product.title} por $${product.price.toLocaleString()}`,
-        url: 'https://tuapp.com/productos/' + product.id 
+        message: `Mira esta obra: ${product.name} por $${product.price.toLocaleString()}`,
+        url: 'https://tuapp.com/obras/' + product.id 
       });
     } catch (e) { console.log(e); }
   };
@@ -76,7 +96,7 @@ export default function ProductDetailViewNative({
           <View style={styles.headerInfo}>
             <View style={styles.badgeRow}>
               <View style={styles.categoryBadge}>
-                <Text style={styles.categoryText}>{product.category}</Text>
+                <Text style={styles.categoryText}>{product.medium || 'Arte'}</Text>
               </View>
               {product.verified && (
                 <View style={styles.verifiedBadge}>
@@ -85,15 +105,15 @@ export default function ProductDetailViewNative({
                 </View>
               )}
             </View>
-            <Text style={styles.productTitle}>{product.title}</Text>
-            <Text style={styles.artistName}>por {product.artist}</Text>
+            <Text style={styles.title}>{product.name}</Text>
+            <Text style={styles.subtitle}>{product.artistName} • {product.location}</Text>
             
             <View style={styles.priceRow}>
               <Text style={styles.priceText}>${product.price.toLocaleString()}</Text>
               <View style={styles.stockStatus}>
-                <View style={[styles.stockDot, { backgroundColor: product.available ? '#10b981' : '#ef4444' }]} />
+                <View style={[styles.stockDot, { backgroundColor: product.forSale ? '#10b981' : '#ef4444' }]} />
                 <Text style={styles.stockText}>
-                  {product.available ? `${product.stock} unidades` : 'Agotado'}
+                  {product.forSale ? 'En venta' : 'No disponible'}
                 </Text>
               </View>
             </View>
@@ -102,27 +122,24 @@ export default function ProductDetailViewNative({
           {/* DESCRIPCIÓN */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Descripción</Text>
-            <Text style={styles.descriptionText}>{product.description}</Text>
+            <Text style={styles.description}>{product.bio}</Text>
           </View>
 
-          {/* ESPECIFICACIONES TÉCNICAS (Grid Dinámico) */}
+          {/* ESPECIFICACIONES TÉCNICAS */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Especificaciones</Text>
             <View style={styles.specsGrid}>
-              <SpecItem iconName="expand-outline" label="Dimensiones" value={product.dimensions} />
-              <SpecItem iconName="options-outline" label="Peso" value={product.weight} />
-              <SpecItem iconName="cube-outline" label="Condición" value={product.condition} />
-              {product.language && <SpecItem iconName="language-outline" label="Idioma" value={product.language} />}
-              {product.pages && <SpecItem iconName="book-outline" label="Páginas" value={product.pages} />}
-              {product.certificate && <SpecItem iconName="ribbon-outline" label="Certificado" value="Sí" />}
+              <SpecItemComponent iconName="brush-outline" label="Técnica" value={product.medium} />
+              <SpecItemComponent iconName="resize-outline" label="Dimensiones" value={product.dimensions} />
+              <SpecItemComponent iconName="calendar-outline" label="Año" value={product.year} />
             </View>
           </View>
 
           {/* INFO DE ENVÍO */}
           <View style={styles.shippingCard}>
-            <Ionicons name="car-outline" size={20} color="#7c3aed" />
+            <View style={styles.infoIconBox}><Ionicons name="car-outline" size={18} color="#7c3aed" /></View>
             <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.shippingTitle}>Envío disponible a {product.city}</Text>
+              <Text style={styles.shippingTitle}>Envío disponible a {product.location}</Text>
               <Text style={styles.shippingSub}>Entrega estimada: 3-5 días hábiles</Text>
             </View>
           </View>
@@ -131,103 +148,297 @@ export default function ProductDetailViewNative({
           <View style={styles.tagsWrapper}>
             {product.tags.map((tag: string, i: number) => (
               <View key={i} style={styles.tag}>
-                <Text style={styles.tagText}>#{tag}</Text>
+                <Text style={styles.tagText}>{tag}</Text>
               </View>
             ))}
           </View>
+
+          {/* BOTONES DE ACCIÓN */}
+          <View style={styles.actionButtons}>
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.actionBtnOutline]} 
+              onPress={() => setQuantity(q => Math.max(1, q - 1))}
+            >
+              <Ionicons name="remove-outline" size={20} color="#7c3aed" />
+              <Text style={styles.actionBtnText}>-</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.quantityDisplay}>
+              <Text style={styles.quantityText}>Cantidad: {quantity}</Text>
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.actionBtn, styles.actionBtnOutline]} 
+              onPress={() => setQuantity(q => q + 1)}
+            >
+              <Ionicons name="add-outline" size={20} color="#7c3aed" />
+              <Text style={styles.actionBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* BOTÓN PRINCIPAL */}
+          <TouchableOpacity 
+            style={[styles.actionBtn, styles.actionBtnPrimary, !product.forSale && styles.actionBtnDisabled]} 
+            onPress={() => {
+              if (product.forSale) {
+                Alert.alert(
+                  'Confirmar compra',
+                  `¿Estás seguro de que quieres adquirir "${product.name}"?`,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Comprar', onPress: () => console.log('Comprar obra') }
+                  ]
+                );
+              }
+            }}
+            disabled={!product.forSale}
+          >
+            <Ionicons name="bag-outline" size={20} color="#FFF" />
+            <Text style={styles.actionBtnText}>{product.forSale ? 'Adquirir obra' : 'No disponible'}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* FOOTER DE ACCIÓN (Sticky) */}
-      <View style={styles.footer}>
-        <View style={styles.quantitySelector}>
-          <TouchableOpacity onPress={() => setQuantity(Math.max(1, quantity - 1))} style={styles.qtyBtn}>
-            <Text style={styles.qtyBtnText}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.qtyText}>{quantity}</Text>
-          <TouchableOpacity onPress={() => setQuantity(quantity + 1)} style={styles.qtyBtn}>
-            <Text style={styles.qtyBtnText}>+</Text>
-          </TouchableOpacity>
-        </View>
-        
-        <TouchableOpacity 
-          style={[styles.addToCartBtn, !product.available && styles.disabledBtn]}
-          disabled={!product.available}
-        >
-          <Ionicons name="cart-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.addToCartText}>Agregar al Carrito</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
 
+// ── STYLES ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  masterContainer: { flex: 1, backgroundColor: '#FFF' },
-  container: { flex: 1 },
-  imageContainer: { width: '100%', height: 350 },
-  mainImage: { width: '100%', height: '100%', objectFit: 'cover' },
-  topOverlay: { ...StyleSheet.absoluteFillObject, height: 100 },
+  masterContainer: { 
+    flex: 1, 
+    backgroundColor: '#f8fafc' 
+  },
+  container: { 
+    flex: 1, 
+    padding: 20 
+  },
+  imageContainer: { 
+    width: '100%', 
+    height: 300, 
+    position: 'relative' 
+  },
+  mainImage: { 
+    width: '100%', 
+    height: '100%', 
+    objectFit: 'cover' 
+  },
+  topOverlay: { 
+    position: 'absolute', 
+    top: 0, 
+    left: 0, 
+    right: 0, 
+    height: 120, 
+    backgroundColor: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)' 
+  },
   headerActions: { 
-    position: 'absolute', top: 50, left: 20, right: 20, 
-    flexDirection: 'row', justifyContent: 'space-between' 
+    position: 'absolute', 
+    top: 20, 
+    right: 20, 
+    flexDirection: 'row', 
+    gap: 10 
   },
   circleBtn: { 
-    width: 40, height: 40, borderRadius: 20, 
-    backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: 'rgba(0,0,0,0.3)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  content: { padding: 20, marginTop: -30, backgroundColor: '#FFF', borderTopLeftRadius: 30, borderTopRightRadius: 30 },
-  headerInfo: { marginBottom: 25 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  categoryBadge: { backgroundColor: '#f3e8ff', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  categoryText: { color: '#7c3aed', fontSize: 11, fontWeight: 'bold', textTransform: 'uppercase' },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ecfdf5', paddingHorizontal: 10, borderRadius: 8, gap: 4 },
-  verifiedText: { color: '#059669', fontSize: 11, fontWeight: 'bold' },
-  productTitle: { fontSize: 24, fontWeight: 'bold', color: '#111827' },
-  artistName: { fontSize: 16, color: '#6b7280', marginTop: 4 },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 15 },
-  priceText: { fontSize: 28, fontWeight: '800', color: '#7c3aed' },
-  stockStatus: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  stockDot: { width: 8, height: 8, borderRadius: 4 },
-  stockText: { fontSize: 13, color: '#4b5563', fontWeight: '500' },
-  section: { marginBottom: 25 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 10 },
-  descriptionText: { fontSize: 15, color: '#4b5563', lineHeight: 22 },
-  specsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  content: { 
+    backgroundColor: '#fff', 
+    borderRadius: 20, 
+    marginTop: -20, 
+    paddingTop: 40, 
+    padding: 20 
+  },
+  headerInfo: { 
+    marginBottom: 20 
+  },
+  badgeRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 10, 
+    marginBottom: 10 
+  },
+  categoryBadge: { 
+    backgroundColor: '#7c3aed', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 12 
+  },
+  categoryText: { 
+    color: '#fff', 
+    fontWeight: '600', 
+    fontSize: 12 
+  },
+  verifiedBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 4, 
+    backgroundColor: 'rgba(5, 209, 98, 0.1)', 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 12 
+  },
+  verifiedText: { 
+    color: '#059669', 
+    fontSize: 12, 
+    fontWeight: '600' 
+  },
+  title: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    color: '#1f2937', 
+    marginBottom: 5 
+  },
+  subtitle: { 
+    fontSize: 16, 
+    color: '#6b7280', 
+    marginBottom: 15 
+  },
+  priceRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    marginBottom: 20 
+  },
+  priceText: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    color: '#1f2937' 
+  },
+  stockStatus: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 8 
+  },
+  stockDot: { 
+    width: 8, 
+    height: 8, 
+    borderRadius: 4 
+  },
+  stockText: { 
+    fontSize: 14, 
+    color: '#6b7280' 
+  },
+  section: { 
+    marginBottom: 25 
+  },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#1f2937', 
+    marginBottom: 15 
+  },
+  description: { 
+    fontSize: 15, 
+    lineHeight: 22, 
+    color: '#4b5563', 
+    marginBottom: 15 
+  },
+  specsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 15 
+  },
   specBox: { 
-    width: (width - 52) / 2, backgroundColor: '#f9fafb', 
-    padding: 12, borderRadius: 12, flexDirection: 'row', 
-    alignItems: 'center', gap: 10 
+    width: '48%', 
+    backgroundColor: '#f8fafc', 
+    padding: 15, 
+    borderRadius: 12 
   },
-  specTextContent: { flex: 1 },
-  specLabel: { fontSize: 11, color: '#9ca3af', textTransform: 'uppercase' },
-  specValue: { fontSize: 13, fontWeight: 'bold', color: '#374151' },
+  infoIconBox: { 
+    marginBottom: 8 
+  },
+  specLabel: { 
+    fontSize: 12, 
+    color: '#6b7280', 
+    marginBottom: 4 
+  },
+  specValue: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: '#1f2937' 
+  },
   shippingCard: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f3ff', 
-    padding: 15, borderRadius: 16, marginBottom: 25 
+    backgroundColor: '#f8fafc', 
+    padding: 20, 
+    borderRadius: 16, 
+    marginBottom: 25 
   },
-  shippingTitle: { fontSize: 14, fontWeight: 'bold', color: '#1f2937' },
-  shippingSub: { fontSize: 12, color: '#6d28d9', marginTop: 2 },
-  tagsWrapper: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 100 },
-  tag: { backgroundColor: '#f3f4f6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  tagText: { fontSize: 12, color: '#4b5563' },
-  footer: { 
-    position: 'absolute', bottom: 0, left: 0, right: 0, 
-    backgroundColor: '#FFF', padding: 20, borderTopWidth: 1, 
-    borderColor: '#f3f4f6', flexDirection: 'row', gap: 15, 
-    paddingBottom: Platform.OS === 'ios' ? 35 : 20 
+  shippingTitle: { 
+    fontSize: 16, 
+    fontWeight: '600', 
+    color: '#1f2937', 
+    marginBottom: 5 
   },
-  quantitySelector: { 
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f3f4f6', 
-    borderRadius: 14, paddingHorizontal: 5 
+  shippingSub: { 
+    fontSize: 14, 
+    color: '#6b7280' 
   },
-  qtyBtn: { width: 35, height: 35, justifyContent: 'center', alignItems: 'center' },
-  qtyBtnText: { fontSize: 20, fontWeight: 'bold', color: '#1f2937' },
-  qtyText: { paddingHorizontal: 15, fontSize: 16, fontWeight: 'bold' },
-  addToCartBtn: { 
-    flex: 1, backgroundColor: '#7c3aed', borderRadius: 14, 
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center' 
+  tagsWrapper: { 
+    marginBottom: 25 
   },
-  addToCartText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
-  disabledBtn: { backgroundColor: '#d1d5db' }
+  tag: { 
+    backgroundColor: '#e5e7eb', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 16, 
+    marginRight: 8 
+  },
+  tagText: { 
+    fontSize: 14, 
+    color: '#374151' 
+  },
+  actionButtons: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    marginBottom: 20 
+  },
+  quantityDisplay: { 
+    backgroundColor: '#f8fafc', 
+    paddingHorizontal: 15, 
+    paddingVertical: 10, 
+    borderRadius: 12 
+  },
+  quantityText: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: '#1f2937' 
+  },
+  actionBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 12, 
+    paddingHorizontal: 20, 
+    borderRadius: 12, 
+    borderWidth: 1, 
+    borderColor: '#d1d5db' 
+  },
+  actionBtnOutline: { 
+    borderColor: '#f3e8ff', 
+    backgroundColor: '#FFF' 
+  },
+  actionBtnPrimary: { 
+    backgroundColor: '#7c3aed', 
+    shadowColor: '#7c3aed', 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.3, 
+    shadowRadius: 8, 
+    elevation: 5 
+  },
+  actionBtnDisabled: { 
+    backgroundColor: '#d1d5db', 
+    shadowOpacity: 0, 
+    elevation: 0 
+  },
+  actionBtnText: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    color: '#FFF' 
+  },
 });

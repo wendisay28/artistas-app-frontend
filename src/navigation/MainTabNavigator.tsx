@@ -38,7 +38,7 @@ interface TabItem {
 }
 
 const TAB_CONFIG: TabItem[] = [
-  { name: 'Home', label: 'Inicio', iconOutline: 'home-outline', iconFilled: 'home', component: HomeScreen },
+  { name: 'Home', label: 'BuscArt', iconOutline: 'home-outline', iconFilled: 'home', component: HomeScreen },
   { name: 'Favorites', label: 'Favoritos', iconOutline: 'heart-outline', iconFilled: 'heart', component: FavoritesScreen },
   { name: 'Contract', label: 'Contratar', iconOutline: 'add-circle-outline', iconFilled: 'add-circle', component: ContractsScreen },
   { name: 'Explorer', label: 'Explorar', iconOutline: 'compass-outline', iconFilled: 'compass', component: ExploreScreen },
