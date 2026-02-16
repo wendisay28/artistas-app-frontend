@@ -2,29 +2,27 @@
   "expo": {
     "name": "artistas-app-frontend",
     "slug": "artistas-app-frontend",
+    "owner": "wendisay29",
     "version": "1.0.0",
+    "scheme": [
+      "artistas-app-frontend",
+      "com.googleusercontent.apps.503562343837-8107on1n39ir43pq43ha301ui2hcsod3"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
-    "ios": {
-      "supportsTablet": true
-    },
+    "plugins": [
+      [
+        "react-native-vector-icons"
+      ]
+    ],
     "android": {
+      "package": "com.wendy.artistasapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+      }
     }
   }
 }
