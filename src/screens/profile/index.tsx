@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { auth } from '../../services/firebase/config';
 import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
@@ -12,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 // ── Profile components modernos
 import { ProfileHero } from '../../components/profile/header/Profilehero';
 import { ProfileIdentity } from '../../components/profile/header/Profileidentity';
+import { ProfileSkeleton } from '../../components/profile/header/ProfileSkeleton';
 import { TabBar } from '../../components/profile/shared/TabBar';
 import { BioModal } from '../../components/profile/modals/BioModal';
 import { PortfolioSection } from '../../components/profile/sections/PortfolioSection';
@@ -36,34 +38,47 @@ import { CategoryModal } from '../../components/profile/modals/CategoryModal';
 import { CompanyModal } from '../../components/profile/modals/CompanyModal';
 
 // ── Types
-import { Artist, TabItem, LiveRequest, Review } from '../../components/profile/types';
+import { Artist, TabItem, LiveRequest } from '../../components/profile/types';
 import { GalleryItem, FeaturedItem } from '../../services/api/portfolio';
 import { Service as APIService } from '../../services/api/services';
+import { Review as BackendReview } from '../../services/api/reviews';
 import { Colors } from '../../theme';
+import { servicesService } from '../../services/api/services';
+import { portfolioService } from '../../services/api/portfolio';
+import { reviewsService } from '../../services/api/reviews';
+import { eventsService } from '../../services/api/events';
+import { productsService } from '../../services/api/products';
 
-// ── Mock Data
-const mockReviews: Review[] = [
-  {
-    id: '1',
-    reviewerName: 'María González',
-    reviewerEmoji: '👩‍🎨',
-    reviewerAvatarGradient: ['#FF6B6B', '#4ECDC4'],
-    serviceName: 'Sesión de Retratos',
-    stars: 5,
-    text: 'Increíble experiencia! María capturó momentos perfectos con una sensibilidad artística única.',
-    date: 'Hace 2 días'
-  },
-  {
-    id: '2',
-    reviewerName: 'Carlos Rodríguez',
-    reviewerEmoji: '👨‍💼',
-    reviewerAvatarGradient: ['#45B7D1', '#96CEB4'],
-    serviceName: 'Fotografía de Producto',
-    stars: 4,
-    text: 'Muy profesional y creativa. Las fotos de mis productos quedaron espectaculares.',
-    date: 'Hace 1 semana'
-  },
-];
+// Tipo combinado para reseñas (compatible con componente y backend)
+type Review = {
+  id: string;
+  reviewerName: string;
+  reviewerEmoji: string;
+  reviewerAvatarGradient: [string, string];
+  serviceName: string;
+  stars: number;
+  text: string;
+  date: string;
+};
+
+// ── Helper para mapear reseñas del backend al formato del componente
+const mapBackendReviewToComponent = (backendReview: BackendReview): Review => ({
+  id: backendReview.id?.toString() || '',
+  reviewerName: backendReview.reviewerName || 'Anónimo',
+  reviewerEmoji: '👤',
+  reviewerAvatarGradient: ['#FF6B6B', '#4ECDC4'],
+  serviceName: backendReview.serviceName || 'Servicio',
+  stars: backendReview.rating || 5,
+  text: backendReview.text || '',
+  date: backendReview.createdAt ? new Date(backendReview.createdAt).toLocaleDateString('es', { 
+    day: 'numeric', 
+    month: 'short', 
+    year: 'numeric' 
+  }) : 'Reciente',
+});
+
+// ── Mock Data (temporal hasta conectar reseñas)
+// NOTA: Las reseñas ya se cargan desde backend, esto se puede eliminar
 
 // ── Configuración de tabs
 const MAIN_TABS: TabItem[] = [
@@ -91,6 +106,7 @@ export default function ProfileScreen() {
     saveExperience,
     saveSocialLinks,
     saveAvatar,
+    saveCoverImage,
   } = useProfileStore();
 
   const [activeMainTab, setActiveMainTab] = useState<string>('sobre');
@@ -192,18 +208,56 @@ export default function ProfileScreen() {
     };
   }, [effectiveArtist.info]);
 
-  // ── Mock data (temporal hasta conectar servicios/portafolio)
-  const mockServices: APIService[] = [];
-  const mockPortfolio: GalleryItem[] = [];
-  const mockVideos: FeaturedItem[] = [];
-  const mockLiveRequest: LiveRequest = {
-    id: '1',
-    title: 'Solicitud de sesión',
-    description: 'Cliente interesado en sesión de fotos',
-    offerAmount: '$150',
-    currency: 'COP',
-    secondsRemaining: 3600,
-  };
+  // ── Cargar datos reales desde backend
+  const [services, setServices] = useState<APIService[]>([]);
+  const [portfolio, setPortfolio] = useState<GalleryItem[]>([]);
+  const [videos, setVideos] = useState<FeaturedItem[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [calendarDays, setCalendarDays] = useState<any[]>([]);
+  const [schedule, setSchedule] = useState<any[]>([]);
+
+  // Cargar servicios, portafolio y reseñas al montar
+  useEffect(() => {
+    const loadProfileData = async () => {
+      try {
+        // Cargar servicios
+        const servicesData = await servicesService.getMyServices();
+        setServices(servicesData);
+
+        // Cargar portafolio
+        const portfolioData = await portfolioService.getMyPortfolio();
+        setPortfolio(portfolioData.photos);
+        setVideos(portfolioData.videos);
+
+        // Cargar reseñas
+        const reviewsData = await reviewsService.getMyReviews();
+        const mappedReviews = reviewsData.reviews.map(mapBackendReviewToComponent);
+        setReviews(mappedReviews);
+
+        // Cargar productos
+        const productsData = await productsService.getMyProducts();
+        setProducts(productsData);
+
+        // Cargar eventos
+        const eventsData = await eventsService.getMyEvents();
+        setEvents(eventsData);
+
+        // TODO: Cargar calendarDays y schedule cuando estén listos los servicios
+      } catch (error: any) {
+        // 401 = backend no tiene el usuario aún — silenciar
+        if (error?.response?.status !== 401) {
+          console.warn('Error loading profile data:', error);
+        }
+      }
+    };
+
+    loadProfileData();
+  }, []);
+
+  // ── Mock data (temporal hasta conectar reseñas)
+// NOTA: Las reseñas ya se cargan desde backend, esto se puede eliminar
 
   // ── Handlers
   const handleLogout = useCallback(() => {
@@ -222,19 +276,102 @@ export default function ProfileScreen() {
 
   // ── Modal handlers
   const handleEditProfile   = useCallback(() => setEditHeaderModalVisible(true), []);
-  const handleEditAvatar    = useCallback(async () => {
-    // TODO: abrir image picker y llamar saveAvatar(url)
-    console.log('Edit avatar');
+  
+  const handleEditAvatar = useCallback(async () => {
+    try {
+      // Request permissions
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permiso requerido', 'Necesitas dar permiso para acceder a tus fotos.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await saveAvatar(result.assets[0].uri);
+        Alert.alert('Éxito', 'Foto de perfil actualizada correctamente.');
+      }
+    } catch (error) {
+      console.error('Error al actualizar avatar:', error);
+      Alert.alert('Error', 'No se pudo actualizar tu foto de perfil.');
+    }
+  }, [saveAvatar]);
+
+  const handleEditCover = useCallback(async () => {
+    try {
+      // Request permissions
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permiso requerido', 'Necesitas dar permiso para acceder a tus fotos.');
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await saveCoverImage(result.assets[0].uri);
+        Alert.alert('Éxito', 'Imagen de portada actualizada correctamente.');
+      }
+    } catch (error) {
+      console.error('Error al actualizar cover:', error);
+      Alert.alert('Error', 'No se pudo actualizar tu imagen de portada.');
+    }
   }, []);
+
   const handleEditProInfo   = useCallback(() => setInfoProfesionalModalVisible(true), []);
   const handleEditExperience = useCallback(() => setExperienceModalVisible(true), []);
   const handleEditStudies   = useCallback(() => setStudiesModalVisible(true), []);
   const handleEditCategory  = useCallback(() => setCategoryModalVisible(true), []);
   const handleEditSocialLinks = useCallback(() => setSocialLinksModalVisible(true), []);
   const handleEditSobreMi   = useCallback(() => setBioModalVisible(true), []);
-  const handleAddService    = useCallback(() => setEditServiceModalVisible(true), []);
-  const handleAddProduct    = useCallback(() => setEditProductModalVisible(true), []);
-  const handleAddEvent      = useCallback(() => setEditEventModalVisible(true), []);
+  const handleAddService    = useCallback(async (serviceData: any) => {
+    try {
+      const newService = await servicesService.createService(serviceData);
+      setServices(prev => [...prev, newService]);
+      setEditServiceModalVisible(false);
+      Alert.alert('Éxito', 'Servicio creado correctamente.');
+    } catch (error) {
+      console.error('Error creating service:', error);
+      Alert.alert('Error', 'No se pudo crear el servicio.');
+    }
+  }, []);
+
+  const handleAddProduct    = useCallback(async (productData: any) => {
+    try {
+      const newProduct = await productsService.createProduct(productData);
+      setProducts(prev => [...prev, newProduct]);
+      setEditProductModalVisible(false);
+      Alert.alert('Éxito', 'Producto creado correctamente.');
+    } catch (error) {
+      console.error('Error creating product:', error);
+      Alert.alert('Error', 'No se pudo crear el producto.');
+    }
+  }, []);
+
+  const handleAddEvent      = useCallback(async (eventData: any) => {
+    try {
+      const newEvent = await eventsService.createEvent(eventData);
+      setEvents(prev => [...prev, newEvent]);
+      setEditEventModalVisible(false);
+      Alert.alert('Éxito', 'Evento creado correctamente.');
+    } catch (error) {
+      console.error('Error creating event:', error);
+      Alert.alert('Error', 'No se pudo crear el evento.');
+    }
+  }, []);
 
   // ── Modal save handlers — conectados al backend vía profileStore
 
@@ -332,16 +469,27 @@ export default function ProfileScreen() {
           <>
             <SobreMiSection
               artist={effectiveArtist}
-              services={mockServices}
-              portfolio={mockPortfolio}
-              videos={mockVideos}
-              reviews={mockReviews}
+              services={services}
+              portfolio={portfolio}
+              videos={videos}
+              reviews={reviews}
               onEditBio={handleEditSobreMi}
               onEditProInfo={handleEditProInfo}
               onEditExperience={handleEditExperience}
               onEditStudies={handleEditStudies}
               onEditCategory={handleEditCategory}
               onEditSocialLinks={handleEditSocialLinks}
+              onServicesUpdated={() => {
+                // Recargar servicios cuando se actualicen
+                servicesService.getMyServices().then(setServices);
+              }}
+              onPortfolioUpdated={() => {
+                // Recargar portafolio cuando se actualice
+                portfolioService.getMyPortfolio().then(data => {
+                  setPortfolio(data.photos);
+                  setVideos(data.videos);
+                });
+              }}
             />
             {/* Opción de convertir a empresa */}
             {effectiveArtist.isOwner && (
@@ -353,26 +501,26 @@ export default function ProfileScreen() {
                 <Ionicons
                   name={effectiveArtist.userType === 'company' ? 'business' : 'business-outline'}
                   size={18}
-                  color={effectiveArtist.userType === 'company' ? '#1E40AF' : Colors.text2}
+                  color={effectiveArtist.userType === 'company' ? '#1E40AF' : Colors.textMuted}
                 />
                 <Text style={styles.companyConvertText}>
                   {effectiveArtist.userType === 'company' ? 'Gestionar perfil de empresa' : 'Convertir a perfil de empresa'}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.text3} />
+                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
               </TouchableOpacity>
             )}
           </>
         );
       case 'tienda':
-        return <TiendaSection products={[]} isOwner={true} />;
+        return <TiendaSection products={products} isOwner={true} />;
       case 'eventos':
-        return <EventosSection events={[]} isOwner={true} />;
+        return <EventosSection events={events} isOwner={true} />;
       case 'agenda':
         return (
           <AgendaSection
-            liveRequest={mockLiveRequest}
-            calendarDays={[]}
-            schedule={[]}
+            liveRequest={undefined} // Sin live requests por ahora
+            calendarDays={calendarDays}
+            schedule={schedule}
             isOwner={true}
           />
         );
@@ -383,54 +531,50 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <TopBar
-        title={effectiveArtist.handle}
-        topInset={insets.top}
-        usernameMode
-      />
-
-      {/* Indicador de guardado */}
-      {isSaving && (
-        <View style={styles.savingBanner}>
-          <ActivityIndicator size="small" color={Colors.primary} />
-          <Text style={styles.savingText}>Guardando...</Text>
-        </View>
-      )}
-
+      <TopBar title="Mi perfil" topInset={insets.top} />
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
-        {/* Loading overlay mientras carga el perfil por primera vez */}
-        {isLoading && !artistData && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
+        {/* Loading skeleton mientras carga el perfil por primera vez */}
+        {isLoading && !artistData ? (
+          <ProfileSkeleton />
+        ) : (
+          <>
+            {/* Indicador de guardado */}
+            {isSaving && (
+              <View style={styles.savingBanner}>
+                <ActivityIndicator size="small" color={Colors.primary} />
+                <Text style={styles.savingText}>Guardando...</Text>
+              </View>
+            )}
+
+            <ProfileHero
+              coverImage={effectiveArtist.coverImage ?? 'https://picsum.photos/800/300?random=cover'}
+              isOwner={true}
+              onEditCover={handleEditCover}
+            />
+
+            <ProfileIdentity
+              artist={effectiveArtist}
+              onEditProfile={handleEditProfile}
+              onEditAvatar={handleEditAvatar}
+            />
+
+            <View style={styles.mainTabsContainer}>
+              <TabBar
+                tabs={MAIN_TABS}
+                active={activeMainTab}
+                onSelect={setActiveMainTab}
+              />
+            </View>
+
+            <View style={styles.content}>
+              {renderContent()}
+            </View>
+          </>
         )}
-
-        <ProfileHero
-          coverImage={effectiveArtist.coverImage ?? 'https://picsum.photos/800/300?random=cover'}
-          isOwner={true}
-        />
-
-        <ProfileIdentity
-          artist={effectiveArtist}
-          onEditProfile={handleEditProfile}
-          onEditAvatar={handleEditAvatar}
-        />
-
-        <View style={styles.mainTabsContainer}>
-          <TabBar
-            tabs={MAIN_TABS}
-            active={activeMainTab}
-            onSelect={setActiveMainTab}
-          />
-        </View>
-
-        <View style={styles.content}>
-          {renderContent()}
-        </View>
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
@@ -579,6 +723,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontFamily: 'PlusJakartaSans_500Medium',
-    color: Colors.text2,
+    color: Colors.textMuted,
   },
 });

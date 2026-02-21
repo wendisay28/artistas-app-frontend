@@ -25,6 +25,7 @@ interface AuthActions {
   setLoading: (value: boolean) => void;
   setError: (error: string | null) => void;
   setProfileComplete: (value: boolean) => void;
+  setPendingRole: (role: 'client' | 'artist') => void;
   logout: () => void;
   setTempUser: (tempUser: TempUserData) => void;
   clearTempUser: () => void;
@@ -39,11 +40,12 @@ const initialState: AuthState = {
   error: null,
 };
 
-export const useAuthStore = create<AuthState & AuthActions & { tempUser: TempUserData | null }>()(
+export const useAuthStore = create<AuthState & AuthActions & { tempUser: TempUserData | null; pendingRole: 'client' | 'artist' | null }>()(
   persist(
     (set) => ({
       ...initialState,
       tempUser: null,
+      pendingRole: null,
 
       setUser: (user) =>
         set({ user, isAuthenticated: true, isProfileComplete: user.isProfileComplete }),
@@ -56,22 +58,24 @@ export const useAuthStore = create<AuthState & AuthActions & { tempUser: TempUse
 
       setProfileComplete: (isProfileComplete) => set({ isProfileComplete }),
 
+      setPendingRole: (pendingRole) => set({ pendingRole }),
+
       setTempUser: (tempUser) => set({ tempUser }),
 
       clearTempUser: () => set({ tempUser: null }),
 
       // Limpia todo el estado al hacer logout
-      logout: () => set({ ...initialState, isLoading: false, tempUser: null }),
+      logout: () => set({ ...initialState, isLoading: false, tempUser: null, pendingRole: null }),
     }),
     {
       name: 'buscartpro-auth',
       storage: createJSONStorage(() => AsyncStorage),
-      // Solo persistir datos no sensibles (token va a SecureStore)
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         isProfileComplete: state.isProfileComplete,
         tempUser: state.tempUser,
+        pendingRole: state.pendingRole,
       }),
     }
   )

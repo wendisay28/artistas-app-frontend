@@ -1,17 +1,16 @@
 // src/navigation/AppNavigator.tsx
 import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { onAuthChange } from '../services/firebase/auth';
 import { getMyProfile } from '../services/api/users';
 import { AuthStack } from './AuthStack';
 import { MainTabNavigator } from './MainTabNavigator';
-import { SetupProfileScreen } from '../screens/auth/setup-profile';
+import OnboardingScreen from '../screens/auth/onboarding';
+import { SplashScreen } from '../screens/auth/splash';
 
-// Configuración para web
 const linking = {
-  prefixes: ['http://localhost:8081', 'https://auth.expo.io/@wendisay29/artistas-app-frontend'],
+  prefixes: ['http://localhost:8081'],
   config: {
     screens: {
       Auth: 'auth',
@@ -21,7 +20,7 @@ const linking = {
 };
 
 export const AppNavigator = () => {
-  const { isAuthenticated, isProfileComplete, isLoading, setUser, setLoading, logout } = useAuthStore();
+  const { isAuthenticated, isProfileComplete, isLoading, user, setUser, setLoading, logout } = useAuthStore();
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
@@ -30,51 +29,71 @@ export const AppNavigator = () => {
         setLoading(false);
         return;
       }
+
+      // Si el perfil ya está completo en el store, no re-sincronizar
+      // (evita resetear isProfileComplete cuando Firebase refresca el token)
+      const { isProfileComplete: alreadyComplete } = useAuthStore.getState();
+      if (alreadyComplete) {
+        setLoading(false);
+        return;
+      }
+
+      // Si el usuario es artista y no tiene perfil completo, no intentar verificar BD
+      // Dejar que el onboarding cree el perfil desde cero
+      const { user: currentUser } = useAuthStore.getState();
+      if (currentUser?.role === 'artist' && !currentUser?.isProfileComplete) {
+        console.log('🎨 Artista necesita onboarding, omitiendo verificación de BD');
+        setLoading(false);
+        return;
+      }
+
       try {
         const profile = await getMyProfile();
         setUser(profile);
-      } catch {
-        setUser({
-          id: firebaseUser.uid,
-          firebaseUid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          displayName: firebaseUser.displayName || '',
-          photoURL: firebaseUser.photoURL || null,
-          role: 'client',
-          isCompany: false,
-          city: null,
-          bio: null,
-          isProfileComplete: false,
-          createdAt: '',
-          updatedAt: '',
-        });
+      } catch (error) {
+        console.log('🔄 Usuario no encontrado en BD, necesita onboarding');
+        // No es error, es usuario nuevo que necesita onboarding
+        // Solo establecer fallback si no hay usuario ya en el store
+        const { user: existingUser, pendingRole } = useAuthStore.getState();
+        if (!existingUser) {
+          setUser({
+            id: firebaseUser.uid,
+            firebaseUid: firebaseUser.uid,
+            email: firebaseUser.email || '',
+            displayName: firebaseUser.displayName || '',
+            username: '', // Campo requerido, vacío inicialmente
+            photoURL: firebaseUser.photoURL || null,
+            role: (pendingRole as any) || 'client',
+            isCompany: false,
+            city: null,
+            bio: null,
+            isProfileComplete: false,
+            createdAt: '',
+            updatedAt: '',
+          });
+        }
       }
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
+  // Splash mientras Firebase resuelve el estado inicial
   if (isLoading) {
-    return (
-      <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#7C3AED" />
-      </View>
-    );
+    return <SplashScreen />;
   }
 
-  // Tres ramas: no autenticado → onboarding; autenticado sin perfil completo → setup; perfil completo → app
-  const showAuth = !isAuthenticated;
-  const showSetupProfile = isAuthenticated && !isProfileComplete;
+  // Artista autenticado sin perfil → onboarding
+  // IMPORTANTE: Solo mostrar onboarding si el usuario no existe en BD o no tiene perfil completo
+  const showSetupProfile = isAuthenticated && user?.role === 'artist' && !isProfileComplete;
 
   return (
     <NavigationContainer linking={linking}>
-      {showAuth && <AuthStack />}
-      {showSetupProfile && <SetupProfileScreen />}
-      {isAuthenticated && isProfileComplete && <MainTabNavigator />}
+      {!isAuthenticated && <AuthStack />}
+      {showSetupProfile && <OnboardingScreen />}
+      {isAuthenticated && (isProfileComplete || user?.role === 'client') && !showSetupProfile && (
+        <MainTabNavigator />
+      )}
     </NavigationContainer>
   );
 };
-
-const styles = StyleSheet.create({
-  splash: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8F9FA' },
-});

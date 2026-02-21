@@ -14,6 +14,10 @@ const config: ExpoConfig = {
   ios: {
     bundleIdentifier: "com.wendy.artistasapp",
     supportsTablet: true,
+    infoPlist: {
+      NSLocationWhenInUseUsageDescription:
+        "BuscArt usa tu ubicación para mostrarte artistas cercanos y ayudarte a conectar con clientes en tu zona.",
+    },
   },
   android: {
     package: "com.wendy.artistasapp",
@@ -21,8 +25,21 @@ const config: ExpoConfig = {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
+    permissions: ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
   },
-  plugins: ["expo-web-browser", "expo-secure-store", "expo-apple-authentication", "expo-font"],
+  plugins: [
+    "expo-web-browser",
+    "expo-secure-store",
+    "expo-apple-authentication",
+    "expo-font",
+    [
+      "expo-location",
+      {
+        locationWhenInUsePermission:
+          "BuscArt usa tu ubicación para mostrarte artistas cercanos y ayudarte a conectar con clientes en tu zona.",
+      },
+    ],
+  ],
   extra: {
     eas: {
       projectId: "69ddbf0f-2791-467c-a689-f46fd6636e3f",

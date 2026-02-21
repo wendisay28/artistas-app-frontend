@@ -9,6 +9,7 @@ export interface UserProfile {
   firebaseUid: string;
   email: string;
   displayName: string;
+  username: string;
   photoURL: string | null;
   role: UserRole;
   /** Dentro de la app, artista o cliente pueden pasar a empresa. */

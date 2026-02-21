@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { colors } from '../../constants/colors';
 import { auth } from '../../services/firebase/config';
 import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
+import { PortalAutorScreen } from '../../screens/artist/PortalAutorScreen';
 
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.65;
 
@@ -49,6 +50,7 @@ export default function TopBar({
   const user = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [portalVisible, setPortalVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
 
@@ -104,8 +106,16 @@ export default function TopBar({
   const menuOptions: MenuOption[] = [
     {
       icon: 'person-outline',
-      label: 'Mi perfil',
+      label: user?.displayName || user?.email || 'Mi perfil',
       onPress: () => closeDrawer(),
+    },
+    {
+      icon: 'star-outline',
+      label: 'Portal del Autor',
+      onPress: () => {
+        closeDrawer();
+        setTimeout(() => setPortalVisible(true), 280);
+      },
     },
     {
       icon: 'settings-outline',
@@ -151,7 +161,9 @@ export default function TopBar({
             <Text style={styles.usernameTitle} numberOfLines={1}>
               {title}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={colors.text} style={{ marginLeft: 2, marginTop: 1 }} />
+            <View style={{ marginLeft: 2, marginTop: 1 }}>
+              <Ionicons name="chevron-down" size={16} color={colors.text} />
+            </View>
           </View>
         ) : (
           <Text style={[styles.title, { marginLeft: 0 }]} numberOfLines={1}>
@@ -182,11 +194,23 @@ export default function TopBar({
               </View>
             )}
             {!usernameMode && (
-              <Ionicons name="chevron-down" size={13} color={colors.textSecondary} style={{ marginLeft: 2 }} />
+              <View style={{ marginLeft: 2 }}>
+                <Ionicons name="chevron-down" size={13} color={colors.textSecondary} />
+              </View>
             )}
           </Pressable>
         </View>
       </View>
+
+      {/* Portal del Autor — fullscreen modal */}
+      <Modal
+        visible={portalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPortalVisible(false)}
+      >
+        <PortalAutorScreen onClose={() => setPortalVisible(false)} />
+      </Modal>
 
       {/* Side Drawer */}
       <Modal

@@ -8,7 +8,9 @@ export const registerOrSyncUser = async (
   _payload?: CreateUserPayload
 ): Promise<UserProfile> => {
   // El backend sincroniza automáticamente usando el token de Firebase (authMiddleware)
+  console.log('[users.ts] Intentando sincronizar usuario...');
   const { data } = await apiClient.get<{ success: boolean; user: UserProfile }>('/auth/sync');
+  console.log('[users.ts] Sincronización exitosa:', data.success);
   return data.user;
 };
 
@@ -45,6 +47,7 @@ export const updateMyProfile = async (
 
 export interface SetupProfilePayload {
   displayName: string;
+  username: string;
   photoURL?: string;
   role: UserRole;
   city?: string;

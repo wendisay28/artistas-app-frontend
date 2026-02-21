@@ -1,73 +1,300 @@
 // src/screens/auth/setup-profile/index.tsx
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { useSetupProfile } from './hooks/useSetupProfile';
-import { StepIndicator } from './components/StepIndicator';
-import { AvatarPicker } from './components/AvatarPicker';
-import { RoleSelector } from './components/RoleSelector';
-import { useAuthStore } from '../../../store/authStore';
 
-export const SetupProfileScreen = () => {
-  const { error } = useAuthStore();
+const SetupProfileScreen = () => {
   const {
-    step, displayName, setDisplayName, photoURI, pickPhoto,
-    role, setRole, isLoading, goNextStep, goPrevStep, submitProfile,
+    displayName, setDisplayName,
+    username, setUsername,
+    photoURI, pickPhoto,
+    city, setCity,
+    bio, setBio,
+    isLoading,
+    saveProfile
   } = useSetupProfile();
 
-  const canProceed = step === 1 ? displayName.trim().length > 0 : step === 2 ? !!role : true;
+  const handleSave = async () => {
+    const result = await saveProfile();
+    if (result.success) {
+      Alert.alert('Éxito', 'Tu perfil ha sido actualizado correctamente');
+    }
+  };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <StepIndicator total={2} current={step} />
-
-        <View style={styles.content}>
-          {step === 1 && (
-            <AvatarPicker
-              photoURI={photoURI}
-              displayName={displayName}
-              onPickPhoto={pickPhoto}
-              onChangeName={setDisplayName}
-            />
-          )}
-          {step === 2 && (
-            <RoleSelector selectedRole={role} onSelect={setRole} />
-          )}
-        </View>
-
-        {error && <Text style={styles.error}>{error}</Text>}
-
-        <View style={styles.footer}>
-          {step > 1 && (
-            <TouchableOpacity style={styles.backBtn} onPress={goPrevStep}>
-              <Text style={styles.backText}>← Atrás</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[styles.nextBtn, !canProceed && styles.nextBtnDisabled]}
-            onPress={step < 2 ? goNextStep : submitProfile}
-            disabled={!canProceed || isLoading}
-          >
-            {isLoading
-              ? <ActivityIndicator color="#FFF" />
-              : <Text style={styles.nextText}>{step < 2 ? 'Continuar' : 'Empezar'}</Text>
-            }
-          </TouchableOpacity>
+    <View style={{ flex: 1, backgroundColor: '#0f0f23' }}>
+      {/* Header */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 60, paddingBottom: 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ 
+            width: 40, height: 40, borderRadius: 20, 
+            backgroundColor: 'rgba(124,58,237,0.1)', 
+            justifyContent: 'center', alignItems: 'center' 
+          }}>
+            <Ionicons name="settings" size={20} color="#7c3aed" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 20, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' }}>
+              Editar Perfil
+            </Text>
+            <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: '#9ca3af', marginTop: 2 }}>
+              Actualiza tu información personal
+            </Text>
+          </View>
         </View>
       </View>
-    </SafeAreaView>
+
+      {/* Content */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+        {/* Photo Upload */}
+        <View style={{ alignItems: 'center', marginTop: 20 }}>
+          <TouchableOpacity 
+            onPress={pickPhoto}
+            style={{ 
+              position: 'relative', 
+              width: 120, 
+              height: 120, 
+              borderRadius: 60 
+            }}
+          >
+            {photoURI ? (
+              <Image 
+                source={{ uri: photoURI }} 
+                style={{ 
+                  width: 120, 
+                  height: 120, 
+                  borderRadius: 60 
+                }} 
+              />
+            ) : (
+              <LinearGradient 
+                colors={['#7c3aed', '#a855f7']} 
+                style={{ 
+                  width: 120, 
+                  height: 120, 
+                  borderRadius: 60, 
+                  justifyContent: 'center', 
+                  alignItems: 'center' 
+                }}
+              >
+                <Ionicons name="camera" size={30} color="#fff" />
+              </LinearGradient>
+            )}
+            <View style={{
+              position: 'absolute',
+              bottom: 0,
+              right: 0,
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: '#7c3aed',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderWidth: 3,
+              borderColor: '#0f0f23'
+            }}>
+              <Ionicons name="pencil" size={16} color="#fff" />
+            </View>
+          </TouchableOpacity>
+          <Text style={{ 
+            fontSize: 13, 
+            fontFamily: 'PlusJakartaSans_400Regular', 
+            color: '#9ca3af', 
+            marginTop: 8 
+          }}>
+            Toca para cambiar foto
+          </Text>
+        </View>
+
+        {/* Form Fields */}
+        <View style={{ marginTop: 32, gap: 20 }}>
+          {/* Display Name */}
+          <View>
+            <Text style={{ 
+              fontSize: 14, 
+              fontFamily: 'PlusJakartaSans_500Medium', 
+              color: '#e5e7eb', 
+              marginBottom: 8 
+            }}>
+              Nombre Artístico
+            </Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: 'rgba(255,255,255,0.05)', 
+              borderRadius: 12, 
+              borderWidth: 1, 
+              borderColor: 'rgba(255,255,255,0.1)' 
+            }}>
+              <View style={{ paddingLeft: 16 }}>
+                <Ionicons name="person" size={20} color="#9ca3af" />
+              </View>
+              <TextInput
+                style={{ 
+                  flex: 1, 
+                  color: '#fff', 
+                  fontSize: 16, 
+                  fontFamily: 'PlusJakartaSans_400Regular', 
+                  paddingVertical: 16, 
+                  paddingHorizontal: 12 
+                }}
+                placeholder="Tu nombre artístico"
+                placeholderTextColor="#6b7280"
+                value={displayName}
+                onChangeText={setDisplayName}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+
+          {/* Username */}
+          <View>
+            <Text style={{ 
+              fontSize: 14, 
+              fontFamily: 'PlusJakartaSans_500Medium', 
+              color: '#e5e7eb', 
+              marginBottom: 8 
+            }}>
+              Nombre de Usuario
+            </Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: 'rgba(255,255,255,0.05)', 
+              borderRadius: 12, 
+              borderWidth: 1, 
+              borderColor: 'rgba(255,255,255,0.1)' 
+            }}>
+              <View style={{ paddingLeft: 16 }}>
+                <Ionicons name="at" size={20} color="#9ca3af" />
+              </View>
+              <TextInput
+                style={{ 
+                  flex: 1, 
+                  color: '#fff', 
+                  fontSize: 16, 
+                  fontFamily: 'PlusJakartaSans_400Regular', 
+                  paddingVertical: 16, 
+                  paddingHorizontal: 12 
+                }}
+                placeholder="@nombredeusuario"
+                placeholderTextColor="#6b7280"
+                value={username}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          </View>
+
+          {/* City */}
+          <View>
+            <Text style={{ 
+              fontSize: 14, 
+              fontFamily: 'PlusJakartaSans_500Medium', 
+              color: '#e5e7eb', 
+              marginBottom: 8 
+            }}>
+              Ciudad
+            </Text>
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              backgroundColor: 'rgba(255,255,255,0.05)', 
+              borderRadius: 12, 
+              borderWidth: 1, 
+              borderColor: 'rgba(255,255,255,0.1)' 
+            }}>
+              <View style={{ paddingLeft: 16 }}>
+                <Ionicons name="location" size={20} color="#9ca3af" />
+              </View>
+              <TextInput
+                style={{ 
+                  flex: 1, 
+                  color: '#fff', 
+                  fontSize: 16, 
+                  fontFamily: 'PlusJakartaSans_400Regular', 
+                  paddingVertical: 16, 
+                  paddingHorizontal: 12 
+                }}
+                placeholder="Tu ciudad"
+                placeholderTextColor="#6b7280"
+                value={city}
+                onChangeText={setCity}
+              />
+            </View>
+          </View>
+
+          {/* Bio */}
+          <View>
+            <Text style={{ 
+              fontSize: 14, 
+              fontFamily: 'PlusJakartaSans_500Medium', 
+              color: '#e5e7eb', 
+              marginBottom: 8 
+            }}>
+              Biografía
+            </Text>
+            <View style={{ 
+              backgroundColor: 'rgba(255,255,255,0.05)', 
+              borderRadius: 12, 
+              borderWidth: 1, 
+              borderColor: 'rgba(255,255,255,0.1)',
+              paddingHorizontal: 16,
+              paddingVertical: 12
+            }}>
+              <TextInput
+                style={{ 
+                  flex: 1, 
+                  color: '#fff', 
+                  fontSize: 16, 
+                  fontFamily: 'PlusJakartaSans_400Regular', 
+                  minHeight: 80,
+                  textAlignVertical: 'top'
+                }}
+                placeholder="Cuéntanos sobre ti..."
+                placeholderTextColor="#6b7280"
+                value={bio}
+                onChangeText={setBio}
+                multiline
+                numberOfLines={4}
+              />
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Footer */}
+      <BlurView intensity={80} tint="dark" style={{ 
+        paddingHorizontal: 20, 
+        paddingTop: 16, 
+        paddingBottom: 28 
+      }}>
+        <TouchableOpacity
+          onPress={handleSave}
+          disabled={isLoading}
+          style={{
+            backgroundColor: '#7c3aed',
+            borderRadius: 12,
+            paddingVertical: 16,
+            alignItems: 'center',
+            opacity: isLoading ? 0.6 : 1
+          }}
+        >
+          <Text style={{
+            color: '#fff',
+            fontSize: 16,
+            fontFamily: 'PlusJakartaSans_600SemiBold'
+          }}>
+            {isLoading ? 'Guardando...' : 'Guardar Cambios'}
+          </Text>
+        </TouchableOpacity>
+      </BlurView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F8F9FA' },
-  container: { flex: 1, paddingHorizontal: 24, paddingTop: 16, paddingBottom: 32 },
-  content: { flex: 1 },
-  error: { color: '#E84393', textAlign: 'center', fontSize: 13, marginBottom: 12 },
-  footer: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  backBtn: { paddingHorizontal: 16, paddingVertical: 14 },
-  backText: { fontSize: 15, color: '#636E72', fontWeight: '600' },
-  nextBtn: { flex: 1, height: 52, borderRadius: 14, backgroundColor: '#6C5CE7', justifyContent: 'center', alignItems: 'center' },
-  nextBtnDisabled: { backgroundColor: '#DFE6E9' },
-  nextText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-});
+export default SetupProfileScreen;

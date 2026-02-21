@@ -3,6 +3,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../services/firebase/config';
 import {
   getMyUserProfile,
   getMyArtistProfile,
@@ -14,9 +15,16 @@ import {
   BackendUser,
   BackendArtist,
 } from '../services/api/profile';
+import { registerOrSyncUser } from '../services/api/users';
 import type { Artist, ArtistTag, StudyDetail, WorkExperienceDetail, CertificationDetail } from '../components/profile/types';
 
 // ── Helpers de mapeo backend → frontend ──────────────────────────────────────
+
+const formatNumber = (num: number): string => {
+  if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+  return String(num);
+};
 
 function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, firebaseUser?: { uid: string; photoURL?: string | null; displayName?: string | null }): Artist {
   const displayName = user.displayName
@@ -46,11 +54,12 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
     // Descripción larga del artista (Sobre mí completo)
     description: artist?.description ?? '',
     tags,
+    // Estadísticas reales desde backend
     stats: [
-      { value: '0', label: 'Obras' },
-      { value: '5.0', label: 'Rating' },
-      { value: '0', label: 'Seguidores' },
-      { value: '0', label: 'Visitas' },
+      { value: formatNumber(user.worksCount ?? 0), label: 'Obras' },
+      { value: (user.rating ?? 5.0).toFixed(1), label: 'Rating' },
+      { value: formatNumber(user.followersCount ?? 0), label: 'Seguidores' },
+      { value: formatNumber(user.viewsCount ?? 0), label: 'Visitas' },
     ],
     socialLinks: [],
     info,
@@ -116,12 +125,14 @@ interface ProfileActions {
   saveStudies: (studies: StudyDetail[]) => Promise<void>;
   /** Guarda la experiencia laboral */
   saveExperience: (workExperience: WorkExperienceDetail[]) => Promise<void>;
-  /** Guarda los links de redes sociales (solo local por ahora, sin endpoint dedicado) */
-  saveSocialLinks: (data: { instagram: string; x: string; youtube: string; spotify: string }) => void;
+  /** Guarda los links de redes sociales (ahora con backend) */
+  saveSocialLinks: (data: { instagram: string; x: string; youtube: string; spotify: string }) => Promise<void>;
   /** Guarda la descripción/bio (texto libre del "Acerca de mí") */
   saveBio: (bio: string) => Promise<void>;
   /** Actualiza el avatar en el backend */
   saveAvatar: (imageUrl: string) => Promise<void>;
+  /** Actualiza la imagen de portada en el backend */
+  saveCoverImage: (imageUrl: string) => Promise<void>;
   /** Convierte el perfil a empresa */
   convertToCompany: (companyData: {
     companyName: string;
@@ -169,9 +180,52 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
 
           set({ artistData: mapped, isLoading: false, lastSynced: Date.now() });
         } catch (e: any) {
-          console.error('[profileStore] loadProfile error:', e);
-          // Si falla la carga, mantener datos cacheados pero reportar error
-          set({ isLoading: false, error: e?.message ?? 'Error al cargar el perfil' });
+          console.warn('[profileStore] loadProfile error:', e);
+          
+          // Si el backend falla (401, 404, 500), crear perfil local desde Firebase
+          if (e?.response?.status >= 400 || !e?.response) {
+            console.log('[profileStore] Backend no disponible, usando perfil local desde Firebase');
+            const firebaseUser = auth.currentUser;
+            if (firebaseUser) {
+              const fallbackProfile: Artist = {
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName || 'Artista',
+                handle: `@${(firebaseUser.displayName || 'artista').toLowerCase().replace(/\s+/g, '_')}`,
+                location: '',
+                avatar: firebaseUser.photoURL || '',
+                isVerified: false,
+                isOnline: true,
+                bio: '',
+                tags: [],
+                stats: [
+                  { value: '0', label: 'Obras' },
+                  { value: '5.0', label: 'Rating' },
+                  { value: '0', label: 'Seguidores' },
+                  { value: '0', label: 'Visitas' },
+                ],
+                socialLinks: [],
+                info: [],
+                isOwner: true,
+                role: '',
+                specialty: '',
+                niche: '',
+                studies: [],
+                workExperience: [],
+                certifications: [],
+                yearsOfExperience: 0,
+                artistId: undefined,
+                userType: 'artist',
+                companyName: undefined,
+                companyDescription: undefined,
+                availability: 'available',
+              };
+              
+              set({ artistData: fallbackProfile, isLoading: false, error: 'Modo offline - Backend no disponible' });
+              return;
+            }
+          }
+          
+          set({ isLoading: false, error: e?.message || 'Error cargando perfil' });
         }
       },
 
@@ -221,7 +275,18 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           set({ isSaving: false });
         } catch (e: any) {
           console.error('[profileStore] saveHeader error:', e);
-          // Rollback
+          
+          // Si el backend falla, mantener los cambios localmente y mostrar advertencia
+          if (e?.response?.status >= 400 || !e?.response) {
+            console.log('[profileStore] Backend no disponible, cambios guardados localmente');
+            set({ 
+              isSaving: false, 
+              error: 'Cambios guardados localmente - Backend no disponible' 
+            });
+            return;
+          }
+          
+          // Rollback solo para errores inesperados
           set({ artistData: prev, isSaving: false, error: e?.message ?? 'Error al guardar' });
           throw e;
         }
@@ -338,9 +403,10 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
         }
       },
 
-      saveSocialLinks: (data) => {
-        // Los social links se guardan en info[] del artistData local
-        // No hay endpoint dedicado en el backend por ahora
+      saveSocialLinks: async (data) => {
+        set({ isSaving: true, error: null });
+        
+        // Optimistic update: actualizar info[] con los valores nuevos
         set((s) => {
           if (!s.artistData) return s;
           const baseInfo = s.artistData.info.filter(i =>
@@ -359,6 +425,21 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
             },
           };
         });
+
+        try {
+          // Guardar en backend
+          await updateUserProfile({
+            instagramUrl: data.instagram ? `https://instagram.com/${data.instagram.replace('@', '')}` : undefined,
+            twitterUrl: data.x ? `https://twitter.com/${data.x.replace('@', '')}` : undefined,
+            youtubeUrl: data.youtube ? `https://youtube.com/@${data.youtube}` : undefined,
+            spotifyUrl: data.spotify ? `https://open.spotify.com/artist/${data.spotify}` : undefined,
+          });
+          set({ isSaving: false });
+        } catch (e: any) {
+          console.error('[profileStore] saveSocialLinks error:', e);
+          set({ isSaving: false, error: e?.message ?? 'Error al guardar redes sociales' });
+          throw e;
+        }
       },
 
       saveBio: async (bio) => {
@@ -389,6 +470,21 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           set({ isSaving: false });
         } catch (e: any) {
           console.error('[profileStore] saveAvatar error:', e);
+          set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
+          throw e;
+        }
+      },
+
+      saveCoverImage: async (imageUrl) => {
+        set({ isSaving: true, error: null });
+        set((s) => ({
+          artistData: s.artistData ? { ...s.artistData, coverImage: imageUrl } : s.artistData,
+        }));
+        try {
+          await updateUserProfile({ coverImageUrl: imageUrl });
+          set({ isSaving: false });
+        } catch (e: any) {
+          console.error('[profileStore] saveCoverImage error:', e);
           set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
           throw e;
         }

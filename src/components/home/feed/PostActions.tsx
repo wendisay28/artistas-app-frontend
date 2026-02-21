@@ -13,6 +13,7 @@ interface PostActionsProps {
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
+  onSave?: () => void;
 }
 
 export const PostActions: React.FC<PostActionsProps> = ({
@@ -20,13 +21,20 @@ export const PostActions: React.FC<PostActionsProps> = ({
   onLike,
   onComment,
   onShare,
+  onSave,
 }) => {
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState<boolean>(!!post.isLiked);
+  const [isSaved, setIsSaved] = useState<boolean>(!!post.isSaved);
   const [isInspired, setIsInspired] = useState(false);
 
   const handleLike = () => {
-    setIsLiked(!isLiked);
+    setIsLiked((prev) => !prev);
     onLike?.();
+  };
+
+  const handleSave = () => {
+    setIsSaved((prev) => !prev);
+    onSave?.();
   };
 
   const handleInspiration = () => {
@@ -75,10 +83,14 @@ export const PostActions: React.FC<PostActionsProps> = ({
 
       <View style={styles.rightActions}>
         {/* Bookmark */}
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="bookmark-outline" size={18} color="#6b7280" />
+        <TouchableOpacity style={styles.actionButton} onPress={handleSave}>
+          <Ionicons
+            name={isSaved ? 'bookmark' : 'bookmark-outline'}
+            size={18}
+            color={isSaved ? '#9333ea' : '#6b7280'}
+          />
           {post.saveCount > 0 && (
-            <Text style={styles.actionText}>{post.saveCount}</Text>
+            <Text style={[styles.actionText, isSaved && styles.savedText]}>{post.saveCount}</Text>
           )}
         </TouchableOpacity>
 
@@ -125,5 +137,8 @@ const styles = StyleSheet.create({
   },
   inspiredText: {
     color: '#8b5cf6',
+  },
+  savedText: {
+    color: '#9333ea',
   },
 });

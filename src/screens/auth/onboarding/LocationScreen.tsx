@@ -1,224 +1,186 @@
 // src/screens/auth/onboarding/LocationScreen.tsx
+// Pantalla de permiso de ubicación
+
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../../constants/colors';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParams } from '../../../navigation/AuthStack';
-
-type LocationData = {
-  country: string;
-  state: string;
-  city: string;
-};
+import { GradientButton } from '../../../components/ui/GradientButton';
 
 type Props = NativeStackScreenProps<AuthStackParams, 'Location'>;
 
-export const LocationScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { userType } = route.params as { userType: 'client' | 'artist' };
-  
-  const [location, setLocation] = useState<LocationData>({
-    country: 'Colombia',
-    state: '',
-    city: '',
-  });
+export const LocationScreen: React.FC<Props> = ({ navigation }) => {
+  const [loading, setLoading] = useState(false);
 
-  const [errors, setErrors] = useState<Partial<LocationData>>({});
-
-  const validateForm = () => {
-    const newErrors: Partial<LocationData> = {};
-    
-    if (location.state.length < 2) {
-      newErrors.state = 'Mínimo 2 caracteres';
-    }
-    
-    if (location.city.length < 2) {
-      newErrors.city = 'Mínimo 2 caracteres';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleAllow = async () => {
+    setLoading(true);
+    // TODO: implementar expo-location permission request
+    // const { status } = await Location.requestForegroundPermissionsAsync();
+    setTimeout(() => {
+      setLoading(false);
+      navigation.navigate('ClientHome');
+    }, 600);
   };
 
-  const handleContinue = () => {
-    if (!validateForm()) return;
-
-    // Guardar ubicación en AsyncStorage o estado global
-    // TODO: Implementar persistencia de ubicación
-
-    if (userType === 'client') {
-      navigation.navigate('Explore');
-    } else {
-      navigation.navigate('ArtistForm');
-    }
-  };
-
-  const handleUseCurrentLocation = () => {
-    // TODO: Implementar geolocalización
-    console.log('Obtener ubicación actual');
+  const handleSkip = () => {
+    navigation.navigate('ClientHome');
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>¿Dónde te encuentras?</Text>
-          <Text style={styles.subtitle}>Te mostramos artistas cerca de ti</Text>
-        </View>
+      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>País</Text>
-            <TouchableOpacity style={styles.selectInput}>
-              <Text style={styles.selectText}>{location.country}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Estado/Departamento</Text>
-            <TextInput
-              style={[styles.input, errors.state && styles.inputError]}
-              value={location.state}
-              onChangeText={(text) => {
-                setLocation(prev => ({ ...prev, state: text }));
-                if (errors.state) setErrors(prev => ({ ...prev, state: undefined }));
-              }}
-              placeholder="Ej: Antioquia"
-              placeholderTextColor={colors.textSecondary}
-            />
-            {errors.state && <Text style={styles.errorText}>{errors.state}</Text>}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Ciudad</Text>
-            <TextInput
-              style={[styles.input, errors.city && styles.inputError]}
-              value={location.city}
-              onChangeText={(text) => {
-                setLocation(prev => ({ ...prev, city: text }));
-                if (errors.city) setErrors(prev => ({ ...prev, city: undefined }));
-              }}
-              placeholder="Ej: Medellín"
-              placeholderTextColor={colors.textSecondary}
-            />
-            {errors.city && <Text style={styles.errorText}>{errors.city}</Text>}
-          </View>
-
-          <TouchableOpacity 
-            style={styles.locationButton}
-            onPress={handleUseCurrentLocation}
-          >
-            <Ionicons name="location-outline" size={20} color={colors.primary} />
-            <Text style={styles.locationButtonText}>Usar mi ubicación actual</Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity 
-          style={styles.continueButton}
-          onPress={handleContinue}
+      {/* Illustration area */}
+      <View style={styles.illustrationWrap}>
+        <LinearGradient
+          colors={['#f3e8ff', '#e9d5ff']}
+          style={styles.illustrationCircle}
         >
-          <Text style={styles.continueButtonText}>Continuar</Text>
+          <LinearGradient
+            colors={['#9333ea', '#2563eb']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconCircle}
+          >
+            <Ionicons name="location" size={48} color="#fff" />
+          </LinearGradient>
+        </LinearGradient>
+
+        {/* Decorative dots */}
+        <View style={[styles.dot, { top: 30, right: 60 }]} />
+        <View style={[styles.dot, styles.dotSm, { top: 70, left: 50 }]} />
+        <View style={[styles.dot, styles.dotLg, { bottom: 20, right: 40 }]} />
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        <Text style={styles.title}>¿Dónde estás?</Text>
+        <Text style={styles.subtitle}>
+          Usamos tu ubicación para mostrarte{'\n'}los mejores artistas cerca de ti
+        </Text>
+
+        {/* Benefits */}
+        <View style={styles.benefits}>
+          {BENEFITS.map((b, i) => (
+            <View key={i} style={styles.benefitRow}>
+              <View style={styles.checkCircle}>
+                <Ionicons name="checkmark" size={14} color="#7e22ce" />
+              </View>
+              <Text style={styles.benefitText}>{b}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Actions */}
+      <View style={styles.actions}>
+        <GradientButton
+          label="Permitir ubicación"
+          onPress={handleAllow}
+          loading={loading}
+          icon={<Ionicons name="navigate" size={18} color="#fff" />}
+        />
+
+        <TouchableOpacity onPress={handleSkip} style={styles.skipBtn}>
+          <Text style={styles.skipText}>Ahora no, seguir sin ubicación</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
+const BENEFITS = [
+  'Artistas ordenados por distancia en km',
+  'Resultados del mapa en tiempo real',
+  'Notificaciones de artistas disponibles',
+];
+
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    justifyContent: 'space-between',
-    paddingBottom: 32,
-  },
-  header: {
-    alignItems: 'center',
-    marginTop: 48,
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  form: {
-    flex: 1,
-    gap: 24,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: colors.text,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  selectInput: {
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  selectText: {
-    fontSize: 16,
-    color: colors.text,
-  },
-  errorText: {
-    fontSize: 14,
-    color: colors.error,
-    marginTop: 4,
-  },
-  locationButton: {
-    flexDirection: 'row',
+  safe: { flex: 1, backgroundColor: '#fff' },
+
+  // Illustration
+  illustrationWrap: {
+    height: 280,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    position: 'relative',
   },
-  locationButtonText: {
-    fontSize: 16,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  continueButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 18,
+  illustrationCircle: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  continueButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
+  iconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dot: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#d8b4fe',
+  },
+  dotSm: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e9d5ff' },
+  dotLg: { width: 16, height: 16, borderRadius: 8, backgroundColor: '#9333ea', opacity: 0.3 },
+
+  // Content
+  content: { flex: 1, paddingHorizontal: 28 },
+  title: {
+    fontSize: 30,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#4c1d95',
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: '#7e22ce',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+
+  // Benefits
+  benefits: { gap: 14 },
+  benefitRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  checkCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f3e8ff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  benefitText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: '#1f2937',
+    flex: 1,
+  },
+
+  // Actions
+  actions: { paddingHorizontal: 24, paddingBottom: 24, gap: 12 },
+  skipBtn: {
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  skipText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: '#9ca3af',
   },
 });

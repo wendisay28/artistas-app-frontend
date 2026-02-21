@@ -1,59 +1,76 @@
-// theme/colors.ts — Paleta de colores global unificada
-// Combina constants/colors.ts con components/profile/theme.ts
+// theme/colors.ts — Paleta de colores global unificada BuscArt
+// FUENTE DE VERDAD para todos los colores del proyecto
 
 export const Colors = {
-  // Base
+  // ── Brand principal (violeta → azul) ─────────────────────────────────────────
+  primary: '#9333ea',          // violet-600 — botones e iconos
+  primaryDark: '#7e22ce',      // violet-800 — checks y texto secundario
+  primaryDeep: '#4c1d95',      // violet-950 — títulos
+  primarySelected: '#581c87',  // entre 900-950 — texto en estado seleccionado
+  blue: '#2563eb',             // blue-600 — combinado en gradiente
+
+  // ── Gradiente principal ───────────────────────────────────────────────────────
+  // Usar con LinearGradient: ['#9333ea', '#2563eb'] → horizontal (x:0→1)
+  gradientStart: '#9333ea',
+  gradientEnd: '#2563eb',
+
+  // ── Fondos claros (light mode) ────────────────────────────────────────────────
+  bgPurple: '#f3e8ff',         // purple-100 — fondos de secciones suaves
+  bgPurpleMid: '#e9d5ff',      // purple-200 — bordes, fondos de inputs
+  bgPurpleStrong: '#d8b4fe',   // purple-300 — acentos visuales
+
+  // ── Estado seleccionado ───────────────────────────────────────────────────────
+  selectedBg: 'rgba(147,51,234,0.10)',   // primary con 10% opacidad
+  selectedBgBlue: 'rgba(37,99,235,0.10)', // blue con 10% opacidad
+
+  // ── Fondos base ──────────────────────────────────────────────────────────────
   bg: '#FFFFFF',
-  bgSoft: '#F4F4F6',
+  bgSoft: '#faf5ff',           // fondo muy suave con tono lila
   surface: '#FAFAFA',
-  surface2: '#F0F0F3',
-  surface3: '#E8E8EC',
+  surface2: '#F3F4F6',
 
-  // Borders
-  border: '#E2E2E8',
-  border2: '#D0D0D8',
+  // ── Texto ────────────────────────────────────────────────────────────────────
+  text: '#4c1d95',             // títulos — deep purple
+  textBody: '#1f2937',         // cuerpo — gray-800
+  textSecondary: '#7e22ce',    // secundario — purple-800
+  textSelected: '#581c87',     // seleccionado
+  textMuted: '#6b7280',        // gris neutro
+  textLight: '#9ca3af',        // placeholder
 
-  // Brand / Accent (purple — primary brand color)
-  primary: '#7C3AED',       // violet-600
-  secondary: '#8B5CF6',     // violet-500
-  accent: '#7C3AED',        // alias de primary para compatibilidad
-  accent2: '#8B5CF6',       // violet-500
-  accentLight: '#EDE9FE',   // violet-100
-  accentMid: '#A78BFA',     // violet-400
-  accentDim: 'rgba(124,58,237,0.08)',
+  // ── Bordes ───────────────────────────────────────────────────────────────────
+  border: '#e9d5ff',           // borde estándar
+  borderStrong: '#d8b4fe',     // borde con más presencia
+  borderLight: '#f3e8ff',      // borde sutil
 
-  // Secondary warm tone (ratings, highlights)
-  warm: '#F59E0B',          // amber star / rating
-  warmDim: 'rgba(245,158,11,0.12)',
-
-  // Text
-  text: '#111118',          // casi negro
-  text2: '#6B6B7E',         // gris medio
-  text3: '#A0A0B4',         // gris claro
-
-  // Status colors
-  green: '#10B981',
+  // ── Estados ──────────────────────────────────────────────────────────────────
+  green: '#10b981',
   greenDim: 'rgba(16,185,129,0.10)',
-  red: '#EF4444',
+  red: '#ef4444',
   redDim: 'rgba(239,68,68,0.10)',
-  blue: '#3B82F6',
-  blueDim: 'rgba(59,130,246,0.10)',
+  yellow: '#f59e0b',
+  yellowDim: 'rgba(245,158,11,0.12)',
+  starYellow: '#fcd34d',
 
-  // Legacy compatibility (para constants/colors.ts)
-  background: '#FFFFFF',
-  backgroundSecondary: '#F3F4F6',
-  textSecondary: '#6B7280',
+  // ── Base ─────────────────────────────────────────────────────────────────────
   white: '#FFFFFF',
   black: '#000000',
-  error: '#EF4444',
-  success: '#10B981',
-  warning: '#F59E0B',
-  starYellow: '#FCD34D',
+
+  // ── Aliases para compatibilidad con código existente ─────────────────────────
+  accent: '#9333ea',
+  accent2: '#8b5cf6',
+  accentLight: '#f3e8ff',
+  accentMid: '#a78bfa',
+  accentDim: 'rgba(147,51,234,0.08)',
+  secondary: '#8b5cf6',
+  background: '#FFFFFF',
+  backgroundSecondary: '#F3F4F6',
+  error: '#ef4444',
+  success: '#10b981',
+  warning: '#f59e0b',
   surfaceAlt: '#F3F4F6',
-  borderLight: '#F0F0F0',
-  textLight: '#9CA3AF',
+  warm: '#f59e0b',
+  warmDim: 'rgba(245,158,11,0.12)',
 } as const;
 
-// Type definitions para mejor autocompletado
 export type ColorKeys = keyof typeof Colors;
 export type ColorValue = typeof Colors[ColorKeys];

@@ -1,7 +1,5 @@
-// src/services/post.service.ts
-import axios from 'axios';
-
-const API_URL = 'https://api.buscart.com'; // Reemplaza con tu URL real
+// src/components/home/services/post.service.ts
+import apiClient from '../../../services/api/config';
 
 export interface Post {
   id: number;
@@ -23,22 +21,15 @@ export interface Post {
     category?: string;
     verified?: boolean;
   };
-  media?: Array<{
-    url: string;
-    type: 'image' | 'video';
-    altText?: string;
-  }>;
-  metadata?: {
-    postSubtype?: string;
-    quoteText?: string;
-    quoteAuthor?: string;
-  };
+  media?: Array<{ url: string; type: 'image' | 'video'; altText?: string }>;
+  metadata?: { postSubtype?: string; quoteText?: string; quoteAuthor?: string };
   likeCount: number;
   commentCount: number;
   shareCount: number;
   saveCount?: number;
   inspirationCount?: number;
   isLiked?: boolean;
+  isSaved?: boolean;
   isPinned?: boolean;
   featured?: boolean;
   createdAt: string;
@@ -49,359 +40,202 @@ export interface CreatePostData {
   content: string;
   type: 'post' | 'nota' | 'blog';
   isPublic: boolean;
-  media?: Array<{
-    url: string;
-    type: 'image' | 'video';
-    file?: File;
-  }>;
+  category?: string;
+  media?: Array<{ url: string; type: 'image' | 'video' }>;
   metadata?: any;
 }
 
+// ── Mock data ────────────────────────────────────────────────────────────────
+
+const MOCK_POSTS: Post[] = [
+  {
+    id: 1,
+    type: 'post',
+    content: '¡Acabo de terminar mi nueva serie de retratos! 📸 Semanas de trabajo capturando la esencia de la luz natural. Estoy muy emocionado de compartirlo con la comunidad de BuscArt.',
+    category: 'photography',
+    author: {
+      id: '1',
+      name: 'Carlos Rodríguez',
+      username: 'carlosphoto',
+      avatar: 'https://picsum.photos/100/100?random=1',
+      category: 'photography',
+      verified: true,
+    },
+    media: [{ url: 'https://picsum.photos/800/600?random=10', type: 'image' }],
+    likeCount: 245,
+    commentCount: 32,
+    shareCount: 18,
+    inspirationCount: 67,
+    isLiked: false,
+    isSaved: false,
+    featured: true,
+    createdAt: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 2,
+    type: 'blog',
+    content: 'En este artículo les quiero compartir mis 5 mejores consejos para iluminación en estudios pequeños. Con creatividad se pueden lograr resultados increíbles sin equipo costoso.',
+    title: '5 Tips de Iluminación para Estudios Pequeños',
+    excerpt: 'Aprende a sacar el máximo provecho de tu espacio con estos consejos prácticos de fotografía.',
+    featuredImage: 'https://picsum.photos/800/400?random=20',
+    category: 'photography',
+    tags: ['tips', 'iluminación', 'estudio'],
+    readingTime: 5,
+    author: {
+      id: '2',
+      name: 'María González',
+      username: 'mariacrea',
+      avatar: 'https://picsum.photos/100/100?random=2',
+      category: 'art',
+      verified: true,
+    },
+    likeCount: 189,
+    commentCount: 45,
+    shareCount: 23,
+    inspirationCount: 112,
+    isLiked: true,
+    isSaved: true,
+    createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 3,
+    type: 'post',
+    content: '¿Alguien más emocionado con el festival de arte urbano este fin de semana? 🏙️ Ya tengo mi cámara lista y no puedo esperar para capturar la energía de la ciudad.',
+    category: 'photography',
+    author: {
+      id: '3',
+      name: 'Diego Martínez',
+      username: 'diegourbano',
+      avatar: 'https://picsum.photos/100/100?random=3',
+      category: 'music',
+      verified: false,
+    },
+    media: [
+      { url: 'https://picsum.photos/800/600?random=30', type: 'image' },
+      { url: 'https://picsum.photos/800/600?random=31', type: 'image' },
+    ],
+    likeCount: 156,
+    commentCount: 28,
+    shareCount: 12,
+    inspirationCount: 44,
+    isLiked: false,
+    isSaved: false,
+    createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 4,
+    type: 'nota',
+    content: 'La música es el lenguaje del alma. Cada nota que toco es una conversación con el universo. 🎵',
+    category: 'music',
+    metadata: {
+      postSubtype: 'quote',
+      quoteText: 'La música es el lenguaje del alma.',
+      quoteAuthor: 'Ana Sofía López',
+    },
+    author: {
+      id: '4',
+      name: 'Ana Sofía López',
+      username: 'anamusic',
+      avatar: 'https://picsum.photos/100/100?random=4',
+      category: 'music',
+      verified: true,
+    },
+    likeCount: 312,
+    commentCount: 67,
+    shareCount: 34,
+    inspirationCount: 189,
+    isLiked: false,
+    isSaved: false,
+    featured: true,
+    createdAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 5,
+    type: 'post',
+    content: 'Nuevo mural terminado en el centro de la ciudad 🎨 Tres semanas de trabajo bajo el sol, pero el resultado habla por sí solo. ¿Qué les parece?',
+    category: 'art',
+    author: {
+      id: '5',
+      name: 'Luisa Vargas',
+      username: 'luisaarte',
+      avatar: 'https://picsum.photos/100/100?random=5',
+      category: 'art',
+      verified: false,
+    },
+    media: [
+      { url: 'https://picsum.photos/800/600?random=50', type: 'image' },
+      { url: 'https://picsum.photos/800/600?random=51', type: 'image' },
+      { url: 'https://picsum.photos/800/600?random=52', type: 'image' },
+    ],
+    likeCount: 423,
+    commentCount: 89,
+    shareCount: 56,
+    inspirationCount: 234,
+    isLiked: true,
+    isSaved: false,
+    createdAt: new Date(Date.now() - 14 * 60 * 60 * 1000).toISOString(),
+  },
+];
+
+// ── Service class ────────────────────────────────────────────────────────────
+
 class PostService {
-  private getAuthToken(): string | null {
-    // Implementa tu lógica de autenticación
-    // Por ejemplo, usando AsyncStorage en React Native
-    return null;
-  }
-
-  private getHeaders() {
-    const token = this.getAuthToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    };
-  }
-
-  // Get posts with filters
   async getPosts(
-    userId?: string,
-    page: number = 1,
-    limit: number = 10,
-    followingOnly: boolean = false,
+    page = 1,
+    limit = 10,
+    followingOnly = false,
     category?: string
   ): Promise<{ posts: Post[]; total: number; hasMore: boolean }> {
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
-        ...(userId && { userId }),
-        ...(followingOnly && { followingOnly: 'true' }),
-        ...(category && { category }),
-      });
+      const params: any = { page, limit };
+      if (followingOnly) params.followingOnly = true;
+      if (category) params.category = category;
 
-      const response = await axios.get(`${API_URL}/posts?${params}`, {
-        headers: this.getHeaders(),
-      });
-
+      const { data } = await apiClient.get('/posts', { params });
       return {
-        posts: response.data.data || [],
-        total: response.data.pagination?.total || 0,
-        hasMore: response.data.pagination?.hasMore || false,
+        posts: data.data ?? [],
+        total: data.pagination?.total ?? 0,
+        hasMore: data.pagination?.hasMore ?? false,
       };
-    } catch (error) {
-      console.error('Error fetching posts:', error);
-      
-      // DATOS MOCK PARA VISUALIZACIÓN - Eliminar en producción
+    } catch {
       if (page === 1) {
-        const mockPosts: Post[] = [
-          {
-            id: 1,
-            type: 'post',
-            content: '¡Acabo de terminar mi nueva serie de retratos! 📸 Estoy muy emocionado de compartir con ustedes este proyecto que me ha tomado semanas de trabajo. La luz natural fue mi mejor aliada en esta sesión.',
-            title: 'Nueva serie de retratos',
-            featuredImage: 'https://picsum.photos/400/300?random=1',
-            category: 'photography',
-            tags: ['retratos', 'fotografía', 'luz natural'],
-            readingTime: 3,
-            author: {
-              id: '1',
-              name: 'Carlos Rodríguez',
-              username: 'carlosphoto',
-              avatar: 'https://picsum.photos/100/100?random=1',
-              category: 'Fotografía',
-              verified: true,
-            },
-            media: [
-              {
-                url: 'https://picsum.photos/400/300?random=1',
-                type: 'image',
-                altText: 'Retrato artístico'
-              }
-            ],
-            likeCount: 245,
-            commentCount: 32,
-            shareCount: 18,
-            isLiked: false,
-            featured: true,
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 2,
-            type: 'blog',
-            content: 'En este artículo les quiero compartir mis 5 mejores consejos para iluminación en estudios pequeños. Muchos creen que necesitan equipo costoso, pero la realidad es que con creatividad se pueden lograr resultados increíbles...',
-            title: '5 Tips de Iluminación para Estudios Pequeños',
-            excerpt: 'Aprende a sacar el máximo provecho de tu espacio con estos consejos prácticos.',
-            featuredImage: 'https://picsum.photos/400/300?random=2',
-            category: 'photography',
-            tags: ['tips', 'iluminación', 'estudio'],
-            readingTime: 5,
-            author: {
-              id: '2',
-              name: 'María González',
-              username: 'mariacrea',
-              avatar: 'https://picsum.photos/100/100?random=2',
-              category: 'Fotografía',
-              verified: true,
-            },
-            likeCount: 189,
-            commentCount: 45,
-            shareCount: 23,
-            isLiked: true,
-            createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 3,
-            type: 'post',
-            content: '¿Alguien más emocionado con el nuevo evento de fotografía urbana? 🏙️ Ya tengo mi cámara lista y no puedo esperar para capturar la esencia de la ciudad esta noche.',
-            title: 'Preparados para la noche fotográfica',
-            featuredImage: 'https://picsum.photos/400/300?random=3',
-            category: 'photography',
-            tags: ['fotografía urbana', 'noche', 'evento'],
-            author: {
-              id: '3',
-              name: 'Diego Martínez',
-              username: 'diegourbano',
-              avatar: 'https://picsum.photos/100/100?random=3',
-              category: 'Fotografía',
-              verified: false,
-            },
-            media: [
-              {
-                url: 'https://picsum.photos/400/300?random=3',
-                type: 'image',
-                altText: 'Ciudad de noche'
-              }
-            ],
-            likeCount: 156,
-            commentCount: 28,
-            shareCount: 12,
-            isLiked: false,
-            createdAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 4,
-            type: 'nota',
-            content: 'Recordatorio importante: Mañana sesión de estudio a las 10am. Traer reflectores y fondos adicionales. 📝️',
-            title: 'Recordatorio de Sesión',
-            category: 'photography',
-            tags: ['recordatorio', 'sesión', 'estudio'],
-            author: {
-              id: '1',
-              name: 'Carlos Rodríguez',
-              username: 'carlosphoto',
-              avatar: 'https://picsum.photos/100/100?random=1',
-              category: 'Fotografía',
-              verified: true,
-            },
-            likeCount: 23,
-            commentCount: 5,
-            shareCount: 2,
-            isLiked: true,
-            createdAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 5,
-            type: 'blog',
-            content: 'La composición es uno de los elementos más importantes en la fotografía. Hoy quiero hablar sobre la regla de los tercios y cómo podemos aplicarla de manera creativa...',
-            title: 'Dominando la Regla de los Tercios',
-            excerpt: 'Un enfoque práctico para mejorar tus composiciones fotográficas.',
-            featuredImage: 'https://picsum.photos/400/300?random=4',
-            category: 'photography',
-            tags: ['composición', 'regla de tercios', 'técnicas'],
-            readingTime: 7,
-            author: {
-              id: '4',
-              name: 'Ana Sofía López',
-              username: 'anacompo',
-              avatar: 'https://picsum.photos/100/100?random=4',
-              category: 'Fotografía',
-              verified: true,
-            },
-            likeCount: 312,
-            commentCount: 67,
-            shareCount: 34,
-            isLiked: false,
-            featured: true,
-            createdAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-          }
-        ];
-
-        return {
-          posts: mockPosts,
-          total: mockPosts.length,
-          hasMore: false,
-        };
+        return { posts: MOCK_POSTS, total: MOCK_POSTS.length, hasMore: false };
       }
-      
-      throw error;
+      return { posts: [], total: 0, hasMore: false };
     }
   }
 
-  // Get single post by ID
-  async getPostById(postId: number): Promise<Post> {
-    try {
-      const response = await axios.get(`${API_URL}/posts/${postId}`, {
-        headers: this.getHeaders(),
-      });
-      return response.data.data;
-    } catch (error) {
-      console.error('Error fetching post:', error);
-      throw error;
-    }
-  }
-
-  // Create new post
   async createPost(data: CreatePostData): Promise<Post> {
-    try {
-      const formData = new FormData();
-      formData.append('content', data.content);
-      formData.append('type', data.type);
-      formData.append('isPublic', String(data.isPublic));
-
-      if (data.metadata) {
-        formData.append('metadata', JSON.stringify(data.metadata));
-      }
-
-      if (data.media && data.media.length > 0) {
-        data.media.forEach((media, index) => {
-          if (media.file) {
-            formData.append('media', media.file as any);
-          }
-        });
-      }
-
-      const response = await axios.post(`${API_URL}/posts`, formData, {
-        headers: {
-          ...this.getHeaders(),
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      return response.data.data;
-    } catch (error) {
-      console.error('Error creating post:', error);
-      throw error;
-    }
+    const { data: res } = await apiClient.post('/posts', data);
+    return res.data;
   }
 
-  // Update post
-  async updatePost(postId: number, data: Partial<CreatePostData>): Promise<Post> {
-    try {
-      const response = await axios.put(`${API_URL}/posts/${postId}`, data, {
-        headers: this.getHeaders(),
-      });
-      return response.data.data;
-    } catch (error) {
-      console.error('Error updating post:', error);
-      throw error;
-    }
-  }
-
-  // Delete post
-  async deletePost(postId: number): Promise<void> {
-    try {
-      await axios.delete(`${API_URL}/posts/${postId}`, {
-        headers: this.getHeaders(),
-      });
-    } catch (error) {
-      console.error('Error deleting post:', error);
-      throw error;
-    }
-  }
-
-  // Like post
   async likePost(postId: number): Promise<void> {
-    try {
-      await axios.post(`${API_URL}/posts/${postId}/like`, {}, {
-        headers: this.getHeaders(),
-      });
-    } catch (error) {
-      console.error('Error liking post:', error);
-      throw error;
-    }
+    await apiClient.post(`/posts/${postId}/like`);
   }
 
-  // Unlike post
   async unlikePost(postId: number): Promise<void> {
-    try {
-      await axios.delete(`${API_URL}/posts/${postId}/like`, {
-        headers: this.getHeaders(),
-      });
-    } catch (error) {
-      console.error('Error unliking post:', error);
-      throw error;
-    }
+    await apiClient.delete(`/posts/${postId}/like`);
   }
 
-  // Share post
-  async sharePost(postId: number, content?: string): Promise<Post> {
-    try {
-      const response = await axios.post(
-        `${API_URL}/posts/${postId}/share`,
-        { content },
-        { headers: this.getHeaders() }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error('Error sharing post:', error);
-      throw error;
-    }
+  async savePost(postId: number): Promise<void> {
+    await apiClient.post(`/posts/${postId}/save`);
   }
 
-  // Get comments
-  async getComments(postId: number, page: number = 1, limit: number = 20) {
-    try {
-      const response = await axios.get(
-        `${API_URL}/posts/${postId}/comments?page=${page}&limit=${limit}`,
-        { headers: this.getHeaders() }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching comments:', error);
-      throw error;
-    }
+  async unsavePost(postId: number): Promise<void> {
+    await apiClient.delete(`/posts/${postId}/save`);
   }
 
-  // Create comment
-  async createComment(postId: number, data: {
-    content: string;
-    parentId?: number;
-    images?: any[];
-    mentions?: string[];
-  }) {
-    try {
-      const response = await axios.post(
-        `${API_URL}/posts/${postId}/comments`,
-        data,
-        { headers: this.getHeaders() }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error('Error creating comment:', error);
-      throw error;
-    }
+  async getComments(postId: number, page = 1, limit = 20) {
+    const { data } = await apiClient.get(`/posts/${postId}/comments`, {
+      params: { page, limit },
+    });
+    return data;
   }
 
-  // Delete comment
-  async deleteComment(postId: number, commentId: number): Promise<void> {
-    try {
-      await axios.delete(`${API_URL}/posts/${postId}/comments/${commentId}`, {
-        headers: this.getHeaders(),
-      });
-    } catch (error) {
-      console.error('Error deleting comment:', error);
-      throw error;
-    }
+  async createComment(postId: number, data: { content: string; parentId?: number }) {
+    const { data: res } = await apiClient.post(`/posts/${postId}/comments`, data);
+    return res.data;
   }
 }
 

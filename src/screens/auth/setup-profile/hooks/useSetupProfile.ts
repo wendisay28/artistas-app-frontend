@@ -2,16 +2,16 @@
 import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../../../store/authStore';
-import { createUserProfile } from '../../../../services/api/users';
-import { UserRole } from '../../../../types/User';
+import { updateMyProfile } from '../../../../services/api/users';
 
 export const useSetupProfile = () => {
-  const { user, setUser, setProfileComplete, setError } = useAuthStore();
-  const [step, setStep] = useState<1 | 2 | 3>(1); // paso del onboarding
-  const [displayName, setDisplayName] = useState(user?.displayName ?? '');
-  const [photoURI, setPhotoURI] = useState<string | null>(user?.photoURL ?? null);
-  const [role, setRole] = useState<UserRole | null>(null);
+  const { user, setUser, setError } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+  const [username, setUsername] = useState(user?.username ?? '');
+  const [photoURI, setPhotoURI] = useState<string | null>(user?.photoURL ?? null);
+  const [city, setCity] = useState(user?.city ?? '');
+  const [bio, setBio] = useState(user?.bio ?? '');
 
   const pickPhoto = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -25,42 +25,34 @@ export const useSetupProfile = () => {
     if (!result.canceled) setPhotoURI(result.assets[0].uri);
   }, []);
 
-  const goNextStep = useCallback(() => {
-    if (step < 3) setStep((prev) => (prev + 1) as 1 | 2 | 3);
-  }, [step]);
-
-  const goPrevStep = useCallback(() => {
-    if (step > 1) setStep((prev) => (prev - 1) as 1 | 2 | 3);
-  }, [step]);
-
-  const submitProfile = useCallback(async () => {
-    if (!displayName.trim() || !role) {
-      setError('Completa tu nombre y elige un rol para continuar.');
-      return;
-    }
+  const saveProfile = useCallback(async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     setError(null);
+
     try {
-      const updatedUser = await createUserProfile({
-        displayName: displayName.trim(),
+      const updatedUser = await updateMyProfile({
         photoURL: photoURI ?? undefined,
-        role,
       });
       setUser(updatedUser);
-      setProfileComplete(true);
-    } catch {
-      setError('No se pudo guardar tu perfil. Intenta de nuevo.');
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Error al actualizar el perfil');
+      return { success: false, error };
     } finally {
       setIsLoading(false);
     }
-  }, [displayName, photoURI, role]);
+  }, [displayName, username, photoURI, city, bio, user, setUser, setError]);
 
   return {
-    step, displayName, setDisplayName,
+    displayName, setDisplayName,
+    username, setUsername,
     photoURI, pickPhoto,
-    role, setRole,
+    city, setCity,
+    bio, setBio,
     isLoading,
-    goNextStep, goPrevStep,
-    submitProfile,
+    saveProfile,
   };
 };

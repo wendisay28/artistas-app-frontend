@@ -5,7 +5,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
-  Image, Pressable, Platform,
+  Image, Pressable, Platform, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,12 +25,15 @@ import GalleryDetails from '../../components/explore/details/GalleryDetails';
 import VenueDetails   from '../../components/explore/details/VenueDetails';
 
 import CategorySelector from '../../components/explore/CategorySelector';
+import UnifiedFiltersPanel from '../../components/explore/shared/UnifiedFiltersPanel';
 
+// Importar servicios y tipos reales
+import { artistsService } from '../../services/api/artists';
 import type {
-  Artist, Event, GalleryItem, Venue,
+  Artist, Event, Venue, GalleryItem,
   ExploreCard, CategoryId, SwipeDirection, SwipeResult,
+  ExploreFilters,
 } from '../../types/explore';
-import { MOCK_ARTISTS, MOCK_EVENTS, MOCK_VENUES, MOCK_GALLERY } from '../../data/explore';
 
 const CATEGORY_LABELS: Record<CategoryId, string> = {
   artists: 'Artistas',
@@ -46,11 +49,12 @@ const CATEGORY_ICONS: Record<CategoryId, string> = {
   gallery: 'images-outline',
 };
 
-const CARD_STACK_DATA: Record<CategoryId, ExploreCard[]> = {
-  artists: MOCK_ARTISTS,
-  events:  MOCK_EVENTS,
-  venues:  MOCK_VENUES,
-  gallery: MOCK_GALLERY,
+// Estado inicial para las categorías (vacío hasta cargar desde API)
+const INITIAL_STACK_DATA: Record<CategoryId, ExploreCard[]> = {
+  artists: [],
+  events:  [],
+  venues:  [],
+  gallery: [],
 };
 
 // Componente para el icono animado del swipe hint
@@ -72,13 +76,86 @@ export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('artists');
-  const [stack,            setStack]            = useState<ExploreCard[]>(MOCK_ARTISTS);
-  const [swipeHistory,     setSwipeHistory]     = useState<SwipeResult[]>([]);
-  const [menuOpen,         setMenuOpen]         = useState(false);
-  const [showFilters,      setShowFilters]      = useState(false);
+  const [stack, setStack] = useState<ExploreCard[]>([]);
+  const [swipeHistory, setSwipeHistory] = useState<SwipeResult[]>([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Estados para filtros (compartidos entre categorías)
+  const [filters, setFilters] = useState({
+    // Genéricos
+    distance: 10,
+    price: 5000,
+    priceMin: 0,
+    priceMax: 20000,
+    selectedDate: null as Date | null,
+    
+    // Artistas
+    categoryFilter: 'all',
+    subCategory: 'all',
+    selectedRole: '',
+    selectedSpecialization: '',
+    selectedTads: [] as string[],
+    selectedStats: {} as Record<string, any>,
+    priceType: 'all' as 'all' | 'free' | 'paid',
+    
+    // Eventos
+    format: 'all',
+    
+    // Venues
+    sortBy: 'rating',
+    
+    // Galería
+    transactionTypes: [] as string[],
+    conditions: [] as string[],
+  });
 
   // Animación para el swipe hint
   const swipeHintAnim = useRef(new Animated.Value(0)).current;
+
+  // Cargar datos desde la API cuando cambia la categoría
+  const loadCategoryData = useCallback(async (category: CategoryId) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      let data: ExploreCard[] = [];
+      
+      switch (category) {
+        case 'artists':
+          const response = await artistsService.getExploreArtists({ limit: 20 });
+          data = response.artists;
+          break;
+        case 'events':
+          // TODO: Implementar eventsService.getExploreEvents()
+          data = []; // Temporal hasta implementar eventos
+          break;
+        case 'venues':
+          // TODO: Implementar venuesService.getExploreVenues()
+          data = []; // Temporal hasta implementar venues
+          break;
+        case 'gallery':
+          // TODO: Implementar galleryService.getExploreGallery()
+          data = []; // Temporal hasta implementar gallery
+          break;
+      }
+      
+      setStack(data);
+    } catch (err) {
+      console.error(`Error loading ${category}:`, err);
+      setError('No se pudieron cargar los datos. Intenta de nuevo.');
+      setStack([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Cargar datos iniciales
+  useEffect(() => {
+    loadCategoryData(selectedCategory);
+  }, [selectedCategory, loadCategoryData]);
 
   useEffect(() => {
     // Animación sutil del swipe hint
@@ -123,7 +200,6 @@ export default function ExploreScreen() {
   const handleCategoryChange = useCallback((cat: CategoryId) => {
     if (Platform.OS !== 'web') Haptics.selectionAsync();
     setSelectedCategory(cat);
-    setStack([...CARD_STACK_DATA[cat]]);
     setSwipeHistory([]);
     setMenuOpen(false);
   }, []);
@@ -133,11 +209,34 @@ export default function ExploreScreen() {
     setSwipeHistory(prev => [...prev, { cardId: id, direction, timestamp: Date.now() }]);
   }, []);
 
+  // Resetear filtros a valores por defecto
+  const handleResetFilters = useCallback(() => {
+    setFilters({
+      distance: 10,
+      price: 5000,
+      priceMin: 0,
+      priceMax: 20000,
+      selectedDate: null,
+      categoryFilter: 'all',
+      subCategory: 'all',
+      selectedRole: '',
+      selectedSpecialization: '',
+      selectedTads: [],
+      selectedStats: {},
+      priceType: 'all',
+      format: 'all',
+      sortBy: 'rating',
+      transactionTypes: [],
+      conditions: [],
+    });
+  }, []);
+
   const handleReset = useCallback(() => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setStack([...CARD_STACK_DATA[selectedCategory]]);
+    handleResetFilters();
+    loadCategoryData(selectedCategory);
     setSwipeHistory([]);
-  }, [selectedCategory]);
+  }, [selectedCategory, loadCategoryData, handleResetFilters]);
 
   const renderCardContent = (card: ExploreCard) => {
     switch (card.type) {
@@ -257,16 +356,54 @@ export default function ExploreScreen() {
 
       {/* ══ FILTER PANEL ══ */}
       {showFilters && (
-        <View style={[styles.filterPanel, { top: (insets.top || webTopInset) + 56 }]}>
-          <Text style={styles.filterTitle}>Filtros</Text>
-          <View style={styles.filterChips}>
-            {['Cerca de mí', 'Mejor rating', 'Disponible hoy', 'Precio bajo'].map(f => (
-              <Pressable key={f} style={({ pressed }) => [styles.filterChip, pressed && { opacity: 0.7 }]}>
-                <Text style={styles.filterChipText}>{f}</Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
+        <UnifiedFiltersPanel
+          isOpen={showFilters}
+          onToggle={() => setShowFilters(false)}
+          category={selectedCategory}
+          
+          // Props genéricas
+          distance={filters.distance}
+          setDistance={(v) => setFilters(prev => ({ ...prev, distance: v }))}
+          price={filters.price}
+          setPrice={(v) => setFilters(prev => ({ ...prev, price: v }))}
+          priceMin={filters.priceMin}
+          setPriceMin={(v) => setFilters(prev => ({ ...prev, priceMin: v }))}
+          priceMax={filters.priceMax}
+          setPriceMax={(v) => setFilters(prev => ({ ...prev, priceMax: v }))}
+          selectedDate={filters.selectedDate}
+          setSelectedDate={(d) => setFilters(prev => ({ ...prev, selectedDate: d }))}
+          onResetFilters={handleResetFilters}
+          
+          // Props específicas de artistas
+          categoryFilter={filters.categoryFilter}
+          setCategoryFilter={(v) => setFilters(prev => ({ ...prev, categoryFilter: v }))}
+          subCategory={filters.subCategory}
+          setSubCategory={(v) => setFilters(prev => ({ ...prev, subCategory: v }))}
+          selectedRole={filters.selectedRole}
+          setSelectedRole={(v) => setFilters(prev => ({ ...prev, selectedRole: v }))}
+          selectedSpecialization={filters.selectedSpecialization}
+          setSelectedSpecialization={(v) => setFilters(prev => ({ ...prev, selectedSpecialization: v }))}
+          selectedTads={filters.selectedTads}
+          setSelectedTads={(v: string[]) => setFilters(prev => ({ ...prev, selectedTads: v }))}
+          selectedStats={filters.selectedStats}
+          setSelectedStats={(v: Record<string, any>) => setFilters(prev => ({ ...prev, selectedStats: v }))}
+          priceType={filters.priceType}
+          setPriceType={(v) => setFilters(prev => ({ ...prev, priceType: v }))}
+          
+          // Props específicas de eventos
+          format={filters.format}
+          setFormat={(v) => setFilters(prev => ({ ...prev, format: v }))}
+          
+          // Props específicas de venues
+          sortBy={filters.sortBy}
+          setSortBy={(v) => setFilters(prev => ({ ...prev, sortBy: v }))}
+          
+          // Props específicas de galería
+          transactionTypes={filters.transactionTypes}
+          setTransactionTypes={(v: string[]) => setFilters(prev => ({ ...prev, transactionTypes: v }))}
+          conditions={filters.conditions}
+          setConditions={(v: string[]) => setFilters(prev => ({ ...prev, conditions: v }))}
+        />
       )}
 
       {/* ══ SCROLL ══ */}
@@ -281,7 +418,22 @@ export default function ExploreScreen() {
 
         {/* stack */}
         <View style={styles.stackWrapper}>
-          {stack.length === 0 ? (
+          {isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Cargando artistas...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorState}>
+              <Ionicons name="alert-circle-outline" size={52} color={colors.primary} />
+              <Text style={styles.errorTitle}>Error al cargar</Text>
+              <Text style={styles.errorSub}>{error}</Text>
+              <Pressable onPress={() => loadCategoryData(selectedCategory)} style={({ pressed }) => [styles.resetBtn, pressed && { opacity: 0.85 }]}>
+                <Ionicons name="refresh" size={16} color="#fff" />
+                <Text style={styles.resetText}>Reintentar</Text>
+              </Pressable>
+            </View>
+          ) : stack.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="albums-outline" size={52} color={colors.border} />
               <Text style={styles.emptyTitle}>Has visto todo</Text>
@@ -404,12 +556,35 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     borderRadius: 24, borderWidth: 1, borderColor: colors.border,
   },
+  loadingState: {
+    width: CARD_WIDTH, height: CARD_HEIGHT,
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: colors.background,
+    borderRadius: 24, borderWidth: 1, borderColor: colors.border,
+  },
+  errorState: {
+    width: CARD_WIDTH, height: CARD_HEIGHT,
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+    backgroundColor: colors.background,
+    borderRadius: 24, borderWidth: 1, borderColor: colors.border,
+  },
   emptyTitle: {
+    fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text,
+  },
+  errorTitle: {
     fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: colors.text,
   },
   emptySub: {
     fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular',
     color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 32,
+  },
+  errorSub: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular',
+    color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 32,
+  },
+  loadingText: {
+    fontSize: 16, fontFamily: 'PlusJakartaSans_500Medium',
+    color: colors.text, marginTop: 8,
   },
   resetBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8,

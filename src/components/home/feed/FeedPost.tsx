@@ -16,6 +16,7 @@ interface FeedPostProps {
   onLike?: () => void;
   onComment?: () => void;
   onShare?: () => void;
+  onSave?: () => void;
 }
 
 export const FeedPost: React.FC<FeedPostProps> = ({
@@ -23,6 +24,7 @@ export const FeedPost: React.FC<FeedPostProps> = ({
   onLike,
   onComment,
   onShare,
+  onSave,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -76,18 +78,18 @@ export const FeedPost: React.FC<FeedPostProps> = ({
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarText}>
-                    {post.author.name.charAt(0).toUpperCase()}
+                    {(post.author?.name ?? '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}
             </View>
-            <CategoryIcon category={post.author.category} />
+            <CategoryIcon category={post.author?.category} />
           </View>
 
           {/* Info */}
           <View style={styles.headerInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.authorName}>{post.author.name}</Text>
+              <Text style={styles.authorName}>{post.author?.name ?? 'Artista'}</Text>
               {post.isPinned && (
                 <View style={styles.pinnedBadge}>
                   <Ionicons name="pin" size={10} color="#fff" />
@@ -124,6 +126,7 @@ export const FeedPost: React.FC<FeedPostProps> = ({
           onLike={onLike}
           onComment={onComment}
           onShare={onShare}
+          onSave={onSave}
         />
       </View>
 

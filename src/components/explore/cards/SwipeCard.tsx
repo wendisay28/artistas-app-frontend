@@ -25,7 +25,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 export const CARD_WIDTH  = Math.min(SCREEN_WIDTH - 32, 420);
 export const CARD_HEIGHT = SCREEN_HEIGHT * 0.72;
 
-const SWIPE_THRESHOLD = 120;
+const SWIPE_THRESHOLD = 80; // Reducido de 120px para swipe más sensible
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ export default function SwipeCard({
 
       RNAnimated.timing(swipeX, {
         toValue,
-        duration: 280,
+        duration: 250, // Reducido de 280ms para respuesta más rápida
         useNativeDriver: true,
       }).start(() => onDismiss(card.id, direction));
     },
@@ -118,7 +118,7 @@ export default function SwipeCard({
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > 12 && Math.abs(gs.dy) < 30,
+        Math.abs(gs.dx) > 15 && Math.abs(gs.dy) < 50, // Más sensible en X, más tolerante en Y
       onPanResponderMove: (_, gs) => {
         swipeX.setValue(gs.dx);
       },

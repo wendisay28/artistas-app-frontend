@@ -133,22 +133,37 @@ export const useLogin = () => {
       const firebaseToken = await firebaseUser.getIdToken();
       console.log('Firebase OK:', firebaseUser.email);
 
-      // 7. Guardar usuario directo de Firebase (backend desconectado por ahora)
+      // 7. Sincronizar con backend INMEDIATAMENTE después del login
+      try {
+        const { registerOrSyncUser } = await import('../../../../services/api/users');
+        await registerOrSyncUser();
+        console.log('[Login] Usuario sincronizado con backend');
+      } catch (syncError: any) {
+        console.warn('[Login] Error sincronizando con backend:', syncError?.message);
+        // No bloquear el login si falla la sincronización
+      }
+
+      // 8. Establecer usuario INMEDIATAMENTE para garantizar isAuthenticated=true
+      //    sin depender del timing de onAuthChange (que es async y puede tardar).
+      //    Solo si el perfil no estaba ya completo (evita pisar usuarios que regresan).
+      const { pendingRole, isProfileComplete: alreadyComplete } = useAuthStore.getState();
       setToken(firebaseToken);
-      setUser({
-        id: firebaseUser.uid,
-        firebaseUid: firebaseUser.uid,
-        email: firebaseUser.email || '',
-        displayName: firebaseUser.displayName || '',
-        photoURL: firebaseUser.photoURL || null,
-        role: 'client' as const,
-        isCompany: false,
-        city: null,
-        bio: null,
-        isProfileComplete: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
+      if (!alreadyComplete) {
+        setUser({
+          id: firebaseUser.uid,
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          displayName: firebaseUser.displayName || '',
+          photoURL: firebaseUser.photoURL || null,
+          role: (pendingRole as any) || 'client',
+          isCompany: false,
+          city: null,
+          bio: null,
+          isProfileComplete: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
       console.log('Login completado exitosamente (solo Firebase)');
     } catch (err: any) {
       console.error('Error Google Login:', err);

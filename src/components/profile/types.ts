@@ -87,6 +87,8 @@ export type Artist = {
   // Datos de empresa (si userType === 'company')
   companyName?: string;
   companyDescription?: string;
+  // Disponibilidad del artista
+  availability?: 'available' | 'busy' | 'unavailable';
 };
 
 export type Service = {

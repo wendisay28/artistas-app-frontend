@@ -24,6 +24,12 @@ export interface BackendUser {
   companyDescription?: string;
   companyLogoUrl?: string;
   taxId?: string;
+  // Estadísticas del usuario
+  followersCount?: number;
+  viewsCount?: number;
+  worksCount?: number;
+  rating?: number;
+  reviewsCount?: number;
 }
 
 /** Categorías de artista usan IDs string (slugs), alineados con constants/artistCategories. */
@@ -91,6 +97,11 @@ export interface UpdateUserPayload {
   companyDescription?: string;
   companyLogoUrl?: string;
   taxId?: string;
+  // Social links
+  instagramUrl?: string;
+  twitterUrl?: string;
+  youtubeUrl?: string;
+  spotifyUrl?: string;
 }
 
 // ── Payload para actualizar el artista ────────────────────────────────────────
