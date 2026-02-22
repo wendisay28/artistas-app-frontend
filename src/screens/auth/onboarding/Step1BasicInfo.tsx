@@ -167,7 +167,7 @@ const Step1BasicInfo = () => {
         <FadeIn delay={0}>
           <View style={s.header}>
             <View style={s.logoRow}>
-              <Text style={s.logoBusca}>Busca</Text>
+              <Text style={s.logoBusca}>Busc</Text>
               <LinearGradient
                 colors={['#7c3aed', '#2563eb']}
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
@@ -346,7 +346,7 @@ const s = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 16,
   },
-  logoRow:       { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  logoRow:       { flexDirection: 'row', alignItems: 'center', gap: 0 },
   logoBusca:     { fontSize: 21, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#1e1b4b', letterSpacing: -0.4 },
   logoArtBg:     { borderRadius: 7, paddingHorizontal: 5, paddingVertical: 1 },
   logoArt:       { fontSize: 21, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', letterSpacing: -0.4 },

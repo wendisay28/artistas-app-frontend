@@ -10,17 +10,17 @@ import { Colors } from '../../theme/colors';
 import TopBar from '../../components/shared/TopBar';
 
 // ── Hiring components
-import HiringHeader from '../../components/hiring/header/HiringHeader';
-import SearchBar from '../../components/hiring/header/SearchBar';
-import AvailabilitySwitch from '../../components/hiring/shared/AvailabilitySwitch';
-import RealTimeOfferBanner from '../../components/hiring/shared/RealTimeOfferBanner';
-import OffersListTab from '../../components/hiring/tabs/OffersListTab';
-import MyOffersTab from '../../components/hiring/tabs/MyOffersTab';
-import SavedOffersTab from '../../components/hiring/tabs/SavedOffersTab';
-import CreateOfferModal from '../../components/hiring/modals/CreateOfferModal';
-import FilterModal from '../../components/hiring/modals/FilterModal';
-import OfferDetailModal from '../../components/hiring/modals/OfferDetailModal';
-import ApplicantsModal from '../../components/hiring/modals/ApplicantsModal';
+import HiringHeader from './components/header/HiringHeader';
+import SearchBar from './components/header/SearchBar';
+import AvailabilitySwitch from './components/shared/AvailabilitySwitch';
+import RealTimeOfferBanner from './components/shared/RealTimeOfferBanner';
+import OffersListTab from './components/tabs/OffersListTab';
+import MyOffersTab from './components/tabs/MyOffersTab';
+import SavedOffersTab from './components/tabs/SavedOffersTab';
+import CreateOfferModal from './components/modals/CreateOfferModal';
+import FilterModal from './components/modals/FilterModal';
+import OfferDetailModal from './components/modals/OfferDetailModal';
+import ApplicantsModal from './components/modals/ApplicantsModal';
 
 // ── Types
 import type { TabType, Offer, MyOffer, SavedOffer, OfferFormData, Applicant } from '../../types/hiring';

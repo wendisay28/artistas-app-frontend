@@ -24,8 +24,8 @@ import EventDetails   from '../../components/explore/details/EventDetails';
 import GalleryDetails from '../../components/explore/details/GalleryDetails';
 import VenueDetails   from '../../components/explore/details/VenueDetails';
 
-import CategorySelector from '../../components/explore/CategorySelector';
-import UnifiedFiltersPanel from '../../components/explore/shared/UnifiedFiltersPanel';
+import CategorySelector from './components/CategorySelector';
+import UnifiedFiltersPanel from './components/shared/UnifiedFiltersPanel';
 
 // Importar servicios y tipos reales
 import { artistsService } from '../../services/api/artists';
@@ -120,31 +120,241 @@ export default function ExploreScreen() {
     setIsLoading(true);
     setError(null);
     
+    console.log(`[Explore] Cargando categoría: ${category}`);
+    
     try {
       let data: ExploreCard[] = [];
       
       switch (category) {
         case 'artists':
           const response = await artistsService.getExploreArtists({ limit: 20 });
-          data = response.artists;
+          data = response.artists ?? [];
+          if (data.length === 0) {
+            data = [
+              {
+                id: 'mock-a1',
+                type: 'artist',
+                name: 'Valentina Rojas',
+                category: 'Fotografía',
+                bio: 'Fotógrafa de retrato y moda con 8 años de experiencia en Medellín. Especializada en editorial y portafolios artísticos.',
+                image: 'https://picsum.photos/seed/valentina/400/500',
+                gallery: [
+                  'https://picsum.photos/seed/val1/400/300',
+                  'https://picsum.photos/seed/val2/400/300',
+                  'https://picsum.photos/seed/val3/400/300',
+                ],
+                tags: ['Retrato', 'Moda', 'Editorial'],
+                rating: 4.9,
+                reviews: 47,
+                price: 180000,
+                location: 'Medellín',
+                responseTime: '~2h',
+                availability: 'Disponible',
+                verified: true,
+                experience: '8 años',
+                style: 'Editorial / Fine Art',
+                services: ['Sesión de fotos', 'Portafolio artístico', 'Fotografía de eventos'],
+              },
+              {
+                id: 'mock-a2',
+                type: 'artist',
+                name: 'Sebastián Mora',
+                category: 'Música',
+                bio: 'Guitarrista y compositor bogotano. Fusiona jazz, bossa nova y música andina colombiana en cada presentación en vivo.',
+                image: 'https://picsum.photos/seed/sebastian/400/500',
+                gallery: [
+                  'https://picsum.photos/seed/seb1/400/300',
+                  'https://picsum.photos/seed/seb2/400/300',
+                ],
+                tags: ['Jazz', 'Guitarra', 'Compositor'],
+                rating: 4.7,
+                reviews: 32,
+                price: 250000,
+                location: 'Bogotá',
+                responseTime: '~4h',
+                availability: 'Disponible',
+                verified: true,
+                experience: '12 años',
+                style: 'Jazz / Fusión',
+                services: ['Presentación en vivo', 'Clases de guitarra', 'Composición'],
+              },
+              {
+                id: 'mock-a3',
+                type: 'artist',
+                name: 'Camila Herrera',
+                category: 'Ilustración',
+                bio: 'Ilustradora digital y muralista de Cali. Crea piezas llenas de color con temáticas latinoamericanas y culturales.',
+                image: 'https://picsum.photos/seed/camila/400/500',
+                gallery: [
+                  'https://picsum.photos/seed/cam1/400/300',
+                  'https://picsum.photos/seed/cam2/400/300',
+                  'https://picsum.photos/seed/cam3/400/300',
+                  'https://picsum.photos/seed/cam4/400/300',
+                ],
+                tags: ['Digital', 'Mural', 'Cultural'],
+                rating: 4.8,
+                reviews: 61,
+                price: 120000,
+                location: 'Cali',
+                responseTime: '~1h',
+                availability: 'Disponible',
+                verified: false,
+                experience: '5 años',
+                style: 'Ilustración digital / Muralismo',
+                services: ['Ilustración digital', 'Murales', 'Identidad visual'],
+              },
+            ];
+          }
           break;
         case 'events':
-          // TODO: Implementar eventsService.getExploreEvents()
-          data = []; // Temporal hasta implementar eventos
+          // Datos mock para eventos mientras se implementa el servicio
+          console.log('[Explore] Usando datos mock para eventos...');
+          data = [
+            {
+              id: 'e1',
+              type: 'event',
+              name: 'Exposición de Arte Urbano',
+              location: 'Medellín',
+              rating: 4.8,
+              reviews: 23,
+              responseTime: '24h',
+              price: 15000,
+              image: 'https://picsum.photos/400/300?random=1',
+              gallery: [],
+              tags: ['arte', 'urbano'],
+              bio: 'Exposición colectiva de arte urbano',
+              availability: 'Disponible',
+              verified: true,
+              date: '2026-03-15',
+              time: '20:00',
+              venue: 'Galería Central',
+              city: 'Medellín',
+              description: 'Exposición de arte urbano con artistas locales',
+            },
+            {
+              id: 'e2', 
+              type: 'event',
+              name: 'Taller de Fotografía',
+              location: 'Bogotá',
+              rating: 4.6,
+              reviews: 15,
+              responseTime: '12h',
+              price: 25000,
+              image: 'https://picsum.photos/400/300?random=2',
+              gallery: [],
+              tags: ['fotografía', 'taller'],
+              bio: 'Taller intensivo de fotografía',
+              availability: 'Disponible',
+              verified: false,
+              date: '2026-03-20',
+              time: '18:00',
+              venue: 'Studio Pro',
+              city: 'Bogotá',
+              description: 'Taller práctico de fotografía',
+            }
+          ];
           break;
         case 'venues':
-          // TODO: Implementar venuesService.getExploreVenues()
-          data = []; // Temporal hasta implementar venues
+          // Datos mock para salas mientras se implementa el servicio
+          console.log('[Explore] Usando datos mock para salas...');
+          data = [
+            {
+              id: 'v1',
+              type: 'venue',
+              name: 'Galería Arte Moderno',
+              location: 'Medellín, El Poblado',
+              rating: 4.9,
+              reviews: 45,
+              responseTime: '48h',
+              price: 50000,
+              image: 'https://picsum.photos/400/300?random=3',
+              gallery: ['Arte Moderno'],
+              tags: ['galería', 'exposiciones'],
+              bio: 'Espacio dedicado al arte contemporáneo',
+              availability: 'Disponible',
+              verified: true,
+              category: 'Galería de Arte',
+              capacity: 100,
+              amenities: ['Sonido profesional', 'Iluminación', 'Camerinos'],
+              openingHours: 'Lun-Sáb 10:00-20:00',
+              website: 'https://galeriaarte.com',
+            },
+            {
+              id: 'v2',
+              type: 'venue', 
+              name: 'Espacio Creativo',
+              location: 'Bogotá, Chapinero',
+              rating: 4.7,
+              reviews: 32,
+              responseTime: '24h',
+              price: 35000,
+              image: 'https://picsum.photos/400/300?random=4',
+              gallery: ['Arte Alternativo'],
+              tags: ['creativo', 'workshops'],
+              bio: 'Espacio para artistas emergentes',
+              availability: 'Disponible',
+              verified: false,
+              category: 'Centro Cultural',
+              capacity: 50,
+              amenities: ['Proyector', 'Sonido básico'],
+              openingHours: 'Mar-Dom 14:00-22:00',
+            }
+          ];
           break;
         case 'gallery':
-          // TODO: Implementar galleryService.getExploreGallery()
-          data = []; // Temporal hasta implementar gallery
+          // Datos mock para galería mientras se implementa el servicio
+          console.log('[Explore] Usando datos mock para galería...');
+          data = [
+            {
+              id: 'g1',
+              type: 'gallery',
+              name: 'Raíces Urbanas',
+              artistName: 'Valentina Rojas',
+              location: 'Ciudad de México',
+              rating: 4.9,
+              reviews: 42,
+              responseTime: '24h',
+              price: 2500000,
+              image: 'https://picsum.photos/400/300?random=5',
+              gallery: ['Arte Contemporáneo'],
+              tags: ['óleo', 'lienzo'],
+              bio: 'Obra que explora las raíces de la cultura urbana',
+              availability: 'Disponible',
+              verified: true,
+              medium: 'Óleo sobre lienzo',
+              dimensions: '80 x 100 cm',
+              year: 2025,
+              forSale: true,
+            },
+            {
+              id: 'g2',
+              type: 'gallery',
+              name: 'Ecos del Silencio',
+              artistName: 'Marco López',
+              location: 'Oaxaca',
+              rating: 4.7,
+              reviews: 28,
+              responseTime: '48h',
+              price: 1800000,
+              image: 'https://picsum.photos/400/300?random=6',
+              gallery: ['Fotografía'],
+              tags: ['digital', 'naturaleza'],
+              bio: 'Serie fotográfica que captura la esencia del silencio',
+              availability: 'Disponible',
+              verified: true,
+              medium: 'Fotografía digital',
+              dimensions: '60 x 80 cm',
+              year: 2025,
+              forSale: true,
+            }
+          ];
           break;
       }
       
+      console.log(`[Explore] Datos cargados para ${category}:`, data.length);
       setStack(data);
     } catch (err) {
-      console.error(`Error loading ${category}:`, err);
+      console.error(`[Explore] Error loading ${category}:`, err);
       setError('No se pudieron cargar los datos. Intenta de nuevo.');
       setStack([]);
     } finally {
@@ -239,11 +449,25 @@ export default function ExploreScreen() {
   }, [selectedCategory, loadCategoryData, handleResetFilters]);
 
   const renderCardContent = (card: ExploreCard) => {
+    console.log('[Explore] Renderizando tarjeta:', card.type, card.id);
+    console.log('[Explore] Datos de la tarjeta:', card);
+    
     switch (card.type) {
-      case 'artist':  return <ArtistCardContent  artist={card as Artist} />;
-      case 'event':   return <EventCardContent   event={card as Event}   />;
-      case 'gallery': return <GalleryCardContent item={card as GalleryItem} />;
-      case 'venue':   return <VenueCardContent   venue={card as Venue}   />;
+      case 'artist':  
+        console.log('[Explore] Renderizando ArtistCardContent');
+        return <ArtistCardContent  artist={card as Artist} />;
+      case 'event':   
+        console.log('[Explore] Renderizando EventCardContent');
+        return <EventCardContent   event={card as Event}   />;
+      case 'gallery': 
+        console.log('[Explore] Renderizando GalleryCardContent');
+        return <GalleryCardContent item={card as GalleryItem} />;
+      case 'venue':   
+        console.log('[Explore] Renderizando VenueCardContent');
+        return <VenueCardContent   venue={card as Venue}   />;
+      default:
+        console.log('[Explore] Tipo de tarjeta no reconocido:', (card as any).type);
+        return null;
     }
   };
 
@@ -445,11 +669,18 @@ export default function ExploreScreen() {
             </View>
           ) : (
             <View>
-              {[...stack].reverse().map((card, i) => (
-                <SwipeCard key={card.id} card={card} zIndex={stack.length - i} onDismiss={handleDismiss}>
-                  {renderCardContent(card)}
-                </SwipeCard>
-              ))}
+              {(() => {
+                console.log('[Explore] Renderizando stack de tarjetas:', stack.length);
+                return null;
+              })()}
+              {[...stack].reverse().map((card, i) => {
+                console.log(`[Explore] Tarjeta ${i}:`, card.type, card.id);
+                return (
+                  <SwipeCard key={card.id} card={card} zIndex={stack.length - i} onDismiss={handleDismiss}>
+                    {renderCardContent(card)}
+                  </SwipeCard>
+                );
+              })}
             </View>
           )}
         </View>

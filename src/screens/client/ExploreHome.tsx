@@ -116,7 +116,7 @@ export const ClientExploreHome: React.FC<Props> = ({ navigation }) => {
       {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.logoRow}>
-          <Text style={styles.logoBusca}>Busca</Text>
+          <Text style={styles.logoBusca}>Busc</Text>
           <LinearGradient colors={['#9333ea', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.logoArtBg}>
             <Text style={styles.logoArt}>rt</Text>
           </LinearGradient>

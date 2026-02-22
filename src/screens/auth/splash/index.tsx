@@ -33,7 +33,7 @@ export const SplashScreen = () => {
           {/* Logo */}
           <Animated.View style={{ opacity: logoOpacity, transform: [{ scale: logoScale }] }}>
             <View style={styles.logoWrap}>
-              <Text style={styles.logoBusca}>Busca</Text>
+              <Text style={styles.logoBusca}>Busc</Text>
               <Text style={styles.logoArt}>rt</Text>
             </View>
           </Animated.View>

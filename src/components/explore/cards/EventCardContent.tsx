@@ -318,7 +318,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     backgroundColor: 'rgba(255,255,255,0.95)',
-    backdropFilter: 'blur(10px)',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6,

@@ -1,7 +1,7 @@
 import type {
   Artist, Service, PortfolioItem, Review,
   Product, ArtistEvent, ScheduleItem, LiveRequest, CalendarDay,
-} from '../../components/profile/types';
+} from './components/types';
 
 export const MOCK_ARTIST: Artist = {
   id: '1',

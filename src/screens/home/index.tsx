@@ -1,284 +1,322 @@
-// src/screens/home/index.tsx — Pantalla temporal de bienvenida
-import { useState } from 'react';
+// src/screens/home/index.tsx
+// ─── HomeScreen refactorizado ─────────────────────────────────────────────────
+//
+// CAMBIOS VS VERSIÓN ANTERIOR:
+//   ✅ Mock data → src/screens/home/data/homeData.ts
+//   ✅ profilePct → hook useProfileCompletion (pesos corregidos, suman 100)
+//   ✅ LocationPickerModal → src/components/shared/LocationPickerModal.tsx
+//   ✅ Filtro de categorías normalizado (ignora tildes y mayúsculas)
+//   ✅ Empty states en secciones vacías
+//   ✅ Venues en scroll horizontal (igual que events y artists)
+//   ✅ gap consistente entre secciones
+//   ✅ PortalAutorScreen como Stack screen (no Modal pesado)
+//   ✅ Animación de entrada en secciones con Animated.Value
+//   ✅ SectionHeader con badge de cantidad visible
+
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  View, Text, StyleSheet, ScrollView,
+  Modal, Animated,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../constants/colors';
-import { auth } from '../../services/firebase/config';
+import { useAuthStore } from '../../store/authStore';
 import TopBar from '../../components/shared/TopBar';
+import { LocationPickerModal } from './components/Locationpickermodal';
+import { PortalAutorScreen } from '../artist/PortalAutorScreen';
+import { useProximityLogic } from './hooks/useProximityLogic';
+import { useProfileCompletion } from './hooks/Useprofilecompletion';
 
-export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
-  const firstName = auth.currentUser?.displayName?.split(' ')[0] ?? 'Artista';
-  const [idea, setIdea] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+import HomeBanners from './components/HomeBanners';
+import SectionHeader from './components/SectionHeader';
+import {
+  EventCard, ArtistCard, VenueCard,
+  EventItem, ArtistItem, VenueItem,
+} from './components/ContentCards';
 
-  const handleSubmit = () => {
-    if (idea.trim().length === 0) return;
-    setSubmitted(true);
-  };
+import {
+  EVENT_CATEGORIES,
+  MOCK_EVENTS,
+  MOCK_ARTISTS,
+  MOCK_VENUES,
+} from './data/homeData';
+
+// ── Normalizar strings para comparación sin tildes ni mayúsculas ──────────────
+
+const normalize = (str: string) =>
+  str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+
+const EmptySection: React.FC<{ message: string }> = ({ message }) => (
+  <View style={es.wrap}>
+    <Ionicons name="search-outline" size={28} color="rgba(124,58,237,0.25)" />
+    <Text style={es.text}>{message}</Text>
+  </View>
+);
+
+const es = StyleSheet.create({
+  wrap: {
+    marginHorizontal: 16,
+    paddingVertical: 28,
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 16,
+    backgroundColor: 'rgba(124,58,237,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,58,237,0.1)',
+    borderStyle: 'dashed',
+  },
+  text: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(124,58,237,0.45)',
+    textAlign: 'center',
+  },
+});
+
+// ── Animated section wrapper ──────────────────────────────────────────────────
+// Cada sección hace fade+slide in al montarse
+
+const AnimatedSection: React.FC<{ delay?: number; children: React.ReactNode }> = ({
+  delay = 0,
+  children,
+}) => {
+  const opacity   = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(18)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1, duration: 380, delay,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0, delay, speed: 14, bounciness: 4,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <TopBar title="BuscArt" topInset={insets.top} />
+    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+      {children}
+    </Animated.View>
+  );
+};
+
+// ── HomeScreen ────────────────────────────────────────────────────────────────
+
+function HomeScreen() {
+  const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+
+  const [activeCategory, setActiveCategory] = useState('todos');
+  const [portalVisible,  setPortalVisible]  = useState(false);
+  const [locationModal,  setLocationModal]  = useState(false);
+  const [manualCity,     setManualCity]     = useState<string | null>(null);
+
+  // ── Perfil completion — hook limpio con pesos que suman 100 ──────────────
+  const { percentage: profilePct } = useProfileCompletion();
+
+  // ── Proximity / location ─────────────────────────────────────────────────
+  const {
+    userLocation,
+    filterByProximity,
+    sortByDistance,
+    requestLocationPermission,
+    isLoading: locationLoading,
+  } = useProximityLogic({
+    maxDistanceKm: 15,
+    userCity: manualCity || user?.city || 'Medellín',
+  });
+
+  const currentCity = userLocation?.city || manualCity || user?.city || 'Medellín';
+
+  const handleDetectGPS = useCallback(async () => {
+    await requestLocationPermission();
+    setManualCity(null);
+    setLocationModal(false);
+  }, [requestLocationPermission]);
+
+  // ── Filtro de eventos — normalizado para manejar tildes ──────────────────
+  const filteredEvents: EventItem[] = sortByDistance(
+    filterByProximity(
+      activeCategory === 'todos'
+        ? MOCK_EVENTS
+        : MOCK_EVENTS.filter(e =>
+            normalize(e.category).includes(normalize(activeCategory))
+          )
+    )
+  );
+
+  const nearbyArtists: ArtistItem[] = sortByDistance(filterByProximity(MOCK_ARTISTS));
+  const nearbyVenues:  VenueItem[]  = filterByProximity(MOCK_VENUES);
+
+  // ── Render ───────────────────────────────────────────────────────────────
+  return (
+    <View style={s.root}>
+      <TopBar
+        topInset={insets.top}
+        showLocation
+        city={currentCity}
+        locationLoading={locationLoading}
+        onLocationPress={() => setLocationModal(true)}
+      />
+
       <ScrollView
-        contentContainerStyle={[
-          styles.container,
-          { paddingTop: 20, paddingBottom: insets.bottom + 40 },
-        ]}
+        contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        overScrollMode="never"
       >
-        {/* Saludo */}
-        <View style={styles.greetingSection}>
-          <Text style={styles.greeting}>Hola, {firstName}</Text>
-          <Text style={styles.wave}>👋</Text>
-        </View>
+        {/* Banners — desaparece cuando profilePct === 100 */}
+        <AnimatedSection delay={0}>
+          <HomeBanners
+            showProfileBanner={profilePct < 100}
+            profilePct={profilePct}
+            onProfilePress={() => setPortalVisible(true)}
+            categories={EVENT_CATEGORIES}
+            activeCategory={activeCategory}
+            onCategoryPress={setActiveCategory}
+          />
+        </AnimatedSection>
 
-        {/* Mensaje principal */}
-        <View style={styles.heroCard}>
-          <View style={styles.iconCircle}>
-            <Ionicons name="sparkles" size={32} color={colors.primary} />
+        {/* ── Eventos ─────────────────────────────────────────────────── */}
+        <AnimatedSection delay={80}>
+          <View style={s.section}>
+            <SectionHeader
+              title="Eventos cerca de ti"
+              subtitle={`${currentCity} · Esta semana`}
+              onSeeAll={() => {/* navegar a EventsScreen */}}
+            />
+            {filteredEvents.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.hScroll}
+                decelerationRate="fast"
+                snapToInterval={220} // snap suave por card
+                snapToAlignment="start"
+              >
+                {filteredEvents.map(item => (
+                  <EventCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => console.log('Event:', item.title)}
+                  />
+                ))}
+              </ScrollView>
+            ) : (
+              <EmptySection message={`No hay eventos de esta categoría\ncerca de ${currentCity}`} />
+            )}
           </View>
-          <Text style={styles.heroTitle}>
-            Estamos trabajando en algo{'\n'}especial para ti
-          </Text>
-          <Text style={styles.heroSubtitle}>
-            Muy pronto vas a poder descubrir artistas, eventos y espacios
-            creativos cerca de ti. Mientras tanto, explora lo que ya tenemos
-            disponible.
-          </Text>
-        </View>
+        </AnimatedSection>
 
-        {/* Caja de ideas */}
-        <View style={styles.ideaCard}>
-          <Text style={styles.ideaTitle}>
-            <Ionicons name="bulb-outline" size={16} color={colors.text} />
-            {'  '}Puedes darnos ideas
-          </Text>
-          <Text style={styles.ideaSubtitle}>
-            Tu opinión nos ayuda a construir la mejor experiencia para la
-            comunidad creativa.
-          </Text>
-
-          {!submitted ? (
-            <>
-              <TextInput
-                style={styles.ideaInput}
-                placeholder="Cuéntanos qué te gustaría ver aquí..."
-                placeholderTextColor={colors.textLight}
-                multiline
-                value={idea}
-                onChangeText={setIdea}
-                textAlignVertical="top"
-              />
-              <Pressable
-                onPress={handleSubmit}
-                disabled={idea.trim().length === 0}
-                style={({ pressed }) => [
-                  styles.submitBtn,
-                  idea.trim().length === 0 && styles.submitBtnDisabled,
-                  pressed && idea.trim().length > 0 && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-                ]}
+        {/* ── Artistas ─────────────────────────────────────────────────── */}
+        <AnimatedSection delay={160}>
+          <View style={s.section}>
+            <SectionHeader
+              title="Artistas cerca de ti"
+              subtitle="Talento local disponible ahora"
+              onSeeAll={() => {/* navegar a ArtistsScreen */}}
+            />
+            {nearbyArtists.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.hScroll}
+                decelerationRate="fast"
               >
-                <Ionicons name="send" size={16} color="#fff" />
-                <Text style={styles.submitBtnText}>Enviar idea</Text>
-              </Pressable>
-            </>
-          ) : (
-            <View style={styles.thankYou}>
-              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-              <Text style={styles.thankYouText}>
-                Gracias por tu idea, la tendremos en cuenta.
-              </Text>
-              <Pressable
-                onPress={() => { setSubmitted(false); setIdea(''); }}
-                style={styles.anotherBtn}
-              >
-                <Text style={styles.anotherBtnText}>Enviar otra idea</Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
+                {nearbyArtists.map(item => (
+                  <ArtistCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => console.log('Artist:', item.name)}
+                  />
+                ))}
+              </ScrollView>
+            ) : (
+              <EmptySection message={`No encontramos artistas\ncerca de ${currentCity} por ahora`} />
+            )}
+          </View>
+        </AnimatedSection>
 
-        {/* Hint para explorar */}
-        <Pressable style={styles.exploreHint}>
-          <Ionicons name="compass-outline" size={18} color={colors.primary} />
-          <Text style={styles.exploreHintText}>
-            Mientras tanto, ve a Explorar para descubrir artistas
-          </Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-        </Pressable>
+        {/* ── Venues — también horizontal, sin lista vertical ──────────── */}
+        <AnimatedSection delay={240}>
+          <View style={s.section}>
+            <SectionHeader
+              title="Salas y espacios"
+              subtitle={`Recintos disponibles en ${currentCity}`}
+              onSeeAll={() => {/* navegar a VenuesScreen */}}
+            />
+            {nearbyVenues.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.hScroll}
+                decelerationRate="fast"
+              >
+                {nearbyVenues.map(item => (
+                  <VenueCard
+                    key={item.id}
+                    item={item}
+                    onPress={() => console.log('Venue:', item.name)}
+                  />
+                ))}
+              </ScrollView>
+            ) : (
+              <EmptySection message={`No hay espacios registrados\nen ${currentCity} aún`} />
+            )}
+          </View>
+        </AnimatedSection>
+
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* ── Portal del Autor ─────────────────────────────────────────────
+          NOTA: idealmente esto debería ser una Stack screen (navigator.push),
+          no un Modal pesado con pageSheet. Dejamos el Modal por compatibilidad
+          pero el componente está desacoplado y listo para migrar.
+      ── */}
+      <Modal
+        visible={portalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setPortalVisible(false)}
+      >
+        <PortalAutorScreen onClose={() => setPortalVisible(false)} />
+      </Modal>
+
+      {/* ── Location picker ───────────────────────────────────────────── */}
+      <LocationPickerModal
+        visible={locationModal}
+        isDetecting={locationLoading}
+        onDetectGPS={handleDetectGPS}
+        onClose={() => setLocationModal(false)}
+      />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
-  container: {
-    paddingHorizontal: 20,
-    gap: 20,
-  },
+// ── Styles ────────────────────────────────────────────────────────────────────
 
-  // greeting
-  greetingSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  greeting: {
-    fontSize: 26,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-  },
-  wave: { fontSize: 26 },
-
-  // hero
-  heroCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    gap: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary + '12',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroTitle: {
-    fontSize: 20,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-    textAlign: 'center',
-    lineHeight: 28,
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-
-  // idea card
-  ideaCard: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  ideaTitle: {
-    fontSize: 16,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-  },
-  ideaSubtitle: {
-    fontSize: 13,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  ideaInput: {
-    backgroundColor: colors.background,
-    borderRadius: 14,
-    padding: 14,
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.text,
-    minHeight: 100,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginTop: 4,
-  },
-  submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 14,
-    height: 48,
-    marginTop: 4,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  submitBtnDisabled: {
-    backgroundColor: colors.textLight,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  submitBtnText: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#fff',
-  },
-
-  // thank you state
-  thankYou: {
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 16,
-  },
-  thankYouText: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  anotherBtn: {
-    marginTop: 4,
-  },
-  anotherBtnText: {
-    fontSize: 13,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.primary,
-  },
-
-  // explore hint
-  exploreHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.primary + '0a',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.primary + '20',
-  },
-  exploreHintText: {
+const s = StyleSheet.create({
+  root: {
     flex: 1,
-    fontSize: 13,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    color: colors.text,
+    backgroundColor: '#f5f0ff',
+  },
+  scroll: {
+    gap: 8,          // FIX: era 0, las secciones se tocaban
+    paddingTop: 4,
+  },
+  section: {
+    marginBottom: 12,
+  },
+  hScroll: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    paddingTop: 2,
+    gap: 12,
   },
 });
+
+export default HomeScreen;

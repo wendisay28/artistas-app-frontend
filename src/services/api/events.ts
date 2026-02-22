@@ -33,8 +33,8 @@ export interface EventResponse {
 export const eventsService = {
   // Obtener eventos del usuario autenticado
   getMyEvents: async (): Promise<Event[]> => {
-    const response = await apiClient.get(API_ENDPOINTS.EVENTS.LIST);
-    return response.data.data || [];
+    const response = await apiClient.get('/events/upcoming');
+    return response.data || [];
   },
 
   // Obtener un evento por ID

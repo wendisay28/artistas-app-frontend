@@ -29,12 +29,16 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    console.error('[API] Error en respuesta:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data
-    });
+    const status = error.response?.status;
+    // 404 es esperado para usuarios nuevos sin perfil en el backend — no loguear como error
+    if (status !== 404) {
+      console.error('[API] Error en respuesta:', {
+        url: error.config?.url,
+        status,
+        statusText: error.response?.statusText,
+        data: error.response?.data
+      });
+    }
     return Promise.reject(error);
   }
 );

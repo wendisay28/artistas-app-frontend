@@ -71,7 +71,7 @@ const isMedellin = (city: string) =>
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 const StepLocation = () => {
-  const { step, city, setCity, goNextStep, goPrevStep } = useOnboardingContext();
+  const { step, city, setCity, goPrevStep, submitProfile, isLoading } = useOnboardingContext();
 
   const [gpsLoading, setGpsLoading]     = useState(false);
   const [gpsStatus, setGpsStatus]       = useState<'idle' | 'success' | 'denied' | 'error'>('idle');
@@ -158,7 +158,7 @@ const StepLocation = () => {
               <TouchableOpacity onPress={goPrevStep} style={s.backBtn} activeOpacity={0.8}>
                 <Ionicons name="arrow-back" size={18} color="#6d28d9" />
               </TouchableOpacity>
-              <Text style={s.logoBusca}>Busca</Text>
+              <Text style={s.logoBusca}>Busc</Text>
               <LinearGradient colors={['#7c3aed','#2563eb']} start={{x:0,y:0}} end={{x:1,y:0}} style={s.logoArtBg}>
                 <Text style={s.logoArt}>Art</Text>
               </LinearGradient>
@@ -380,18 +380,23 @@ const StepLocation = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={goNextStep}
-              disabled={!canContinue}
+              onPress={submitProfile}
+              disabled={!canContinue || isLoading}
               activeOpacity={0.85}
-              style={[s.nextBtn, !canContinue && s.nextBtnDisabled]}
+              style={[s.nextBtn, (!canContinue || isLoading) && s.nextBtnDisabled]}
             >
               <LinearGradient
                 colors={canContinue ? ['#7c3aed','#2563eb'] : ['rgba(124,58,237,0.3)','rgba(37,99,235,0.3)']}
                 start={{x:0,y:0}} end={{x:1,y:0}}
                 style={s.nextBtnInner}
               >
-                <Text style={s.nextBtnText}>Continuar</Text>
-                <Ionicons name="arrow-forward" size={18} color="#fff" />
+                {isLoading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <>
+                      <Text style={s.nextBtnText}>Empezar</Text>
+                      <Ionicons name="arrow-forward" size={18} color="#fff" />
+                    </>
+                }
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -424,12 +429,12 @@ const s = StyleSheet.create({
     flexDirection:'row', alignItems:'center', justifyContent:'space-between',
     paddingHorizontal:20, paddingTop:10, paddingBottom:16,
   },
-  logoRow:         { flexDirection:'row', alignItems:'center', gap:6 },
+  logoRow:         { flexDirection:'row', alignItems:'center', gap:0 },
   backBtn: {
     width:32, height:32, borderRadius:10,
     backgroundColor:'rgba(255,255,255,0.8)',
     borderWidth:1, borderColor:'rgba(124,58,237,0.14)',
-    alignItems:'center', justifyContent:'center', marginRight:2,
+    alignItems:'center', justifyContent:'center', marginRight:8,
   },
   logoBusca:       { fontSize:21, fontFamily:'PlusJakartaSans_800ExtraBold', color:'#1e1b4b', letterSpacing:-0.4 },
   logoArtBg:       { borderRadius:7, paddingHorizontal:5, paddingVertical:1 },

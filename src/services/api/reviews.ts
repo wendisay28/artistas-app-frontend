@@ -37,8 +37,23 @@ export interface ReviewResponse {
 export const reviewsService = {
   // Obtener reseñas del perfil del usuario autenticado
   getMyReviews: async (): Promise<ReviewResponse> => {
-    const response = await apiClient.get(API_ENDPOINTS.REVIEWS.MY_REVIEWS);
-    return response.data.data;
+    try {
+      const response = await apiClient.get(API_ENDPOINTS.REVIEWS.MY_REVIEWS);
+      const body = response.data;
+      // El backend retorna { reviews, stats: { averageRating, totalReviews } }
+      return {
+        reviews: body.reviews ?? [],
+        averageRating: body.stats?.averageRating ?? body.averageRating ?? 0,
+        totalReviews: body.stats?.totalReviews ?? body.totalReviews ?? 0,
+        ratingDistribution: body.stats?.ratingDistribution ?? body.ratingDistribution ?? { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+      };
+    } catch (e: any) {
+      // 404 = perfil aún no existe en backend (usuario nuevo) — retornar vacío silenciosamente
+      if (e?.response?.status === 404 || e?.response?.status === 401) {
+        return { reviews: [], averageRating: 0, totalReviews: 0, ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } };
+      }
+      throw e;
+    }
   },
 
   // Obtener reseñas de un artista específico

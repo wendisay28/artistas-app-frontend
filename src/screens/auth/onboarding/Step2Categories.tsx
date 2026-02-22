@@ -221,7 +221,7 @@ const Step2Categories = () => {
               <TouchableOpacity onPress={goPrevStep} style={s.backBtn} activeOpacity={0.8}>
                 <Ionicons name="arrow-back" size={18} color="#6d28d9" />
               </TouchableOpacity>
-              <Text style={s.logoBusca}>Busca</Text>
+              <Text style={s.logoBusca}>Busc</Text>
               <LinearGradient colors={['#7c3aed','#2563eb']} start={{x:0,y:0}} end={{x:1,y:0}} style={s.logoArtBg}>
                 <Text style={s.logoArt}>Art</Text>
               </LinearGradient>
@@ -320,7 +320,7 @@ const s = StyleSheet.create({
     flexDirection:'row', alignItems:'center', justifyContent:'space-between',
     paddingHorizontal:20, paddingTop:10, paddingBottom:16,
   },
-  logoRow:         { flexDirection:'row', alignItems:'center', gap:6 },
+  logoRow:         { flexDirection:'row', alignItems:'center', gap:0 },
   backBtn: {
     width:32, height:32, borderRadius:10,
     backgroundColor:'rgba(255,255,255,0.8)',

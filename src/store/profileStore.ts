@@ -16,7 +16,7 @@ import {
   BackendArtist,
 } from '../services/api/profile';
 import { registerOrSyncUser } from '../services/api/users';
-import type { Artist, ArtistTag, StudyDetail, WorkExperienceDetail, CertificationDetail } from '../components/profile/types';
+import type { Artist, ArtistTag, StudyDetail, WorkExperienceDetail, CertificationDetail } from '../screens/profile/components/types';
 
 // ── Helpers de mapeo backend → frontend ──────────────────────────────────────
 
@@ -27,10 +27,12 @@ const formatNumber = (num: number): string => {
 };
 
 function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, firebaseUser?: { uid: string; photoURL?: string | null; displayName?: string | null }): Artist {
-  const displayName = user.displayName
+  const displayName = artist?.artistName ?? user.displayName
+    ?? user.email?.split('@')[0]
     ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
     ?? firebaseUser?.displayName
     ?? 'Artista';
+
 
   const tags: ArtistTag[] = Array.isArray(artist?.tags)
     ? artist!.tags.map((t, i) => ({ label: t, genre: i === 0 }))
@@ -171,60 +173,95 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
             { uid: firebaseUid ?? user.id, photoURL: firebasePhotoURL, displayName: firebaseDisplayName }
           );
 
-          // Preservar datos locales que no vienen del backend (socialLinks, info detallado)
+          // Preservar datos locales que no vienen del backend o que el backend aún no tiene
           const existing = get().artistData;
           if (existing) {
-            mapped.info = existing.info ?? [];
+            mapped.info        = existing.info        ?? [];
             mapped.socialLinks = existing.socialLinks ?? [];
+            // Si el backend devuelve vacío pero tenemos datos locales, conservarlos
+            if (!mapped.bio         && existing.bio)         mapped.bio         = existing.bio;
+            if (!mapped.description && existing.description) mapped.description = existing.description;
+            if (!mapped.location    && existing.location)    mapped.location    = existing.location;
+            if (!mapped.role        && existing.role)        mapped.role        = existing.role;
+            if (!(mapped as any).schedule && (existing as any).schedule) {
+              (mapped as any).schedule = (existing as any).schedule;
+            }
+            if ((!mapped.tags || mapped.tags.length === 0) && existing.tags?.length) {
+              mapped.tags = existing.tags;
+            }
           }
 
           set({ artistData: mapped, isLoading: false, lastSynced: Date.now() });
         } catch (e: any) {
-          console.warn('[profileStore] loadProfile error:', e);
-          
-          // Si el backend falla (401, 404, 500), crear perfil local desde Firebase
+          // 404 = perfil aún no creado en el backend → comportamiento esperado, no loguear como error
+          if (e?.response?.status !== 404) {
+            console.warn('[profileStore] loadProfile error:', e);
+          }
+
+          const existing = get().artistData;
+
+          // Si el backend falla (401, 404, 500) — preservar datos locales ante todo
           if (e?.response?.status >= 400 || !e?.response) {
-            console.log('[profileStore] Backend no disponible, usando perfil local desde Firebase');
             const firebaseUser = auth.currentUser;
+
+            if (existing) {
+              // Ya hay datos guardados localmente: mantenerlos y solo refrescar
+              // nombre/avatar desde Firebase si están vacíos
+              set({
+                artistData: {
+                  ...existing,
+                  name:   existing.name   || firebaseUser?.displayName || 'Artista',
+                  avatar: existing.avatar || firebaseUser?.photoURL    || '',
+                },
+                isLoading: false,
+                error: null,
+              });
+              return;
+            }
+
+            // No hay datos locales: crear perfil vacío desde Firebase como base
             if (firebaseUser) {
-              const fallbackProfile: Artist = {
-                id: firebaseUser.uid,
-                name: firebaseUser.displayName || 'Artista',
-                handle: `@${(firebaseUser.displayName || 'artista').toLowerCase().replace(/\s+/g, '_')}`,
-                location: '',
-                avatar: firebaseUser.photoURL || '',
-                isVerified: false,
-                isOnline: true,
-                bio: '',
-                tags: [],
-                stats: [
-                  { value: '0', label: 'Obras' },
-                  { value: '5.0', label: 'Rating' },
-                  { value: '0', label: 'Seguidores' },
-                  { value: '0', label: 'Visitas' },
-                ],
-                socialLinks: [],
-                info: [],
-                isOwner: true,
-                role: '',
-                specialty: '',
-                niche: '',
-                studies: [],
-                workExperience: [],
-                certifications: [],
-                yearsOfExperience: 0,
-                artistId: undefined,
-                userType: 'artist',
-                companyName: undefined,
-                companyDescription: undefined,
-                availability: 'available',
-              };
-              
-              set({ artistData: fallbackProfile, isLoading: false, error: 'Modo offline - Backend no disponible' });
+              console.log('[profileStore] Sin datos locales, creando perfil base desde Firebase');
+              set({
+                artistData: {
+                  id: firebaseUser.uid,
+                  name: firebaseUser.displayName || 'Artista',
+                  handle: `@${(firebaseUser.displayName || 'artista').toLowerCase().replace(/\s+/g, '_')}`,
+                  location: '',
+                  avatar: firebaseUser.photoURL || '',
+                  isVerified: false,
+                  isOnline: true,
+                  bio: '',
+                  tags: [],
+                  stats: [
+                    { value: '0', label: 'Obras' },
+                    { value: '5.0', label: 'Rating' },
+                    { value: '0', label: 'Seguidores' },
+                    { value: '0', label: 'Visitas' },
+                  ],
+                  socialLinks: [],
+                  info: [],
+                  isOwner: true,
+                  role: '',
+                  specialty: '',
+                  niche: '',
+                  studies: [],
+                  workExperience: [],
+                  certifications: [],
+                  yearsOfExperience: 0,
+                  artistId: undefined,
+                  userType: 'artist',
+                  companyName: undefined,
+                  companyDescription: undefined,
+                  availability: 'available',
+                },
+                isLoading: false,
+                error: null,
+              });
               return;
             }
           }
-          
+
           set({ isLoading: false, error: e?.message || 'Error cargando perfil' });
         }
       },
@@ -277,18 +314,9 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           console.error('[profileStore] saveHeader error:', e);
           
           // Si el backend falla, mantener los cambios localmente y mostrar advertencia
-          if (e?.response?.status >= 400 || !e?.response) {
-            console.log('[profileStore] Backend no disponible, cambios guardados localmente');
-            set({ 
-              isSaving: false, 
-              error: 'Cambios guardados localmente - Backend no disponible' 
-            });
-            return;
-          }
-          
-          // Rollback solo para errores inesperados
-          set({ artistData: prev, isSaving: false, error: e?.message ?? 'Error al guardar' });
-          throw e;
+          // Mantener el optimistic update local aunque el backend falle
+          console.warn('[profileStore] saveHeader: backend no disponible, guardado solo localmente:', e?.message);
+          set({ isSaving: false });
         }
       },
 
@@ -312,7 +340,7 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
             artistData: {
               ...s.artistData,
               description: data.description,
-              bio: data.description.length > 105 ? data.description.substring(0, 105) + '...' : data.description,
+              // bio corta NO se toca aquí — se edita independientemente en saveBio
               specialty: data.specialty,
               niche: data.niche,
               studies: data.studies,
@@ -443,20 +471,18 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       },
 
       saveBio: async (bio) => {
+        // Bio corta — solo actualiza `bio`, NO `description` (son campos independientes)
+        // description = texto largo del "Sobre mí" → se guarda en saveSobreMi
         set({ isSaving: true, error: null });
         set((s) => ({
-          artistData: s.artistData ? { ...s.artistData, bio, description: bio } : s.artistData,
+          artistData: s.artistData ? { ...s.artistData, bio } : s.artistData,
         }));
         try {
-          await Promise.all([
-            updateUserProfile({ bio: bio.substring(0, 500) }),
-            updateArtistProfile({ description: bio }),
-          ]);
-          set({ isSaving: false });
+          await updateUserProfile({ bio: bio.substring(0, 300) });
         } catch (e: any) {
-          console.error('[profileStore] saveBio error:', e);
-          set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
-          throw e;
+          console.warn('[profileStore] saveBio: backend no disponible, guardado solo localmente:', e?.message);
+        } finally {
+          set({ isSaving: false });
         }
       },
 

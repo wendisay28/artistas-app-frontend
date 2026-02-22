@@ -1,3 +1,7 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// TopBar.tsx — Barra superior global · Estilo Instagram · BuscArt
+// ─────────────────────────────────────────────────────────────────────────────
+
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
@@ -22,13 +26,21 @@ import { PortalAutorScreen } from '../../screens/artist/PortalAutorScreen';
 
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.65;
 
+// ── Props ──────────────────────────────────────────────────────────────────────
+
 interface TopBarProps {
-  title: string;
+  title?: string;
   topInset: number;
   rightActions?: React.ReactNode;
   onNotificationPress?: () => void;
   onSettingsPress?: () => void;
-  usernameMode?: boolean; // Muestra el título como username estilo Instagram
+  usernameMode?: boolean;
+  showLocation?: boolean;
+  city?: string;
+  onLocationPress?: () => void;
+  locationLoading?: boolean;
+  notificationCount?: number;    // Badge en el bell
+  onCreatePress?: () => void;    // Botón "+" (crear publicación)
 }
 
 interface MenuOption {
@@ -39,6 +51,8 @@ interface MenuOption {
   destructive?: boolean;
 }
 
+// ── Componente ─────────────────────────────────────────────────────────────────
+
 export default function TopBar({
   title,
   topInset,
@@ -46,6 +60,12 @@ export default function TopBar({
   onNotificationPress,
   onSettingsPress,
   usernameMode = false,
+  showLocation = false,
+  city,
+  onLocationPress,
+  locationLoading = false,
+  notificationCount = 0,
+  onCreatePress,
 }: TopBarProps) {
   const user = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
@@ -152,57 +172,136 @@ export default function TopBar({
     },
   ];
 
+  // ── Sección derecha según modo ─────────────────────────────────────────────
+
+  const renderRightActions = () => {
+    if (rightActions) return rightActions;
+
+    // Modo perfil (usernameMode): iconos tipo Instagram perfil
+    if (usernameMode) {
+      return (
+        <>
+          {/* Añadir contenido */}
+          <Pressable
+            onPress={onCreatePress}
+            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.5 }]}
+            hitSlop={8}
+          >
+            <Ionicons name="add-outline" size={26} color={colors.text} />
+          </Pressable>
+          {/* Menú / drawer — hamburger */}
+          <Pressable
+            onPress={openDrawer}
+            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.5 }]}
+            hitSlop={8}
+          >
+            <Ionicons name="reorder-three-outline" size={26} color={colors.text} />
+          </Pressable>
+        </>
+      );
+    }
+
+    // Modo home / default: bell con badge + avatar para drawer
+    return (
+      <>
+        {/* Bell con badge de notificaciones */}
+        <Pressable
+          onPress={onNotificationPress}
+          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.5 }]}
+          hitSlop={8}
+        >
+          <Ionicons name="notifications-outline" size={24} color={colors.text} />
+          {notificationCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {notificationCount > 9 ? '9+' : notificationCount}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+      </>
+    );
+  };
+
+  // ── En modo perfil el drawer lo abre el hamburger, no el avatar ───────────
+  const renderAvatarOrHamburger = () => {
+    if (usernameMode) return null; // el hamburger ya está en renderRightActions
+
+    return (
+      <Pressable
+        onPress={openDrawer}
+        style={({ pressed }) => [styles.avatarBtn, pressed && { opacity: 0.75 }]}
+      >
+        {user?.photoURL ? (
+          <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Ionicons name="person" size={15} color={colors.textSecondary} />
+          </View>
+        )}
+      </Pressable>
+    );
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <>
       <View style={[styles.container, { paddingTop: topInset + 8 }]}>
-        {/* Title / Username */}
-        {usernameMode ? (
-          <View style={styles.usernameRow}>
-            <Text style={styles.usernameTitle} numberOfLines={1}>
-              {title}
-            </Text>
-            <View style={{ marginLeft: 2, marginTop: 1 }}>
-              <Ionicons name="chevron-down" size={16} color={colors.text} />
-            </View>
-          </View>
-        ) : (
-          <Text style={[styles.title, { marginLeft: 0 }]} numberOfLines={1}>
-            {title}
-          </Text>
-        )}
 
-        {/* Right actions */}
-        <View style={styles.rightActions}>
-          {rightActions ?? (
-            <>
-              <Pressable
-                onPress={onNotificationPress}
-                style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}
+        {/* ── LEFT: Logo o Título ── */}
+        <View style={styles.leftSection}>
+          {!title ? (
+            <View style={styles.logoRow}>
+              <Text style={styles.logoBusca}>Busc</Text>
+              <LinearGradient
+                colors={['#7c3aed', '#2563eb']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.logoArtBg}
               >
-                <Ionicons name="notifications-outline" size={22} color={colors.text} />
-              </Pressable>
-            </>
+                <Text style={styles.logoArt}>Art</Text>
+              </LinearGradient>
+            </View>
+          ) : usernameMode ? (
+            <View style={styles.usernameRow}>
+              <Text style={styles.usernameTitle} numberOfLines={1}>{title}</Text>
+              <Ionicons name="chevron-down" size={15} color={colors.text} style={{ marginLeft: 3, marginTop: 2 }} />
+            </View>
+          ) : (
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
           )}
+        </View>
 
-          {/* Avatar — abre drawer (+ chevron solo en modo normal) */}
-          <Pressable onPress={openDrawer} style={styles.avatarDropdown}>
-            {user?.photoURL ? (
-              <Image source={{ uri: user.photoURL }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Ionicons name="person" size={16} color={colors.textSecondary} />
-              </View>
-            )}
-            {!usernameMode && (
-              <View style={{ marginLeft: 2 }}>
-                <Ionicons name="chevron-down" size={13} color={colors.textSecondary} />
-              </View>
-            )}
+        {/* ── CENTER: Location (solo en home) ── */}
+        {showLocation && city ? (
+          <Pressable
+            onPress={onLocationPress}
+            style={({ pressed }) => [styles.locationCenter, pressed && { opacity: 0.65 }]}
+          >
+            <Text style={styles.locationLabel}>Ubicación</Text>
+            <View style={styles.locationCityRow}>
+              {locationLoading ? (
+                <Ionicons name="location" size={11} color="#7c3aed" />
+              ) : (
+                <Ionicons name="location" size={11} color="#7c3aed" />
+              )}
+              <Text style={styles.locationCity} numberOfLines={1}>
+                {city.split(',')[0]}
+              </Text>
+              <Ionicons name="chevron-down" size={11} color="#7c3aed" />
+            </View>
           </Pressable>
+        ) : <View style={{ flex: 1 }} />}
+
+        {/* ── RIGHT: Acciones ── */}
+        <View style={styles.rightSection}>
+          {renderRightActions()}
+          {renderAvatarOrHamburger()}
         </View>
       </View>
 
-      {/* Portal del Autor — fullscreen modal */}
+      {/* Portal del Autor */}
       <Modal
         visible={portalVisible}
         animationType="slide"
@@ -220,38 +319,53 @@ export default function TopBar({
         onRequestClose={closeDrawer}
         statusBarTranslucent
       >
-        {/* Overlay */}
         <Animated.View style={[styles.overlay, { opacity: overlayAnim }]}>
           <Pressable style={StyleSheet.absoluteFill} onPress={closeDrawer} />
         </Animated.View>
 
-        {/* Drawer panel */}
         <Animated.View
-          style={[
-            styles.drawer,
-            { width: DRAWER_WIDTH, transform: [{ translateX: slideAnim }] },
-          ]}
+          style={[styles.drawer, { width: DRAWER_WIDTH, transform: [{ translateX: slideAnim }] }]}
         >
-          {/* Header minimalista */}
-          <View style={[styles.drawerHeader, { paddingTop: topInset + 20 }]}>
-            {user?.photoURL ? (
-              <View style={styles.avatarContainer}>
-                <Image source={{ uri: user.photoURL }} style={styles.drawerAvatar} />
-              </View>
-            ) : (
-              <View style={styles.avatarContainer}>
-                <View style={[styles.drawerAvatar, styles.drawerAvatarPlaceholder]}>
-                  <Ionicons name="person" size={28} color={colors.textSecondary} />
+          {/* Drawer header con gradiente */}
+          <LinearGradient
+            colors={['#f5f3ff', '#eff6ff']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.drawerHeader, { paddingTop: topInset + 24 }]}
+          >
+            {/* Avatar con anillo gradiente */}
+            <View style={styles.drawerAvatarRingOuter}>
+              <LinearGradient
+                colors={['#7c3aed', '#2563eb']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.drawerAvatarRing}
+              >
+                <View style={styles.drawerAvatarInner}>
+                  {user?.photoURL ? (
+                    <Image source={{ uri: user.photoURL }} style={styles.drawerAvatar} />
+                  ) : (
+                    <View style={[styles.drawerAvatar, styles.drawerAvatarPlaceholder]}>
+                      <Ionicons name="person" size={24} color={colors.textSecondary} />
+                    </View>
+                  )}
                 </View>
-              </View>
-            )}
+              </LinearGradient>
+            </View>
+
             <Text style={styles.drawerUserName} numberOfLines={1}>
               {user?.displayName ?? 'Usuario'}
             </Text>
             <Text style={styles.drawerUserEmail} numberOfLines={1}>
               {user?.email ?? ''}
             </Text>
-          </View>
+
+            {/* Pill de estado */}
+            <View style={styles.drawerStatusPill}>
+              <View style={styles.drawerStatusDot} />
+              <Text style={styles.drawerStatusText}>Activo</Text>
+            </View>
+          </LinearGradient>
 
           <View style={styles.drawerDivider} />
 
@@ -272,12 +386,12 @@ export default function TopBar({
                     styles.drawerItemIcon,
                     option.color
                       ? { backgroundColor: option.color + '12' }
-                      : { backgroundColor: colors.primary + '10' },
+                      : { backgroundColor: '#7c3aed10' },
                   ]}>
                     <Ionicons
                       name={option.icon as any}
-                      size={20}
-                      color={option.color ?? colors.primary}
+                      size={18}
+                      color={option.color ?? '#7c3aed'}
                     />
                   </View>
                   <Text style={[
@@ -286,7 +400,7 @@ export default function TopBar({
                   ]}>
                     {option.label}
                   </Text>
-                  <Ionicons name="chevron-forward" size={16} color={option.color ?? colors.textLight} />
+                  <Ionicons name="chevron-forward" size={14} color={option.color ?? colors.textLight} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -294,7 +408,7 @@ export default function TopBar({
 
           {/* Footer */}
           <View style={styles.drawerFooter}>
-            <Text style={styles.drawerFooterText}>Artistas App v1.0</Text>
+            <Text style={styles.drawerFooterText}>BuscArt v1.0</Text>
           </View>
         </Animated.View>
       </Modal>
@@ -302,75 +416,151 @@ export default function TopBar({
   );
 }
 
+// ── Styles ─────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    backgroundColor: colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
     zIndex: 10,
   },
-  avatarDropdown: {
+
+  // ── Sections ──
+  leftSection: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  rightSection: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 2,
+  },
+
+  // ── Logo ──
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoBusca: {
+    fontSize: 20,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  logoArtBg: {
+    borderRadius: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    marginLeft: 1,
+  },
+  logoArt: {
+    fontSize: 20,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+
+  // ── Title / Username ──
+  title: {
+    flex: 1,
+    fontSize: 18,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: colors.text,
+  },
+  usernameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  usernameTitle: {
+    fontSize: 22,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: colors.text,
+    letterSpacing: -0.6,
+  },
+
+  // ── Location center ──
+  locationCenter: {
+    alignItems: 'center',
+  },
+  locationLabel: {
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: '#9ca3af',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  locationCityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  locationCity: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#1e1b4b',
+    maxWidth: 110,
+  },
+
+  // ── Icon buttons ──
+  iconBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ── Notification badge ──
+  badge: {
+    position: 'absolute',
+    top: 6,
+    right: 5,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: '#fff',
+  },
+  badgeText: {
+    fontSize: 8,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
+  },
+
+  // ── Avatar ──
+  avatarBtn: {
+    marginLeft: 4,
   },
   avatar: {
     width: 32,
     height: 32,
     borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#e5e7eb',
   },
   avatarPlaceholder: {
     backgroundColor: colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  title: {
-    flex: 1,
-    fontSize: 20,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-    marginLeft: 12,
-  },
-  usernameRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  usernameTitle: {
-    fontSize: 18,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: colors.text,
-    letterSpacing: -0.3,
-  },
-  rightActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 
-  // Overlay
+  // ── Overlay ──
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
 
-  // Drawer
+  // ── Drawer ──
   drawer: {
     position: 'absolute',
     top: 0,
@@ -379,87 +569,120 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     shadowColor: '#000',
     shadowOffset: { width: -4, height: 0 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
     elevation: 16,
   },
 
-  // Drawer header minimalista
+  // ── Drawer header con gradiente ──
   drawerHeader: {
     paddingHorizontal: 24,
     paddingBottom: 20,
-    gap: 8,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    gap: 6,
   },
-  avatarContainer: {
-    marginBottom: 8,
+  drawerAvatarRingOuter: {
+    marginBottom: 6,
+  },
+  drawerAvatarRing: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    padding: 2.5,
+    shadowColor: '#7c3aed',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  drawerAvatarInner: {
+    flex: 1,
+    borderRadius: 17,
+    overflow: 'hidden',
+    backgroundColor: '#ede8ff',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   drawerAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: '100%',
+    height: '100%',
   },
   drawerAvatarPlaceholder: {
-    backgroundColor: colors.background,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#ede8ff',
   },
   drawerUserName: {
     fontSize: 16,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.text,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#1e1b4b',
     textAlign: 'center',
   },
   drawerUserEmail: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
+    color: '#6b7280',
     textAlign: 'center',
   },
+  drawerStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(22,163,74,0.1)',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginTop: 2,
+  },
+  drawerStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16a34a',
+  },
+  drawerStatusText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#16a34a',
+  },
 
-  // Divider
+  // ── Divider ──
   drawerDivider: {
     height: 1,
     backgroundColor: colors.border,
     marginHorizontal: 20,
-    marginVertical: 8,
+    marginVertical: 6,
   },
 
-  // Content
+  // ── Drawer content ──
   drawerContent: {
     paddingVertical: 4,
   },
-
-  // Item minimalista
   drawerItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 11,
   },
   drawerItemIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
   },
   drawerItemText: {
     flex: 1,
     fontSize: 14,
-    fontFamily: 'PlusJakartaSans_400Regular',
+    fontFamily: 'PlusJakartaSans_500Medium',
     color: colors.text,
   },
 
-  // Footer minimalista
+  // ── Drawer footer ──
   drawerFooter: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderTopWidth: 1,
     borderTopColor: colors.border,
     alignItems: 'center',

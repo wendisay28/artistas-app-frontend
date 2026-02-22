@@ -11,9 +11,7 @@ import FavoritesScreen from '../screens/favorites/index';
 import ContractsScreen from '../screens/contracts/index';
 import ExploreScreen from '../screens/explore/index';
 import ProfileScreen from '../screens/profile/index';
-import { ArtistHome } from '../screens/artist/ArtistHome';
-import { ClientExploreHome } from '../screens/client/ExploreHome';
-import { useAuthStore } from '../store/authStore';
+import HomeScreen from '../screens/home/index';
 
 export type MainTabParams = {
   Home: undefined;
@@ -36,21 +34,12 @@ interface TabItem {
 }
 
 const TAB_CONFIG: TabItem[] = [
-  { name: 'Home', label: 'Inicio', iconOutline: 'home-outline', iconFilled: 'home', component: HomeTab },
+  { name: 'Home', label: 'Inicio', iconOutline: 'home-outline', iconFilled: 'home', component: HomeScreen },
   { name: 'Favorites', label: 'Favoritos', iconOutline: 'heart-outline', iconFilled: 'heart', component: FavoritesScreen },
   { name: 'Contract', label: 'Contratar', iconOutline: 'add-circle-outline', iconFilled: 'add-circle', component: ContractsScreen },
   { name: 'Explorer', label: 'Explorar', iconOutline: 'compass-outline', iconFilled: 'compass', component: ExploreScreen },
   { name: 'Profile', label: 'Perfil', iconOutline: 'person-outline', iconFilled: 'person', component: ProfileScreen },
 ];
-
-// Home tab es role-aware: artista → ArtistHome, cliente → ClientExploreHome
-function HomeTab() {
-  const { user } = useAuthStore();
-  if (user?.role === 'artist') return <ArtistHome />;
-  // Para clientes autenticados se pasa navigation dummy ya que ClientExploreHome es también ruta de AuthStack
-  // Aquí usamos un cast para compatibilidad
-  return <ClientExploreHome navigation={null as any} route={null as any} />;
-}
 
 const ACTIVE_COLOR = '#9333ea';
 const INACTIVE_COLOR = '#9ca3af';

@@ -28,7 +28,7 @@ export interface ProductResponse {
 export const productsService = {
   // Obtener productos del usuario autenticado
   getMyProducts: async (): Promise<Product[]> => {
-    const response = await apiClient.get('/products/me');
+    const response = await apiClient.get('/store/me');
     return response.data.data || [];
   },
 

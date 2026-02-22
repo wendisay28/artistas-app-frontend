@@ -41,7 +41,7 @@ export const API_ENDPOINTS = {
     USER_FEATURED: (userId: string) => `/portfolio/user/${userId}/featured`,
   },
   REVIEWS: {
-    MY_REVIEWS: '/reviews/me',
+    MY_REVIEWS: '/profile/me/reviews',
     ARTIST_REVIEWS: (artistId: string) => `/reviews/artist/${artistId}`,
     DETAIL: (id: number) => `/reviews/${id}`,
     CREATE: '/reviews',

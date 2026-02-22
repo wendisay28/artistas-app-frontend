@@ -4,7 +4,7 @@
 // - Título, meta, descripción, tags, anuncio, CTA
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,

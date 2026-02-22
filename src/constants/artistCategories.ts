@@ -745,3 +745,14 @@ export const searchCategories = (term: string) => {
     )
   );
 };
+
+// Helper functions for CategorySelector
+export const getDisciplinesByCategory = (categoryId: string) => {
+  const category = getCategoryById(categoryId);
+  return category?.disciplines || [];
+};
+
+export const getRolesByDiscipline = (categoryId: string, disciplineId: string) => {
+  const discipline = getDisciplineById(categoryId, disciplineId);
+  return discipline?.roles || [];
+};

@@ -1,6 +1,6 @@
 // src/screens/profile/index.tsx — Pantalla de perfil moderna
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { auth } from '../../services/firebase/config';
@@ -11,17 +11,17 @@ import TopBar from '../../components/shared/TopBar';
 import { Ionicons } from '@expo/vector-icons';
 
 // ── Profile components modernos
-import { ProfileHero } from '../../components/profile/header/Profilehero';
-import { ProfileIdentity } from '../../components/profile/header/Profileidentity';
-import { ProfileSkeleton } from '../../components/profile/header/ProfileSkeleton';
-import { TabBar } from '../../components/profile/shared/TabBar';
-import { BioModal } from '../../components/profile/modals/BioModal';
-import { PortfolioSection } from '../../components/profile/sections/PortfolioSection';
-import { ServicesSection } from '../../components/profile/sections/ServicesSection';
-import { SobreMiSection } from '../../components/profile/sections/SobremiSection';
-import { EventosSection } from '../../components/profile/sections/Eventossection';
-import { AgendaSection } from '../../components/profile/sections/Agendasection';
-import { TiendaSection } from '../../components/profile/sections/TiendaSection';
+import { ProfileHero } from './components/header/Profilehero';
+import { ProfileIdentity } from './components/header/Profileidentity';
+import { ProfileSkeleton } from './components/header/ProfileSkeleton';
+import { TabBar } from './components/shared/TabBar';
+import { BioModal } from './components/modals/BioModal';
+import { PortfolioSection } from './components/sections/PortfolioSection';
+import { ServicesSection } from './components/sections/ServicesSection';
+import { SobreMiSection } from './components/sections/SobremiSection';
+import { EventosSection } from './components/sections/Eventossection';
+import { AgendaSection } from './components/sections/Agendasection';
+import { TiendaSection } from './components/sections/TiendaSection';
 
 // ── Profile modals
 import {
@@ -30,19 +30,19 @@ import {
   EditProductModal,
   EditEventModal,
   SocialLinksModal,
-} from '../../components/profile/modals';
-import { InfoProfesionalModal } from '../../components/profile/modals/InfoProfesionalModal';
-import { ExperienceModal } from '../../components/profile/modals/ExperienceModal';
-import { StudiesModal } from '../../components/profile/modals/StudiesModal';
-import { CategoryModal } from '../../components/profile/modals/CategoryModal';
-import { CompanyModal } from '../../components/profile/modals/CompanyModal';
+} from './components/modals';
+import { InfoProfesionalModal } from './components/modals/InfoProfesionalModal';
+import { ExperienceModal } from './components/modals/ExperienceModal';
+import { StudiesModal } from './components/modals/StudiesModal';
+import { CategoryModal } from './components/modals/CategoryModal';
+import { CompanyModal } from './components/modals/CompanyModal';
 
 // ── Types
-import { Artist, TabItem, LiveRequest } from '../../components/profile/types';
+import { Artist, TabItem, LiveRequest } from './components/types';
 import { GalleryItem, FeaturedItem } from '../../services/api/portfolio';
 import { Service as APIService } from '../../services/api/services';
 import { Review as BackendReview } from '../../services/api/reviews';
-import { Colors } from '../../theme';
+import { Colors } from '../../theme/colors';
 import { servicesService } from '../../services/api/services';
 import { portfolioService } from '../../services/api/portfolio';
 import { reviewsService } from '../../services/api/reviews';
@@ -107,9 +107,11 @@ export default function ProfileScreen() {
     saveSocialLinks,
     saveAvatar,
     saveCoverImage,
+    setArtistData,
   } = useProfileStore();
 
-  const [activeMainTab, setActiveMainTab] = useState<string>('sobre');
+  const [activeMainTab,    setActiveMainTab]    = useState<string>('sobre');
+  const [viewingAsClient,  setViewingAsClient]  = useState(false);
 
   // ── Modals state
   const [editHeaderModalVisible,    setEditHeaderModalVisible]    = useState(false);
@@ -135,31 +137,59 @@ export default function ProfileScreen() {
     });
   }, []);
 
+  // Forzar recarga cada 30 segundos para actualizar datos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('[ProfileScreen] Forzando recarga de perfil...');
+      loadProfile(
+        firebaseUser?.uid,
+        firebaseUser?.photoURL,
+        firebaseUser?.displayName,
+      ).catch((e) => {
+        console.warn('[ProfileScreen] Error en recarga:', e?.message);
+      });
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Fallback: si no hay datos en el store, construir desde Firebase
   const effectiveArtist: Artist = artistData ?? {
     id: firebaseUser?.uid ?? '1',
-    name: firebaseUser?.displayName ?? 'Artista',
-    handle: `@${(firebaseUser?.displayName ?? 'artista').toLowerCase().replace(/\s+/g, '_')}`,
-    location: '',
-    avatar: firebaseUser?.photoURL ?? '',
-    isVerified: false,
-    isOnline: true,
-    schedule: '',
-    bio: '',
-    description: '',
-    tags: [],
-    stats: [
+    name: artistData?.name ?? firebaseUser?.displayName ?? firebaseUser?.email?.split('@')[0] ?? 'Artista',
+    handle: artistData?.handle ?? `@${(firebaseUser?.displayName ?? firebaseUser?.email?.split('@')[0] ?? 'artista').toLowerCase().replace(/\s+/g, '_')}`,
+    location: artistData?.location ?? '',
+    avatar: artistData?.avatar ?? firebaseUser?.photoURL ?? '',
+    isVerified: artistData?.isVerified ?? false,
+    isOnline: artistData?.isOnline ?? true,
+    schedule: artistData?.schedule ?? '',
+    bio: artistData?.bio ?? '',
+    description: artistData?.description ?? '',
+    tags: artistData?.tags ?? [],
+    stats: artistData?.stats ?? [
       { value: '0', label: 'Obras' },
       { value: '5.0', label: 'Rating' },
       { value: '0', label: 'Seguidores' },
       { value: '0', label: 'Visitas' },
     ],
-    socialLinks: [],
-    info: [],
-    isOwner: true,
-    role: '',
-    userType: 'artist',
+    socialLinks: artistData?.socialLinks ?? [],
+    info: artistData?.info ?? [],
+    isOwner: artistData?.isOwner ?? true,
+    role: artistData?.role ?? '',
+    userType: artistData?.userType ?? 'artist',
   };
+
+  // Debug: verificar qué nombre se está usando (se ejecuta en cada render)
+  React.useEffect(() => {
+    console.log('[ProfileScreen] Nombre a mostrar:', effectiveArtist.name);
+    console.log('[ProfileScreen] ArtistData completo:', artistData);
+    console.log('[ProfileScreen] Firebase user:', firebaseUser?.displayName);
+  }, [effectiveArtist.name, artistData]);
+
+  // Debug adicional para forzar re-render si hay cambios
+  React.useEffect(() => {
+    console.log('[ProfileScreen] Render de ProfileScreen - nombre:', effectiveArtist.name);
+  });
 
   // ── Memoized initial data para modales
   const infoProfesionalInitialData = React.useMemo(() => ({
@@ -246,8 +276,9 @@ export default function ProfileScreen() {
 
         // TODO: Cargar calendarDays y schedule cuando estén listos los servicios
       } catch (error: any) {
-        // 401 = backend no tiene el usuario aún — silenciar
-        if (error?.response?.status !== 401) {
+        // 401/404 = backend no tiene el perfil aún (usuario nuevo) — silenciar
+        const status = error?.response?.status;
+        if (status !== 401 && status !== 404) {
           console.warn('Error loading profile data:', error);
         }
       }
@@ -273,6 +304,24 @@ export default function ProfileScreen() {
       },
     ]);
   }, [logout]);
+
+  // ── Share handler
+  const handleShare = useCallback(async () => {
+    const handle = effectiveArtist.handle?.replace('@', '') ?? '';
+    const name   = effectiveArtist.name ?? '';
+    try {
+      await Share.share({
+        title:   `Perfil de ${name} en BuscArt`,
+        message: `Mira el perfil de ${name} en BuscArt 🎨\n@${handle}`,
+      });
+    } catch {
+      // el usuario canceló
+    }
+  }, [effectiveArtist.handle, effectiveArtist.name]);
+
+  // ── Ver como cliente
+  const handleViewAsClient  = useCallback(() => setViewingAsClient(true),  []);
+  const handleExitClientView = useCallback(() => setViewingAsClient(false), []);
 
   // ── Modal handlers
   const handleEditProfile   = useCallback(() => setEditHeaderModalVisible(true), []);
@@ -376,6 +425,7 @@ export default function ProfileScreen() {
   // ── Modal save handlers — conectados al backend vía profileStore
 
   const handleSaveHeader = useCallback(async (data: any) => {
+    console.log('[ProfileScreen] Guardando header:', data);
     try {
       await saveHeader({
         name:     data.name,
@@ -387,19 +437,19 @@ export default function ProfileScreen() {
         tags:     data.tags as [string, string, string],
       });
       setEditHeaderModalVisible(false);
-    } catch {
-      Alert.alert('Error', 'No se pudo guardar el encabezado. Revisa tu conexión.');
+      Alert.alert('Éxito', 'Perfil actualizado correctamente.');
+      console.log('[ProfileScreen] Header guardado exitosamente');
+    } catch (error) {
+      console.error('[ProfileScreen] Error guardando header:', error);
+      Alert.alert('Error', 'No se pudo guardar el perfil. Revisa tu conexión.');
     }
   }, [saveHeader]);
 
-  const handleSaveBio = useCallback(async (bio: string) => {
-    try {
-      await saveBio(bio);
-      setBioModalVisible(false);
-    } catch {
-      Alert.alert('Error', 'No se pudo guardar la descripción. Revisa tu conexión.');
-    }
-  }, [saveBio]);
+  const handleSaveBio = useCallback(async (description: string) => {
+    // "Acerca de mí" guarda en `description` (texto largo), no en `bio` (resumen corto del header)
+    setArtistData({ description });
+    setBioModalVisible(false);
+  }, [setArtistData]);
 
   const handleSaveProInfo = useCallback(async (data: any) => {
     try {
@@ -531,7 +581,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.root}>
-      <TopBar title="Mi perfil" topInset={insets.top} />
+      <TopBar title={effectiveArtist.handle?.replace('@', '') ?? effectiveArtist.name} topInset={insets.top} usernameMode={true} />
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -556,10 +606,24 @@ export default function ProfileScreen() {
               onEditCover={handleEditCover}
             />
 
+            {/* Banner "vista de cliente" */}
+            {viewingAsClient && (
+              <View style={styles.clientViewBanner}>
+                <Ionicons name="eye-outline" size={14} color="#7c3aed" />
+                <Text style={styles.clientViewText}>Vista de cliente</Text>
+                <TouchableOpacity onPress={handleExitClientView} style={styles.clientViewClose}>
+                  <Ionicons name="close" size={14} color="#7c3aed" />
+                  <Text style={styles.clientViewCloseText}>Salir</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             <ProfileIdentity
-              artist={effectiveArtist}
-              onEditProfile={handleEditProfile}
-              onEditAvatar={handleEditAvatar}
+              artist={viewingAsClient ? { ...effectiveArtist, isOwner: false } : effectiveArtist}
+              onEditProfile={viewingAsClient ? undefined : handleEditProfile}
+              onEditAvatar={viewingAsClient ? undefined : handleEditAvatar}
+              onShare={handleShare}
+              onViewAsClient={handleViewAsClient}
             />
 
             <View style={styles.mainTabsContainer}>
@@ -724,5 +788,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'PlusJakartaSans_500Medium',
     color: Colors.textMuted,
+  },
+  clientViewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(124,58,237,0.06)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(124,58,237,0.12)',
+  },
+  clientViewText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#7c3aed',
+  },
+  clientViewClose: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(124,58,237,0.1)',
+  },
+  clientViewCloseText: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#7c3aed',
   },
 });

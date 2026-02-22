@@ -34,10 +34,10 @@ import VenueDetails from '../../components/explore/details/VenueDetails';
 import GalleryDetails from '../../components/explore/details/GalleryDetails';
 
 // Filter Panels
-import { FilterPanel } from '../../components/favorites/filters/FilterPanel';
-import { EventFilterPanel } from '../../components/favorites/filters/EventFilterPanel';
-import { SiteFilterPanel } from '../../components/favorites/filters/SiteFilterPanel';
-import { GalleryFilterPanel } from '../../components/favorites/filters/GalleryFilterPanel';
+import { FilterPanel } from './components/filters/FilterPanel';
+import { EventFilterPanel } from './components/filters/EventFilterPanel';
+import { SiteFilterPanel } from './components/filters/SiteFilterPanel';
+import { GalleryFilterPanel } from './components/filters/GalleryFilterPanel';
 
 // Types
 import type { Artist, Event, Venue, GalleryItem, ExploreCard } from '../../types/explore';

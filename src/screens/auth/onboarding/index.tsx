@@ -5,11 +5,17 @@ import Step1BasicInfo from './Step1BasicInfo';
 import Step2Categories from './Step2Categories';
 import Step3Discipline from './Step3Discipline';
 import Step4Location from './Step4Location';
+import CreatingProfileScreen from './CreatingProfileScreen';
 import { OnboardingProvider, useOnboardingContext } from './OnboardingContext';
 
 // Componente interno que lee el step desde el contexto compartido
 const OnboardingSteps = () => {
-  const { step } = useOnboardingContext();
+  const { step, isCreatingProfile } = useOnboardingContext();
+
+  // Si está creando el perfil, mostrar pantalla de carga
+  if (isCreatingProfile) {
+    return <CreatingProfileScreen />;
+  }
 
   switch (step) {
     case 1: return <Step1BasicInfo />;
