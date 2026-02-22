@@ -8,6 +8,7 @@ import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
 import TopBar from '../../components/shared/TopBar';
+import { AppFooter } from '../../components/shared/AppFooter';
 import { Ionicons } from '@expo/vector-icons';
 
 // ── Profile components modernos
@@ -235,6 +236,7 @@ export default function ProfileScreen() {
       x:         extractHandle(tw, 'twitter.com'),
       youtube:   extractHandle(yt, 'youtube.com/@'),
       spotify:   extractHandle(sp, 'open.spotify.com/artist'),
+      tiktok:    '', // Agregar propiedad tiktok requerida
     };
   }, [effectiveArtist.info]);
 
@@ -582,6 +584,19 @@ export default function ProfileScreen() {
   return (
     <View style={styles.root}>
       <TopBar title={effectiveArtist.handle?.replace('@', '') ?? effectiveArtist.name} topInset={insets.top} usernameMode={true} />
+      
+      {/* Banner "vista de cliente" - ahora arriba de todo */}
+      {viewingAsClient && (
+        <View style={styles.clientViewBanner}>
+          <Ionicons name="eye-outline" size={14} color="#7c3aed" />
+          <Text style={styles.clientViewText}>Vista de cliente</Text>
+          <TouchableOpacity onPress={handleExitClientView} style={styles.clientViewClose}>
+            <Ionicons name="close" size={14} color="#7c3aed" />
+            <Text style={styles.clientViewCloseText}>Salir</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -606,18 +621,6 @@ export default function ProfileScreen() {
               onEditCover={handleEditCover}
             />
 
-            {/* Banner "vista de cliente" */}
-            {viewingAsClient && (
-              <View style={styles.clientViewBanner}>
-                <Ionicons name="eye-outline" size={14} color="#7c3aed" />
-                <Text style={styles.clientViewText}>Vista de cliente</Text>
-                <TouchableOpacity onPress={handleExitClientView} style={styles.clientViewClose}>
-                  <Ionicons name="close" size={14} color="#7c3aed" />
-                  <Text style={styles.clientViewCloseText}>Salir</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
             <ProfileIdentity
               artist={viewingAsClient ? { ...effectiveArtist, isOwner: false } : effectiveArtist}
               onEditProfile={viewingAsClient ? undefined : handleEditProfile}
@@ -640,7 +643,7 @@ export default function ProfileScreen() {
           </>
         )}
 
-        <View style={styles.bottomSpacer} />
+        <AppFooter />
       </ScrollView>
 
       {/* ── Modals ── */}
@@ -752,7 +755,7 @@ const styles = StyleSheet.create({
   mainTabsContainer: {
     backgroundColor: '#fff',
     marginHorizontal: 0,
-    marginTop: 0,
+    marginTop: -8,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },

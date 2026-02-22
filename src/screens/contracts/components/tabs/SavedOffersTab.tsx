@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../../theme/colors';
 import OfferCard from '../cards/OfferCard';
+import { AppFooter } from '../../../../components/shared/AppFooter';
 
 interface SavedOffer {
   id: string;
@@ -103,6 +104,7 @@ export default function SavedOffersTab({
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
       ListEmptyComponent={renderEmptyState}
+      ListFooterComponent={<View style={{ marginHorizontal: -16 }}><AppFooter /></View>}
       ItemSeparatorComponent={() => <View style={styles.separator} />}
       refreshControl={
         onRefresh ? (
@@ -122,7 +124,6 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 20,
   },
   separator: {
     height: 16,

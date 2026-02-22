@@ -10,6 +10,7 @@ import {
   ScrollView,
   Pressable,
   StyleSheet,
+  Dimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +19,7 @@ import { useFavoritesData } from './hooks/useFavoritesData';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import TopBar from '../../components/shared/TopBar';
+import { AppFooter } from '../../components/shared/AppFooter';
 
 // Explore card contents
 import ArtistCardContent from '../../components/explore/cards/ArtistCardContent';
@@ -394,9 +396,17 @@ export default function FavoritesScreen() {
           contentContainerStyle={{
             alignItems: viewMode === 'grid' ? 'center' : undefined,
             paddingHorizontal: viewMode === 'grid' ? 0 : 16,
-            paddingBottom: insets.bottom + 96,
           }}
           showsVerticalScrollIndicator={false}
+          ListFooterComponent={
+            <View style={
+              viewMode === 'grid'
+                ? { width: Dimensions.get('window').width }
+                : { marginHorizontal: -16 }
+            }>
+              <AppFooter />
+            </View>
+          }
           renderItem={({ item }) =>
             viewMode === 'list'
               ? renderListCard(item)

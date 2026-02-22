@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import TopBar from '../../components/shared/TopBar';
+import { AppFooter } from '../../components/shared/AppFooter';
 import { LocationPickerModal } from './components/Locationpickermodal';
 import { PortalAutorScreen } from '../artist/PortalAutorScreen';
 import { useProximityLogic } from './hooks/useProximityLogic';
@@ -269,6 +270,8 @@ function HomeScreen() {
             )}
           </View>
         </AnimatedSection>
+
+        <AppFooter />
 
       </ScrollView>
 
