@@ -9,13 +9,13 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
-  ActivityIndicator,
-  SafeAreaView
+  ActivityIndicator
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../../../constants/colors';
-import type { Artist } from '../../../types/explore';
+import type { Artist } from '../../../../types/explore';
 
 const { width } = Dimensions.get('window');
 

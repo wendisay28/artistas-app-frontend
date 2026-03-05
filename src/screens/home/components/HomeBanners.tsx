@@ -226,15 +226,16 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
     setActiveIndex(idx);
   }, []);
 
+  const activeIndexRef = useRef(0);
+
   const startAutoplay = useCallback(() => {
     if (autoplayRef.current) clearInterval(autoplayRef.current);
     autoplayRef.current = setInterval(() => {
       if (!isPaused.current) {
-        setActiveIndex(prev => {
-          const next = (prev + 1) % banners.length;
-          scrollRef.current?.scrollTo({ x: next * (CARD_W + 16), animated: true });
-          return next;
-        });
+        const next = (activeIndexRef.current + 1) % banners.length;
+        activeIndexRef.current = next;
+        setActiveIndex(next);
+        scrollRef.current?.scrollTo({ x: next * (CARD_W + 16), animated: false });
       }
     }, AUTOPLAY_MS);
   }, [banners.length]);
@@ -247,6 +248,7 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
   const handleScrollBegin = () => { isPaused.current = true; };
   const handleScrollEnd   = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.round(e.nativeEvent.contentOffset.x / (CARD_W + 16));
+    activeIndexRef.current = idx;
     setActiveIndex(idx);
     isPaused.current = false;
     startAutoplay();

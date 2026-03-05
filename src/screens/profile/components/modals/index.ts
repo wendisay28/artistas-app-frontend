@@ -9,7 +9,7 @@ export { CategoryModal } from './CategoryModal';
 export { EditServiceModal } from './EditServiceModal';
 export { EditProductModal } from './EditProductModal';
 export { EditEventModal } from './EditEventModal';
-export { BioModal } from './BioModal';
+export { AcercaDeMiModal } from './AcercaDeMiModal';
 export { SocialLinksModal } from './SocialLinksModal';
 export { CompanyModal } from './CompanyModal';
 

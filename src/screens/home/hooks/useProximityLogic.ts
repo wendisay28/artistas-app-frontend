@@ -183,10 +183,8 @@ export const useProximityLogic = (options: ProximityOptions = {}) => {
     return `A ${status.distance} km`;
   };
 
-  // Initialize location on mount
-  useEffect(() => {
-    requestLocationPermission();
-  }, []);
+  // Location is NOT requested automatically on mount.
+  // Call requestLocationPermission() explicitly when the user asks for GPS.
 
   return {
     userLocation,

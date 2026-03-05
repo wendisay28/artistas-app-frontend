@@ -41,6 +41,7 @@ interface TopBarProps {
   locationLoading?: boolean;
   notificationCount?: number;    // Badge en el bell
   onCreatePress?: () => void;    // Botón "+" (crear publicación)
+  onUsernamePress?: () => void;  // Acción al presionar el username en modo perfil
 }
 
 interface MenuOption {
@@ -53,7 +54,7 @@ interface MenuOption {
 
 // ── Componente ─────────────────────────────────────────────────────────────────
 
-export default function TopBar({
+export const TopBar: React.FC<TopBarProps> = ({
   title,
   topInset,
   rightActions,
@@ -66,7 +67,8 @@ export default function TopBar({
   locationLoading = false,
   notificationCount = 0,
   onCreatePress,
-}: TopBarProps) {
+  onUsernamePress,
+}) => {
   const user = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
   const [drawerVisible, setDrawerVisible] = useState(false);
@@ -266,7 +268,7 @@ export default function TopBar({
           ) : usernameMode ? (
             <View style={styles.usernameRow}>
               <Text style={styles.usernameTitle} numberOfLines={1}>{title}</Text>
-              <Ionicons name="chevron-down" size={15} color={colors.text} style={{ marginLeft: 3, marginTop: 2 }} />
+              <Ionicons name="chevron-down" size={15} color={colors.text} />
             </View>
           ) : (
             <Text style={styles.title} numberOfLines={1}>{title}</Text>
@@ -693,3 +695,5 @@ const styles = StyleSheet.create({
     color: colors.textLight,
   },
 });
+
+export default TopBar;

@@ -69,18 +69,14 @@ export const getStoredToken = async (): Promise<string | null> => {
 
 export const refreshToken = async (): Promise<string | null> => {
   const currentUser = auth.currentUser;
-  console.log('[auth] currentUser:', currentUser ? 'exists' : 'null');
   if (!currentUser) {
-    console.warn('[auth] No hay usuario actual en Firebase');
     return null;
   }
   try {
     const token = await currentUser.getIdToken(true); // force refresh
-    console.log('[auth] Token obtenido, length:', token.length);
     await SecureStore.setItemAsync(TOKEN_KEY, token);
     return token;
   } catch (error) {
-    console.error('[auth] Error obteniendo token:', error);
     return null;
   }
 };

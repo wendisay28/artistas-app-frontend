@@ -17,6 +17,14 @@ const config: ExpoConfig = {
     infoPlist: {
       NSLocationWhenInUseUsageDescription:
         "BuscArt usa tu ubicación para mostrarte artistas cercanos y ayudarte a conectar con clientes en tu zona.",
+      NSPhotoLibraryUsageDescription:
+        "BuscArt necesita acceso a tu galería para que puedas subir tu foto de perfil y portada.",
+      NSPhotoLibraryAddUsageDescription:
+        "BuscArt necesita permiso para guardar fotos en tu galería.",
+      NSCameraUsageDescription:
+        "BuscArt necesita acceso a tu cámara para tomar fotos de perfil y portada.",
+      NSMicrophoneUsageDescription:
+        "BuscArt necesita acceso al micrófono para grabar videos de tu trabajo artístico.",
     },
   },
   android: {
@@ -25,13 +33,31 @@ const config: ExpoConfig = {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
-    permissions: ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
+    permissions: [
+      "ACCESS_FINE_LOCATION",
+      "ACCESS_COARSE_LOCATION",
+      "READ_MEDIA_IMAGES",
+      "READ_MEDIA_VIDEO",
+      "CAMERA",
+    ],
   },
   plugins: [
     "expo-web-browser",
     "expo-secure-store",
     "expo-apple-authentication",
     "expo-font",
+    "expo-video",
+    [
+      "expo-image-picker",
+      {
+        photosPermission:
+          "BuscArt necesita acceso a tu galería para subir fotos de perfil y portada.",
+        cameraPermission:
+          "BuscArt necesita acceso a tu cámara para tomar fotos de perfil y portada.",
+        microphonePermission:
+          "BuscArt necesita acceso al micrófono para grabar videos de tu trabajo artístico.",
+      },
+    ],
     [
       "expo-location",
       {

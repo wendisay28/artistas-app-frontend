@@ -1,4 +1,6 @@
 // src/services/api/endpoints.ts
+// BASE_URL ya incluye /api/v1 (definido en .env como EXPO_PUBLIC_BACKEND_URL)
+// Todos los paths aquí son relativos a ese base.
 
 export const API_ENDPOINTS = {
   ARTISTS: {
@@ -10,29 +12,30 @@ export const API_ENDPOINTS = {
     DELETE: (id: number) => `/artists/${id}`,
   },
   USERS: {
-    ME: '/users/me',
-    UPDATE: '/users/me',
+    ME: '/profile',
+    UPDATE: '/profile',
   },
   PROFILE: {
-    MY_USER: '/users/me',
-    UPDATE_USER: '/users/me',
+    MY_USER: '/profile',
+    UPDATE_USER: '/profile',
     MY_ARTIST: '/artist/me',
     UPDATE_ARTIST: '/artist/me',
     UPDATE_USER_TYPE: '/profile/type',
   },
   SERVICES: {
-    ME: '/services/me',
-    USER: (userId: string) => `/services/user/${userId}`,
-    DETAIL: (id: number) => `/services/${id}`,
-    CREATE: '/services',
-    UPDATE: (id: number) => `/services/${id}`,
-    DELETE: (id: number) => `/services/${id}`,
+    ME: '/explorer/services/me',
+    USER: (userId: string) => `/explorer/services/user/${userId}`,
+    DETAIL: (id: number) => `/explorer/services/${id}`,
+    CREATE: '/explorer/services',
+    UPDATE: (id: number) => `/explorer/services/${id}`,
+    DELETE: (id: number) => `/explorer/services/${id}`,
   },
   PORTFOLIO: {
     ME: '/portfolio/me',
     USER: (userId: string) => `/portfolio/user/${userId}`,
     PHOTOS: '/portfolio/photos',
     VIDEOS: '/portfolio/videos',
+    FEATURED: '/portfolio/featured',
     UPDATE_PHOTO: (id: number) => `/portfolio/photos/${id}`,
     DELETE_PHOTO: (id: number) => `/portfolio/photos/${id}`,
     UPDATE_VIDEO: (id: number) => `/portfolio/videos/${id}`,
@@ -42,7 +45,7 @@ export const API_ENDPOINTS = {
   },
   REVIEWS: {
     MY_REVIEWS: '/profile/me/reviews',
-    ARTIST_REVIEWS: (artistId: string) => `/reviews/artist/${artistId}`,
+    ARTIST_REVIEWS: (artistId: string) => `/profiles/${artistId}/reviews`,
     DETAIL: (id: number) => `/reviews/${id}`,
     CREATE: '/reviews',
     UPDATE: (id: number) => `/reviews/${id}`,
@@ -52,7 +55,8 @@ export const API_ENDPOINTS = {
     REPORT: (id: number) => `/reviews/${id}/report`,
   },
   STORAGE: {
-    UPLOAD_IMAGE: '/storage/upload',
+    UPLOAD_IMAGE: '/upload/image',
+    UPLOAD_VIDEO: '/upload/video',
     DELETE_IMAGE: '/storage/delete',
   },
   EVENTS: {

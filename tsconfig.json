@@ -8,14 +8,15 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "moduleResolution": "bundler",
+    "customConditions": ["react-native"],
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true
   },
   "include": [
-    "src/**/*",
-    "App.tsx",
-    "app/**/*"
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",

@@ -1,207 +1,152 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+// src/screens/artist/profile/modals/InfoProfesionalModal.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Modal,
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  ScrollView,
+  Modal, View, Text, TextInput, TouchableOpacity,
+  StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../../../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 
-
-// ─────────────────────────────────────────
-// FIELD
-// ─────────────────────────────────────────
+// ── Field (Optimizado para evitar parpadeos) ──────────────────────────────────
 type FieldProps = {
   label: string;
   value: string;
   onChangeText: (v: string) => void;
   placeholder?: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
+  autoFocus?: boolean;
 };
 
 const Field: React.FC<FieldProps> = ({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  icon,
+  label, value, onChangeText, placeholder, icon, autoFocus,
 }) => {
   const [focused, setFocused] = useState(false);
-
+  
   return (
     <View style={f.wrapper}>
       <Text style={f.label}>{label}</Text>
-
       <View style={[f.box, focused && f.boxFocused]}>
-        <View style={{ marginRight: 10 }}>
+        <View style={f.icon}>
           <Ionicons
             name={icon}
-            size={18}
-            color={focused ? Colors.primary : '#9CA3AF'}
+            size={17}
+            color={focused ? '#7c3aed' : 'rgba(124,58,237,0.3)'}
           />
         </View>
-
         <TextInput
           style={f.input}
-          value={value}
+          value={value || ''}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor="#C4C4C4"
-          onFocus={() => setFocused(true)}
+          placeholderTextColor="rgba(124,58,237,0.25)"
+          autoFocus={autoFocus}
+          onFocus={() => {
+            // Log sencillo para no saturar la consola
+            console.log(`🎯 BuscArt - Focus: ${label}`);
+            setFocused(true);
+          }}
           onBlur={() => setFocused(false)}
+          underlineColorAndroid="transparent"
         />
+        {(value && value.length > 0) && (
+          <TouchableOpacity
+            onPress={() => onChangeText('')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={16} color="rgba(124,58,237,0.3)" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
 };
 
+// ... Estilos f y Componente AvailabilitySelector se mantienen igual que tu versión previa ...
 const f = StyleSheet.create({
-  wrapper: { marginBottom: 22 },
-
+  wrapper: { marginBottom: 20 },
   label: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#6B7280',
-    marginBottom: 8,
+    fontSize: 9.5, fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(124,58,237,0.5)', letterSpacing: 0.8,
+    marginBottom: 8, textTransform: 'uppercase',
   },
-
   box: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1.2,
-    borderColor: '#E5E7EB',
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13,
+    borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.25)',
   },
-
   boxFocused: {
-    borderColor: Colors.primary,
-    backgroundColor: '#FFFFFF',
+    borderColor: '#7c3aed',
+    backgroundColor: '#fff',
+    elevation: 2,
   },
-
+  icon:  { marginRight: 10 },
   input: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.text,
-    fontFamily: 'PlusJakartaSans_500Medium',
+    flex: 1, fontSize: 14.5,
+    fontFamily: 'PlusJakartaSans_400Regular', color: '#1e1b4b',
+    paddingVertical: Platform.OS === 'ios' ? 0 : 2, // Evita saltos en Android
   },
 });
-
-
-// ─────────────────────────────────────────
-// AVAILABILITY OPTIONS
-// ─────────────────────────────────────────
-type AvailabilityProps = {
-  value: string;
-  onSelect: (v: string) => void;
-};
 
 const OPTIONS = [
-  { label: 'Disponible', color: '#10B981' },
-  { label: 'Ocupado', color: '#EF4444' },
-  { label: 'Bajo pedido', color: '#F59E0B' },
+  { label: 'Disponible',  color: '#16a34a' },
+  { label: 'Ocupado',      color: '#ef4444' },
+  { label: 'Bajo pedido', color: '#d97706' },
 ];
 
-const AvailabilitySelector: React.FC<AvailabilityProps> = ({
-  value,
-  onSelect,
-}) => {
-  return (
-    <View style={a.wrapper}>
-      <Text style={a.label}>Disponibilidad</Text>
-
-      <View style={a.row}>
-        {OPTIONS.map((opt) => {
-          const active = value === opt.label;
-
-          return (
-            <TouchableOpacity
-              key={opt.label}
-              style={[
-                a.pill,
-                active && {
-                  borderColor: opt.color,
-                  backgroundColor: opt.color + '20',
-                },
-              ]}
-              onPress={() => onSelect(opt.label)}
-              activeOpacity={0.8}
-            >
-              <View
-                style={[a.dot, { backgroundColor: opt.color }]}
-              />
-              <Text
-                style={[
-                  a.pillText,
-                  active && { color: opt.color },
-                ]}
-              >
-                {opt.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+const AvailabilitySelector: React.FC<{
+  value: string;
+  onSelect: (v: string) => void;
+}> = ({ value, onSelect }) => (
+  <View style={av.wrapper}>
+    <Text style={av.label}>DISPONIBILIDAD</Text>
+    <View style={av.row}>
+      {OPTIONS.map((opt) => {
+        const active = value === opt.label;
+        return (
+          <TouchableOpacity
+            key={opt.label}
+            activeOpacity={0.8}
+            style={[av.pill, active && { borderColor: opt.color, backgroundColor: opt.color + '18' }]}
+            onPress={() => onSelect(opt.label)}
+          >
+            <View style={[av.dot, { backgroundColor: opt.color }]} />
+            <Text style={[av.pillText, active && { color: opt.color, fontFamily: 'PlusJakartaSans_700Bold' }]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
-  );
-};
+  </View>
+);
 
-const a = StyleSheet.create({
-  wrapper: {
-    marginBottom: 24,
-  },
-
+const av = StyleSheet.create({
+  wrapper: { marginBottom: 8 },
   label: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#6B7280',
-    marginBottom: 10,
+    fontSize: 9.5, fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(124,58,237,0.5)', letterSpacing: 0.8,
+    marginBottom: 12,
   },
-
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 100,
-    borderWidth: 1.2,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#F9FAFB',
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 100, borderWidth: 1.5,
+    borderColor: 'rgba(167,139,250,0.25)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
   },
-
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-  },
-
+  dot:      { width: 8, height: 8, borderRadius: 4, marginRight: 7 },
   pillText: {
-    fontSize: 13,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    color: '#6B7280',
+    fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium',
+    color: 'rgba(109,40,217,0.45)',
   },
 });
 
+// ── Modal principal ───────────────────────────────────────────────────────────
 
-// ─────────────────────────────────────────
-// MODAL PRINCIPAL
-// ─────────────────────────────────────────
 type ModalData = {
   yearsExperience: string;
   style: string;
@@ -211,36 +156,27 @@ type ModalData = {
 
 type Props = {
   visible: boolean;
-  initialData: ModalData;
+  initialData?: ModalData;
   onClose: () => void;
   onSave: (data: ModalData) => void;
 };
 
 export const InfoProfesionalModal: React.FC<Props> = ({
-  visible,
-  initialData,
-  onClose,
-  onSave,
+  visible, initialData, onClose, onSave,
 }) => {
-  const [data, setData] = useState(initialData);
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const insets = useSafeAreaInsets();
+  const [data, setData] = useState(initialData || {
+    yearsExperience: '',
+    style: '',
+    availability: 'Disponible',
+    responseTime: '',
+  });
 
   useEffect(() => {
-    if (visible) {
+    if (visible && initialData) {
       setData(initialData);
     }
-  }, [visible]);
-
-  useEffect(() => {
-    if (visible) {
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      slideAnim.setValue(300);
-    }
-  }, [visible]);
+  }, [visible, initialData]);
 
   const update = useCallback(
     (key: keyof ModalData) => (v: string) =>
@@ -248,35 +184,53 @@ export const InfoProfesionalModal: React.FC<Props> = ({
     []
   );
 
-  return (
-    <Modal visible={visible} animationType="none" transparent statusBarTranslucent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={s.overlay}
-      >
-        <Animated.View style={[s.sheet, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={s.handle} />
+  const handleSave = useCallback(() => {
+    onSave(data);
+  }, [data, onSave]);
 
-          {/* HEADER */}
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      statusBarTranslucent={true}
+      onRequestClose={onClose}
+    >
+      <View style={[s.safeArea, { paddingTop: insets.top }]}>
+        <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+        
+        <KeyboardAvoidingView
+          style={s.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          {/* Header */}
           <View style={s.header}>
-            <TouchableOpacity onPress={onClose} style={s.sideButton}>
+            <TouchableOpacity onPress={onClose} style={s.headerSide} activeOpacity={0.7}>
               <Text style={s.cancelText}>Cancelar</Text>
             </TouchableOpacity>
 
-            <Text numberOfLines={1} style={s.title}>
-              Información Profesional
-            </Text>
+            <View style={s.headerCenter}>
+              <Text style={s.title}>Info Profesional</Text>
+            </View>
 
-            <TouchableOpacity
-              style={s.sideButton}
-              onPress={() => onSave(data)}
-            >
-              <Text style={s.saveText}>Guardar</Text>
+            <TouchableOpacity onPress={handleSave} style={s.headerSideRight} activeOpacity={0.85}>
+              <LinearGradient
+                colors={['#7c3aed', '#2563eb']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={s.saveBtn}
+              >
+                <Text style={s.saveBtnText}>Guardar</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
           <ScrollView
-            contentContainerStyle={s.content}
+            style={s.flex}
+            contentContainerStyle={[
+                s.content,
+                { paddingBottom: insets.bottom + 100 } // Padding extra para que el teclado no tape el último campo
+            ]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -286,16 +240,15 @@ export const InfoProfesionalModal: React.FC<Props> = ({
               onChangeText={update('yearsExperience')}
               placeholder="Ej. 8 años"
               icon="time-outline"
+              autoFocus={true}
             />
-
             <Field
               label="Estilo artístico"
               value={data.style}
               onChangeText={update('style')}
-              placeholder="Ej. Minimalista"
+              placeholder="Ej. Minimalista, expresionista..."
               icon="color-palette-outline"
             />
-
             <Field
               label="Tiempo de respuesta"
               value={data.responseTime}
@@ -303,76 +256,58 @@ export const InfoProfesionalModal: React.FC<Props> = ({
               placeholder="Ej. En 2 horas"
               icon="chatbubble-ellipses-outline"
             />
-
             <AvailabilitySelector
               value={data.availability}
               onSelect={update('availability')}
             />
           </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
+
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
 const s = StyleSheet.create({
-  overlay: {
+  safeArea: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: '#faf9ff', // El fondo que pediste
   },
-
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 28,
-  },
-
-  handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 3,
-    backgroundColor: '#E5E7EB',
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 10,
-  },
-
+  flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(167,139,250,0.15)',
+    backgroundColor: '#fff',
   },
-
-  sideButton: {
-    width: 90,
-  },
-
+  headerSide: { width: 90, alignItems: 'flex-start' },
+  headerSideRight: { width: 90, alignItems: 'flex-end' },
+  headerCenter: { flex: 1, alignItems: 'center' },
   title: {
-    flex: 1,
-    textAlign: 'center',
     fontSize: 16,
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: Colors.text,
+    color: '#1e1b4b',
   },
-
   cancelText: {
     fontSize: 14,
-    color: '#6B7280',
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: 'rgba(124,58,237,0.55)',
   },
-
-  saveText: {
-    fontSize: 14,
+  saveBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+  },
+  saveBtnText: {
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: Colors.primary,
-    textAlign: 'right',
+    color: '#fff',
   },
-
   content: {
     paddingHorizontal: 24,
     paddingTop: 24,
-    paddingBottom: 10,
   },
 });

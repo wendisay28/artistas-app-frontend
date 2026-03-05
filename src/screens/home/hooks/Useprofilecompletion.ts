@@ -50,7 +50,7 @@ export function useProfileCompletion(
       },
       {
         key: 'category', label: 'Categoría artística', weight: 16,
-        completed: !!(artistData?.role || (artistData?.tags?.length ?? 0) > 0),
+        completed: !!(artistData?.role || (artistData?.tags?.length ?? 0) > 0 || (artistData as any)?.category),
       },
       {
         key: 'location', label: 'Ciudad', weight: 14,

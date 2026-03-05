@@ -1,49 +1,25 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// EditServiceModal.tsx — Modal para agregar/editar servicios
-// Diseño premium: tema claro con acentos morados
-// ─────────────────────────────────────────────────────────────────────────────
-
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  Animated,
+  Modal, View, Text, TouchableOpacity, TextInput, Switch,
+  StyleSheet, ScrollView, KeyboardAvoidingView,
+  Platform, StatusBar, Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Service as APIService } from '../../../../services/api/services';
-import { ARTIST_CATEGORIES, getLocalizedCategoryName } from '../../../../constants/artistCategories';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// ── Design Tokens ─────────────────────────────────────────────────────────────
-
-const D = {
-  bg:            '#FFFFFF',
-  surface:       '#F7F5FF',
-  surfaceHigh:   '#EDE9FF',
-  border:        '#E2DCF5',
-  borderHi:      '#C9BEF0',
-  primary:       '#7C5CBF',
-  primarySoft:   'rgba(124,92,191,0.10)',
-  primaryLight:  '#9B7DD4',
-  text:          '#1A1530',
-  textSub:       '#6B6080',
-  textMuted:     '#A89EC0',
-  white:         '#FFFFFF',
-  radius:        { sm: 8, md: 12, lg: 16, xl: 24 },
-  font: {
-    regular:  'PlusJakartaSans_400Regular',
-    medium:   'PlusJakartaSans_500Medium',
-    semibold: 'PlusJakartaSans_600SemiBold',
-    bold:     'PlusJakartaSans_700Bold',
-  },
-};
+// Helpers
+import { getLocalizedRoleName, getSuggestedTagsForDiscipline, getRolesByDiscipline, getDisciplinesByCategory } from '../../../../constants/artistCategories';
+import {
+  getUnitSuggestions,
+  getHintByUnit,
+  getIconByDiscipline,
+  getServiceNamePlaceholder,
+  getGenericUnits,
+  getPackageTypes,
+  getDefaultDuration,
+  getDefaultCategory,
+} from '../../../../utils/serviceHelpers';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,638 +30,458 @@ export type ServiceFormData = {
   currency: string;
   duration: string;
   category: string;
+  unit: string;
   deliveryTag: string;
   icon: string;
+  packageType: 'simple' | 'pack' | 'weekly' | 'monthly';
+  includedCount: string;
+  deliveryDays: string;
+  weeklyFrequency: string;
+  deliveryNotApplies: boolean;
+  tags: string[];
 };
 
 type Props = {
   visible: boolean;
-  service?: APIService;
-  onClose: () => void;
+  service?: Partial<ServiceFormData> | null; // Cambiado a permitir null
+  artistCategoryId?: string;
+  artistRoleId?: string;
   onSave: (data: ServiceFormData) => void;
+  onClose: () => void;
 };
 
-// ── Field Component ───────────────────────────────────────────────────────────
+// ── Components ──────────────────────────────────────────────────────────────
 
-type FieldProps = {
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  value: string;
-  onChangeText: (t: string) => void;
-  placeholder?: string;
-  multiline?: boolean;
-  maxLength?: number;
-  hint?: string;
-  keyboardType?: 'default' | 'numeric';
-  required?: boolean;
-};
-
-const Field: React.FC<FieldProps> = ({
+const Field = memo(({
   label, icon, value, onChangeText, placeholder,
   multiline, maxLength, hint, keyboardType = 'default', required,
-}) => {
+  error, formatter,
+}: any) => {
   const [focused, setFocused] = useState(false);
-  const focusAnim = useRef(new Animated.Value(0)).current;
-
-  const handleFocus = () => {
-    setFocused(true);
-    Animated.timing(focusAnim, { toValue: 1, duration: 180, useNativeDriver: false }).start();
-  };
-  const handleBlur = () => {
-    setFocused(false);
-    Animated.timing(focusAnim, { toValue: 0, duration: 180, useNativeDriver: false }).start();
-  };
-
-  const borderColor = focusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [D.border, D.primary],
-  });
-
-  const bgColor = focusAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [D.surfaceHigh, D.white],
-  });
 
   return (
-    <View style={fld.wrap}>
-      <View style={fld.labelRow}>
-        <Ionicons name={icon} size={12} color={focused ? D.primary : D.textMuted} />
-        <Text style={[fld.label, focused && { color: D.primary }]}>
-          {label}
-          {required && <Text style={fld.required}> *</Text>}
+    <View style={s.wrap}>
+      {!!label && (
+        <Text style={s.fieldLabel}>
+          {label}{required && <Text style={s.req}> *</Text>}
         </Text>
-        {maxLength && (
-          <Text style={fld.counter}>{value.length}/{maxLength}</Text>
-        )}
-      </View>
-      <Animated.View style={[
-        fld.inputWrap,
-        { borderColor, backgroundColor: bgColor },
-        multiline && fld.inputMulti,
-        focused && fld.inputShadow,
+      )}
+      <View style={[
+        s.box,
+        focused && s.boxFocused,
+        multiline && s.boxMulti,
+        error && s.boxError,
       ]}>
+        {!!icon && (
+          <View style={s.iconWrap}>
+            <Ionicons
+              name={icon}
+              size={17}
+              color={focused ? '#7c3aed' : 'rgba(124,58,237,0.3)'}
+            />
+          </View>
+        )}
         <TextInput
-          style={[fld.input, multiline && { height: 88, textAlignVertical: 'top', paddingTop: 4 }]}
-          value={value}
+          style={[s.input, multiline && s.inputMulti]}
+          value={formatter ? formatter(value) : value}
           onChangeText={onChangeText}
+          onBlur={() => setFocused(false)}
+          onFocus={() => setFocused(true)}
           placeholder={placeholder}
-          placeholderTextColor={D.textMuted}
+          placeholderTextColor="rgba(124,58,237,0.25)"
           multiline={multiline}
           maxLength={maxLength}
           keyboardType={keyboardType}
-          autoCapitalize="none"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          textAlignVertical={multiline ? 'top' : 'center'}
         />
-      </Animated.View>
-      {hint ? <Text style={fld.hint}>{hint}</Text> : null}
+        {maxLength && <Text style={s.counter}>{value.length}/{maxLength}</Text>}
+        {!multiline && !!value && (
+          <TouchableOpacity
+            onPress={() => onChangeText('')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            style={s.clearBtn}
+          >
+            <Ionicons name="close-circle" size={16} color="rgba(124,58,237,0.3)" />
+          </TouchableOpacity>
+        )}
+      </View>
+      {hint && !error && <Text style={s.hint}>{hint}</Text>}
     </View>
   );
-};
-
-const fld = StyleSheet.create({
-  wrap:        { gap: 6, marginBottom: 2 },
-  labelRow:    { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  label:       { flex: 1, fontSize: 11, letterSpacing: 0.8, fontFamily: 'PlusJakartaSans_600SemiBold', color: D.textSub, textTransform: 'uppercase' },
-  required:    { color: D.primary },
-  counter:     { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: D.textMuted },
-  inputWrap:   {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: D.radius.md,
-    paddingHorizontal: 14,
-    minHeight: 48,
-  },
-  inputMulti:  { alignItems: 'flex-start', paddingVertical: 12 },
-  inputShadow: {
-    shadowColor: D.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  input:       { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: D.text, letterSpacing: 0.1 },
-  hint:        { fontSize: 10, color: D.textMuted, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 4, paddingLeft: 1 },
 });
 
-// ── Section Header ────────────────────────────────────────────────────────────
+// ── Main Modal ──────────────────────────────────────────────────────────────
 
-const SectionHeader: React.FC<{ label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = ({ label, icon }) => (
-  <View style={sec.wrap}>
-    <View style={sec.line} />
-    <View style={sec.inner}>
-      <Ionicons name={icon} size={11} color={D.primary} />
-      <Text style={sec.label}>{label}</Text>
-    </View>
-    <View style={sec.line} />
-  </View>
-);
-
-const sec = StyleSheet.create({
-  wrap:  { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 20, marginBottom: 14 },
-  line:  { flex: 1, height: 1, backgroundColor: D.border },
-  inner: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 2 },
-  label: { fontSize: 10, fontFamily: 'PlusJakartaSans_700Bold', color: D.primary, letterSpacing: 1.5, textTransform: 'uppercase' },
-});
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const iconOptions = [
-  { name: 'camera-outline',    label: 'Cámara' },
-  { name: 'videocam-outline',  label: 'Video' },
-  { name: 'brush-outline',     label: 'Pincel' },
-  { name: 'color-palette',     label: 'Paleta' },
-  { name: 'musical-note',      label: 'Música' },
-  { name: 'laptop-outline',    label: 'Diseño' },
-  { name: 'images-outline',    label: 'Arte Digital' },
-];
-
-const getCategoryIcon = (categoryId: string): string => {
-  const iconMap: Record<string, string> = {
-    'artes-visuales':           'color-palette',
-    'artes-escenicas':          'musical-note',
-    'medios-audiovisuales':     'videocam',
-    'moda-diseno':              'laptop',
-    'cultura-turismo':          'location',
-    'arte-digital-tecnologia':  'images',
-    'servicios-creativos':      'briefcase',
-  };
-  return iconMap[categoryId] || 'ellipsis-horizontal';
-};
-
-const currencies = ['COP', 'USD', 'EUR'];
-
-const deliveryOptions = [
-  { key: 'Express',  icon: 'flash-outline' as const },
-  { key: 'Estándar', icon: 'checkmark-circle-outline' as const },
-  { key: 'A medida', icon: 'build-outline' as const },
-];
-
-// ── Main Component ────────────────────────────────────────────────────────────
-
-export const EditServiceModal: React.FC<Props> = ({ visible, service, onClose, onSave }) => {
-  const [name, setName]            = useState('');
-  const [description, setDesc]     = useState('');
-  const [price, setPrice]          = useState('');
-  const [currency, setCurrency]    = useState('COP');
-  const [duration, setDuration]    = useState('');
-  const [category, setCategory]    = useState('');
-  const [deliveryTag, setDelivery] = useState('');
-  const [icon, setIcon]            = useState('camera-outline');
-
+export const EditServiceModal: React.FC<Props> = ({ 
+  visible, service, artistCategoryId, artistRoleId, onSave, onClose 
+}) => {
+  const insets = useSafeAreaInsets();
   const isEditing = !!service;
 
-  const categories = ARTIST_CATEGORIES.map(cat => ({
-    id:    cat.id,
-    label: getLocalizedCategoryName(cat.id),
-    icon:  getCategoryIcon(cat.id),
-  }));
+  // Estados del Formulario
+  const [name, setName] = useState('');
+  const [description, setDesc] = useState('');
+  const [price, setPrice] = useState('');
+  const [duration, setDuration] = useState(getDefaultDuration());  // ✅ Agregado
+  const [unit, setUnit] = useState('');
+  const [icon, setIcon] = useState('star-outline');
+  const [packageType, setPackageType] = useState<'simple' | 'pack' | 'weekly' | 'monthly'>('simple');
+  const [includedCount, setIncludedCount] = useState('');
+  const [deliveryDays, setDeliveryDays] = useState('');
+  const [deliveryNotApplies, setDeliveryNotApplies] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [errors, setErrors] = useState<any>({});
 
-  useEffect(() => {
-    if (visible && service) {
-      setName(service.name ?? '');
-      setDesc(service.description ?? '');
-      setPrice(service.price?.toString() ?? '');
-      setCurrency('COP');
-      setDuration(service.duration ?? '');
-      setCategory(service.category ?? '');
-      setDelivery('');
-      setIcon('camera-outline');
-    } else if (visible) {
-      setName(''); setDesc(''); setPrice('');
-      setCurrency('COP'); setDuration('');
-      setCategory(''); setDelivery(''); setIcon('camera-outline');
+  // --- 1. LÓGICA DE MEMORIZACIÓN (ESTABLE) ---
+  const disciplineId = useMemo(() => {
+    if (!artistCategoryId || !artistRoleId) return null;
+    const disciplines = getDisciplinesByCategory(artistCategoryId);
+    for (const d of disciplines) {
+      const roles = getRolesByDiscipline(artistCategoryId, d.id);
+      if (roles.find(r => r.id === artistRoleId)) return d.id;
     }
-  }, [visible, service]);
+    return null;
+  }, [artistCategoryId, artistRoleId]);
+
+  const finalDisciplineId = disciplineId || (artistRoleId === 'fotografo' ? 'fotografia' : null);
+
+  const artistRoleName = useMemo(() => {
+    return (artistCategoryId && finalDisciplineId && artistRoleId) 
+      ? getLocalizedRoleName(artistCategoryId, finalDisciplineId, artistRoleId) 
+      : '';
+  }, [artistCategoryId, finalDisciplineId, artistRoleId]);
+
+  const finalUnitOptions = useMemo(() => {
+    return finalDisciplineId ? getUnitSuggestions(finalDisciplineId) : getGenericUnits();
+  }, [finalDisciplineId]);
+
+  const suggestedTags = useMemo(() => {
+    return (artistCategoryId && finalDisciplineId) 
+      ? getSuggestedTagsForDiscipline(artistCategoryId, finalDisciplineId) 
+      : [];
+  }, [artistCategoryId, finalDisciplineId]);
+
+  // --- 2. RESET Y CARGA DE DATOS ---
+  useEffect(() => {
+    if (visible) {
+      if (service) {
+        // MODO EDICIÓN: Cargar datos existentes
+        setName(service.name || '');
+        setDesc(service.description || '');
+        setPrice(service.price?.toString() || '');  // Convertir number a string
+        setDuration(service.duration || getDefaultDuration());  // ✅ Agregado
+        setUnit((service as any).unit || '');      // unit no está en el tipo Service
+        setIcon(service.icon || 'star-outline');
+        const apiPackageType = service.packageType as string;
+        setPackageType(apiPackageType === 'single' ? 'simple' : (apiPackageType as any) || 'simple');
+        setIncludedCount(service.includedCount?.toString() || '');
+        setDeliveryDays(service.deliveryDays?.toString() || '');
+        setDeliveryNotApplies(false); // No existe en Service, default false
+        setSelectedTags([]);
+      } else {
+        // MODO CREACIÓN: Limpiar todo
+        setName('');
+        setDesc('');
+        setPrice('');
+        setDuration(getDefaultDuration());  // ✅ Agregado
+        setPackageType('simple');
+        setIncludedCount('');
+        setDeliveryDays('');
+        setDeliveryNotApplies(false);
+        setErrors({});
+        
+        // Auto-seleccionar según la categoría actual
+        if (finalUnitOptions.length > 0) {
+          setUnit(finalUnitOptions[0].id);
+          setIcon(finalUnitOptions[0].icon);
+        }
+        setSelectedTags(suggestedTags.length > 0 ? [suggestedTags[0]] : []);
+      }
+    }
+  }, [visible, service, finalUnitOptions, suggestedTags]);
 
   const handleSave = () => {
-    if (!name.trim() || !price.trim()) {
-      alert('Por favor completa los campos obligatorios');
-      return;
-    }
+    Keyboard.dismiss();
+    if (!name.trim()) { setErrors({ name: 'El nombre es obligatorio' }); return; }
+
+    const resolvedCategory = finalDisciplineId || service?.category || getDefaultCategory();
+    
     onSave({
-      name: name.trim(), description: description.trim(),
-      price: price.trim(), currency,
-      duration: duration.trim(), category,
-      deliveryTag, icon,
+      name, description, price, currency: 'COP', duration,  // ✅ Usar valor real
+      category: resolvedCategory, unit, deliveryTag: 'standard', icon,
+      packageType, includedCount, deliveryDays, weeklyFrequency: '',
+      deliveryNotApplies, tags: selectedTags
     });
-    onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={s.kav}>
-        <Pressable style={s.overlay} onPress={onClose} />
-
-        <View style={s.sheet}>
-
-          {/* Handle */}
-          <View style={s.handleWrap}>
-            <View style={s.handle} />
-          </View>
-
-          {/* Header */}
-          <View style={s.header}>
-            <TouchableOpacity onPress={onClose} style={s.closeBtn} hitSlop={12}>
-              <Ionicons name="close" size={18} color={D.textSub} />
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <View style={[s.safeArea, { paddingBottom: insets.bottom }]}>
+        <StatusBar barStyle="dark-content" />
+        <KeyboardAvoidingView style={s.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          
+          {/* Header estilo Instagram */}
+          <View style={[s.header, { paddingTop: insets.top }]}>
+            <TouchableOpacity onPress={onClose} style={s.headerSide} activeOpacity={0.7}>
+              <Text style={s.cancelText}>Cancelar</Text>
             </TouchableOpacity>
 
-            <View style={s.titleWrap}>
-              <Text style={s.titleEyebrow}>{isEditing ? 'Modificar' : 'Crear'}</Text>
-              <Text style={s.title}>Servicio</Text>
+            <View style={s.headerCenter}>
+              <Text style={s.title}>{isEditing ? 'Editar Servicio' : 'Nuevo Servicio'}</Text>
             </View>
 
-            <TouchableOpacity onPress={handleSave} style={s.saveBtn}>
-              <Ionicons name="checkmark" size={15} color={D.white} />
-              <Text style={s.saveBtnText}>Guardar</Text>
+            <TouchableOpacity onPress={handleSave} style={s.headerSide} activeOpacity={0.85}>
+              <LinearGradient
+                colors={['#7c3aed', '#2563eb']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={s.saveBtn}
+              >
+                <Text style={s.saveBtnText}>Guardar</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            contentContainerStyle={s.content}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView style={s.scroll} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+            
+            {/* Info Card de Rol */}
+            <View style={s.roleInfoCard}>
+               <Ionicons name="sparkles" size={14} color="#7c3aed" />
+               <Text style={s.roleName}>Configurando para: <Text style={{color: '#7c3aed'}}>{artistRoleName || 'Artista'}</Text></Text>
+            </View>
 
-            {/* ── Información Básica ── */}
-            <SectionHeader label="Información Básica" icon="person-outline" />
-
-            <Field
-              label="Nombre del servicio" icon="pricetag-outline"
-              value={name} onChangeText={setName}
-              placeholder="ej. Sesión de Retratos"
-              maxLength={60} required
-              hint="Un nombre claro aumenta la visibilidad de tu servicio"
+            <Field 
+              label="Nombre del servicio" icon="brush-outline" 
+              value={name} onChangeText={setName} 
+              placeholder={getServiceNamePlaceholder(unit, artistRoleName)}
+              required error={errors.name}
             />
-            <View style={{ height: 12 }} />
-            <Field
-              label="Descripción" icon="document-text-outline"
-              value={description} onChangeText={setDesc}
-              placeholder="Describe qué incluye tu servicio..."
-              multiline maxLength={300}
-              hint="Los clientes leen la descripción antes de contactarte"
+            
+            <Field 
+              label="Descripción detallada" icon="reader-outline" 
+              value={description} onChangeText={setDesc} 
+              multiline maxLength={300} placeholder="Ej: Sesión de 2 horas, edición incluida..."
             />
 
-            {/* ── Ícono ── */}
-            <SectionHeader label="Ícono del Servicio" icon="shapes-outline" />
-
-            <View style={s.iconGrid}>
-              {iconOptions.map((opt) => {
-                const selected = icon === opt.name;
-                return (
-                  <TouchableOpacity
-                    key={opt.name}
-                    style={[s.iconOption, selected && s.iconOptionSelected]}
-                    onPress={() => setIcon(opt.name)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={opt.name as any}
-                      size={22}
-                      color={selected ? D.primary : D.textMuted}
-                    />
-                    <Text style={[s.iconLabel, selected && s.iconLabelSelected]}>
-                      {opt.label}
-                    </Text>
-                    {selected && <View style={s.iconDot} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* ── Categoría ── */}
-            <SectionHeader label="Categoría" icon="grid-outline" />
-
-            <View style={s.catGrid}>
-              {categories.map((cat) => {
-                const selected = category === cat.id;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[s.catChip, selected && s.catChipSelected]}
-                    onPress={() => setCategory(cat.id)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={{ marginRight: 4 }}>
-                      <Ionicons
-                        name={`${cat.icon}-outline` as any}
-                        size={11}
-                        color={selected ? D.white : D.textSub}
-                      />
-                    </View>
-                    <Text style={[s.catText, selected && s.catTextSelected]}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* ── Precio y Duración ── */}
-            <SectionHeader label="Precio y Duración" icon="cash-outline" />
-
-            <View style={s.priceBlock}>
-              {/* Moneda */}
-              <View>
-                <Text style={s.miniLabel}>Moneda</Text>
-                <View style={s.currencyRow}>
-                  {currencies.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[s.currencyBtn, currency === c && s.currencyBtnSelected]}
-                      onPress={() => setCurrency(c)}
-                    >
-                      <Text style={[s.currencyBtnText, currency === c && s.currencyBtnTextSelected]}>
-                        {c}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Precio */}
-              <View>
-                <Text style={s.miniLabel}>
-                  Precio <Text style={{ color: D.primary }}>*</Text>
-                </Text>
-                <View style={s.priceInputBox}>
-                  <Text style={s.priceCurrencyTag}>{currency}</Text>
-                  <TextInput
-                    style={s.priceInput}
-                    value={price}
-                    onChangeText={setPrice}
-                    placeholder="0"
-                    placeholderTextColor={D.textMuted}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={{ height: 14 }} />
-
             <Field
-              label="Duración estimada" icon="time-outline"
-              value={duration} onChangeText={setDuration}
-              placeholder="ej. 2 horas, 1–3 días"
-              maxLength={30}
-              hint="Ayuda al cliente a planificar"
+              label="Precio base" icon="cash-outline"
+              value={price}
+              onChangeText={(text: string) => setPrice(text.replace(/[^\d]/g, ''))}
+              keyboardType="numeric"
+              placeholder="Ej: 150000"
+              hint={price ? `COP ${new Intl.NumberFormat('es-CO').format(parseInt(price, 10))}` : undefined}
             />
 
-            <View style={{ height: 14 }} />
+            <Field 
+              label="Duración" icon="time-outline" 
+              value={duration} onChangeText={setDuration} 
+              placeholder="Ej: 1 hora, 30 minutos"
+            />
 
-            {/* Delivery tag */}
-            <Text style={s.miniLabel}>Tag de Entrega</Text>
-            <View style={{ height: 8 }} />
-            <View style={s.deliveryRow}>
-              {deliveryOptions.map((opt) => {
-                const selected = deliveryTag === opt.key;
-                return (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={[s.deliveryTag, selected && s.deliveryTagSelected]}
-                    onPress={() => setDelivery(opt.key)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={opt.icon}
-                      size={12}
-                      color={selected ? D.primary : D.textMuted}
-                    />
-                    <Text style={[s.deliveryTagText, selected && s.deliveryTagTextSelected]}>
-                      {opt.key}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={s.dividerWrap}>
+              <Text style={s.dividerLabel}>MODALIDAD DE TRABAJO</Text>
+              <View style={s.dividerLine} />
             </View>
 
-            <View style={{ height: 32 }} />
+            <View style={s.packageGrid}>
+              {getPackageTypes().map(p => (
+                <TouchableOpacity 
+                  key={p.id} 
+                  style={[s.card, packageType === p.id && s.cardSel]} 
+                  onPress={() => setPackageType(p.id as any)}
+                >
+                  <Ionicons name={p.icon as any} size={18} color={packageType === p.id ? '#7c3aed' : '#a78bfa'} />
+                  <View style={{flex: 1}}>
+                    <Text style={[s.label, packageType === p.id && s.labelSel]}>{p.label}</Text>
+                    <Text style={s.desc}>{p.desc}</Text>
+                  </View>
+                  {packageType === p.id && <Ionicons name="checkmark-circle" size={16} color="#7c3aed" />}
+                </TouchableOpacity>
+              ))}
+            </View>
 
-            {/* CTA principal */}
-            <TouchableOpacity style={s.ctaBtn} onPress={handleSave} activeOpacity={0.85}>
-              <Ionicons
-                name={isEditing ? 'create-outline' : 'add-circle-outline'}
-                size={18}
-                color={D.white}
+            <View style={s.dividerWrap}>
+              <Text style={s.dividerLabel}>ENTREGA Y UNIDADES</Text>
+              <View style={s.dividerLine} />
+            </View>
+
+            <View style={s.unitChipsContainer}>
+              {finalUnitOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[s.unitChip, unit === option.id && s.unitChipSelected]}
+                  onPress={() => { setUnit(option.id); setIcon(option.icon); }}
+                >
+                  <Text style={[s.unitChipText, unit === option.id && s.unitChipTextSelected]}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Field 
+              label="Cantidad incluida" icon="copy-outline"
+              value={includedCount} onChangeText={setIncludedCount}
+              keyboardType="number-pad" hint={getHintByUnit(unit).includedCount}
+            />
+
+            {!deliveryNotApplies && (
+              <Field 
+                label="Tiempo estimado (Días)" icon="time-outline"
+                value={deliveryDays} onChangeText={setDeliveryDays}
+                keyboardType="number-pad" hint={getHintByUnit(unit).deliveryDays}
               />
-              <Text style={s.ctaBtnText}>
-                {isEditing ? 'Guardar cambios' : 'Crear servicio'}
-              </Text>
-            </TouchableOpacity>
+            )}
 
-            <View style={{ height: 24 }} />
+            <View style={s.deliveryOption}>
+              <Text style={s.deliveryOptionLabel}>Entrega inmediata / No aplica tiempo</Text>
+              <Switch 
+                value={deliveryNotApplies} 
+                onValueChange={setDeliveryNotApplies}
+                trackColor={{ false: '#eee', true: '#ddd' }}
+                thumbColor={deliveryNotApplies ? '#7c3aed' : '#f4f4f4'}
+              />
+            </View>
+
+            <View style={{ height: 40 }} />
           </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Styles (BUSCART DESIGN SYSTEM) ───────────────────────────────────────────
 
 const s = StyleSheet.create({
-  kav: { flex: 1, justifyContent: 'flex-end' },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(80,60,130,0.25)',
-  },
-
-  sheet: {
-    backgroundColor: D.bg,
-    borderTopLeftRadius: D.radius.xl,
-    borderTopRightRadius: D.radius.xl,
-    maxHeight: '93%',
-    overflow: 'hidden',
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: D.borderHi,
-    shadowColor: D.primary,
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 24,
-    elevation: 16,
-  },
-
-  handleWrap: { alignItems: 'center', paddingTop: 12, paddingBottom: 4 },
-  handle: {
-    width: 40, height: 4,
-    backgroundColor: D.borderHi,
-    borderRadius: 2,
-  },
-
+  safeArea: { flex: 1, backgroundColor: '#faf9ff' },
+  kav: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: D.border,
+    borderBottomColor: 'rgba(167,139,250,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
   },
-
-  closeBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: D.surface,
-    borderWidth: 1, borderColor: D.border,
-    alignItems: 'center', justifyContent: 'center',
+  headerSide: {
+    width: 90,
   },
-
-  titleWrap:    { alignItems: 'center' },
-  titleEyebrow: {
-    fontSize: 9, fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: D.primary, letterSpacing: 2.5,
-    textTransform: 'uppercase', marginBottom: 1,
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   title: {
-    fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold',
-    color: D.text, letterSpacing: -0.3,
+    fontSize: 16,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#1e1b4b',
+    letterSpacing: -0.2,
   },
-
+  cancelBtn: { paddingVertical: 5 },
+  cancelText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: 'rgba(124,58,237,0.55)',
+  },
   saveBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: D.primary,
-    paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: D.radius.lg,
-    shadowColor: D.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 4,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    alignSelf: 'flex-end',
   },
   saveBtnText: {
-    fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold',
-    color: D.white, letterSpacing: 0.2,
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
   },
+  
+  scroll: { flex: 1 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    flexGrow: 1,
+  },
+  sectionLabel: {
+    fontSize: 9.5,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(124,58,237,0.5)',
+    letterSpacing: 0.8,
+    marginBottom: 14,
+  },
+  
+  roleInfoCard: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f5f3ff', padding: 12, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: '#ddd6fe' },
+  roleName: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#4b5563' },
 
-  content: { paddingHorizontal: 20, paddingTop: 4 },
-
-  // ── Icon grid ──
-  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  iconOption: {
-    alignItems: 'center', justifyContent: 'center',
-    minWidth: 72, minHeight: 72,
-    paddingHorizontal: 8,
-    borderWidth: 1.5, borderColor: D.border,
-    borderRadius: D.radius.md,
-    backgroundColor: D.surface,
-    gap: 5, position: 'relative',
+  // Inputs
+  wrap: { marginBottom: 18 },
+  fieldLabel: {
+    fontSize: 9.5,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(124,58,237,0.5)',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
-  iconOptionSelected: {
-    borderColor: D.primary,
-    backgroundColor: D.primarySoft,
-  },
-  iconLabel: { fontSize: 9, fontFamily: 'PlusJakartaSans_400Regular', color: D.textMuted },
-  iconLabelSelected: { color: D.primary, fontFamily: 'PlusJakartaSans_600SemiBold' },
-  iconDot: {
-    position: 'absolute', top: 6, right: 6,
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: D.primary,
-  },
-
-  // ── Category chips ──
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  catChip: {
+  iconWrap: { marginRight: 10 },
+  clearBtn: { padding: 4 },
+  box: { 
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderWidth: 1.5, borderColor: D.border,
-    borderRadius: 20,
-    backgroundColor: D.surface,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 13,
+    borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.25)',
+    minHeight: 50,
   },
-  catChipSelected: {
-    borderColor: D.primary,
-    backgroundColor: D.primary,
+  boxFocused: {
+    borderColor: '#7c3aed',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    shadowColor: '#7c3aed',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12, shadowRadius: 10, elevation: 2,
   },
-  catText: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: D.textSub },
-  catTextSelected: { color: D.white, fontFamily: 'PlusJakartaSans_700Bold' },
+  boxMulti: { 
+    height: 120, 
+    alignItems: 'flex-start', 
+    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.75)',
+  },
+  boxError: { borderColor: '#ef4444' },
+  icon:  { marginRight: 10 },
+  input: { 
+    flex: 1, 
+    fontSize: 14.5,
+    fontFamily: 'PlusJakartaSans_400Regular', 
+    color: '#1e1b4b',
+    minHeight: 24,
+  },
+  inputMulti: { paddingTop: 0 },
+  counter: { fontSize: 10, color: '#94a3b8', alignSelf: 'flex-end', marginBottom: 5 },
+  hint: { fontSize: 11, color: '#7c3aed', marginTop: 6, fontFamily: 'PlusJakartaSans_500Medium', opacity: 0.7 },
 
-  // ── Price block ──
-  priceBlock: {
-    backgroundColor: D.surface,
-    borderWidth: 1, borderColor: D.border,
-    borderRadius: D.radius.lg,
-    padding: 16, gap: 14,
+  // Dividers
+  dividerWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 22 },
+  dividerLabel: { 
+    fontSize: 9.5, 
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(124,58,237,0.4)', 
+    letterSpacing: 0.8,
   },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(167,139,250,0.15)' },
 
-  miniLabel: {
-    fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: D.textSub, letterSpacing: 1,
-    textTransform: 'uppercase', marginBottom: 8,
-  },
+  // Cards
+  packageGrid: { gap: 10 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 15, padding: 15, borderRadius: 16, borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.15)', backgroundColor: '#fff' },
+  cardSel: { borderColor: '#7c3aed', backgroundColor: '#f5f3ff' },
+  label: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#475569' },
+  labelSel: { color: '#1e1b4b' },
+  desc: { fontSize: 11, color: '#94a3b8', marginTop: 2, fontFamily: 'PlusJakartaSans_400Regular' },
 
-  currencyRow: { flexDirection: 'row', gap: 6 },
-  currencyBtn: {
-    paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: D.radius.sm,
-    borderWidth: 1.5, borderColor: D.border,
-    backgroundColor: D.surfaceHigh,
-  },
-  currencyBtnSelected: {
-    borderColor: D.primary,
-    backgroundColor: D.primarySoft,
-  },
-  currencyBtnText: {
-    fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: D.textMuted,
-  },
-  currencyBtnTextSelected: { color: D.primary },
+  // Chips
+  unitChipsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 15 },
+  unitChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', backgroundColor: '#fff' },
+  unitChipSelected: { backgroundColor: '#7c3aed', borderColor: '#7c3aed' },
+  unitChipText: { fontSize: 12, color: '#64748b', fontFamily: 'PlusJakartaSans_600SemiBold' },
+  unitChipTextSelected: { color: '#fff' },
 
-  priceInputBox: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: D.border,
-    borderRadius: D.radius.md,
-    backgroundColor: D.surfaceHigh,
-    paddingHorizontal: 14, minHeight: 52, gap: 8,
-  },
-  priceCurrencyTag: {
-    fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold',
-    color: D.primary, letterSpacing: 0.5,
-    paddingRight: 8,
-    borderRightWidth: 1, borderRightColor: D.border,
-  },
-  priceInput: {
-    flex: 1, fontSize: 24, fontFamily: 'PlusJakartaSans_700Bold',
-    color: D.text, letterSpacing: -0.5,
-  },
-
-  // ── Delivery tags ──
-  deliveryRow: { flexDirection: 'row', gap: 8 },
-  deliveryTag: {
-    flex: 1, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'center',
-    gap: 5, paddingVertical: 11,
-    borderRadius: D.radius.md,
-    borderWidth: 1.5, borderColor: D.border,
-    backgroundColor: D.surface,
-  },
-  deliveryTagSelected: {
-    borderColor: D.primary,
-    backgroundColor: D.primarySoft,
-  },
-  deliveryTagText: {
-    fontSize: 11, fontFamily: 'PlusJakartaSans_500Medium', color: D.textMuted,
-  },
-  deliveryTagTextSelected: {
-    color: D.primary, fontFamily: 'PlusJakartaSans_700Bold',
-  },
-
-  // ── CTA ──
-  ctaBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8,
-    backgroundColor: D.primary,
-    borderRadius: D.radius.lg,
-    paddingVertical: 16,
-    shadowColor: D.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  ctaBtnText: {
-    fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold',
-    color: D.white, letterSpacing: 0.2,
-  },
+  // Footer
+  deliveryOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f8fafc', padding: 15, borderRadius: 14, marginTop: 10 },
+  deliveryOptionLabel: { fontSize: 13, color: '#334155', fontFamily: 'PlusJakartaSans_600SemiBold' },
+  req: { color: '#ef4444' },
 });

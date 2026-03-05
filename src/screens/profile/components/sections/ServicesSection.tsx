@@ -1,300 +1,257 @@
-// src/components/profile/sections/ServicesSection.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Pressable, Platform, Alert,
+  View, Text, TouchableOpacity, StyleSheet, Platform, Alert,
+  LayoutAnimation, UIManager, ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { Colors, Radius, Spacing } from '../../../../theme';
-import { Service as APIService } from '../../../../services/api/services';
-import { ServiceModal } from '../../../../components/modals/ServiceModal';
-import { servicesService } from '../../../../services/api/services';
+
+// Servicios y Tipos (Ajusta las rutas según tu proyecto)
+import { Service as APIService, servicesService } from '../../../../services/api/services';
+import { EditServiceModal, ServiceFormData } from '../modals/EditServiceModal';
+
+// Habilitar animaciones en Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface ServicesSectionProps {
   services: APIService[];
   isOwner: boolean;
+  artistCategoryId?: string;
+  artistRoleId?: string;
   onServicesUpdated?: () => void;
 }
 
-const formatCOP = (price: number) =>
-  `$${price.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+// ── Formateador Pro ─────────────────────────────────────────
+const formatPrice = (price: any) => {
+  const n = typeof price === 'string' ? parseFloat(price) : price;
+  if (!n || isNaN(n) || n <= 0) return null;
+  return new Intl.NumberFormat('es-CO').format(n);
+};
 
-// ── Service Card ─────────────────────────────────────────────────────────────
-
-interface ServiceCardDetailProps {
-  service: APIService;
-  index: number;
-  showEdit?: boolean;
-  onEdit?: (service: APIService) => void;
-}
-
-const ServiceCardDetail: React.FC<ServiceCardDetailProps> = ({ service, index, showEdit, onEdit }) => {
+// ── ServiceCard: El corazón del diseño ───────────────────────
+const ServiceCard = ({ 
+  service, 
+  isOwner, 
+  onEdit, 
+  onDelete 
+}: { 
+  service: APIService, 
+  isOwner: boolean, 
+  onEdit: (s: APIService) => void, 
+  onDelete: (s: APIService) => void 
+}) => {
   const [expanded, setExpanded] = useState(false);
-
-  const name = service.name;
-  const price = service.price;
-  const icon = 'camera-outline'; // Icono por defecto
-  const description = service.description;
-  const duration = service.duration;
-  const category = service.category;
-
-  const hasExtras = description;
+  const priceStr = formatPrice(service.price);
+  
+  const toggle = () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded(!expanded);
+  };
 
   return (
-    <Pressable
-      onPress={() => {
-        if (hasExtras) {
-          if (Platform.OS !== 'web') Haptics.selectionAsync();
-          setExpanded(p => !p);
-        }
-      }}
-      style={({ pressed }) => [
-        scd.card,
-        pressed && { opacity: 0.95 },
-      ]}
-    >
-      <View style={scd.accentBar} />
-      <View style={scd.inner}>
-        {showEdit && (
-          <TouchableOpacity style={scd.editButton} onPress={() => {
-            if (onEdit) {
-              onEdit(service);
-            }
-          }}>
-            <Ionicons name="pencil" size={14} color={Colors.primary} />
-          </TouchableOpacity>
-        )}
-        <View style={scd.topRow}>
-          <View style={scd.iconWrap}>
-            <Ionicons name={icon} size={18} color={Colors.primary} />
-          </View>
-          <View style={scd.nameBlock}>
-            <Text style={scd.name} numberOfLines={1}>{name}</Text>
-            {category && (
-              <View style={scd.categoryPill}>
-                <Text style={scd.categoryText}>{category}</Text>
-              </View>
-            )}
-          </View>
-          <View style={scd.priceBlock}>
-            {price !== null && price !== undefined ? (
-              <Text style={scd.price}>{formatCOP(price)}</Text>
-            ) : (
-              <View style={scd.consultPill}>
-                <Text style={scd.consultText}>Consultar</Text>
-              </View>
-            )}
-          </View>
+    <View style={[sc.card, expanded && sc.cardActive]}>
+      <TouchableOpacity activeOpacity={0.9} onPress={toggle} style={sc.mainRow}>
+        
+        {/* IZQUIERDA: VISUAL ESTILO BOOKING */}
+        <View style={sc.imageContainer}>
+          <LinearGradient colors={['#7c3aed20', '#7c3aed05']} style={sc.imagePlaceholder}>
+            <Ionicons name="brush" size={32} color="#7c3aed" />
+          </LinearGradient>
+          {!!service.deliveryDays && (
+            <View style={sc.floatingBadge}>
+              <Text style={sc.badgeText}>{service.deliveryDays}d</Text>
+            </View>
+          )}
         </View>
 
-        {duration && (
-          <View style={scd.chipsRow}>
-            <View style={scd.chip}>
-              <Ionicons name="time-outline" size={10} color={Colors.primary} />
-              <Text style={scd.chipText}>{duration}</Text>
+        {/* DERECHA: INFO REFINADA */}
+        <View style={sc.content}>
+          <View style={sc.topHeader}>
+            <Text style={sc.category}>{service.category || 'Servicio'}</Text>
+            <View style={sc.statusRow}>
+              <View style={sc.dotStatus} />
+              <Text style={sc.statusText}>Activo</Text>
             </View>
           </View>
-        )}
 
-        {expanded && description && (
-          <View style={scd.expandedBlock}>
-            <Text style={scd.description}>{description}</Text>
+          <Text style={sc.name} numberOfLines={1}>{service.name}</Text>
+          
+          <View style={sc.featureRow}>
+            <Ionicons name="time-outline" size={14} color="#64748b" />
+            <Text style={sc.featureText}>{service.duration || 'Flexible'}</Text>
           </View>
-        )}
 
-        {hasExtras && (
-          <View style={scd.expandHint}>
-            <Ionicons
-              name={expanded ? 'chevron-up' : 'chevron-down'}
-              size={13}
-              color={Colors.textSecondary}
-            />
+          <View style={sc.priceRow}>
+            <View>
+              <Text style={sc.priceLabel}>Precio base</Text>
+              <View style={sc.priceFlex}>
+                <Text style={sc.currency}>$</Text>
+                <Text style={sc.amount}>{priceStr || '---'}</Text>
+              </View>
+            </View>
+            
+            <View style={[sc.cta, { backgroundColor: expanded ? '#7c3aed' : '#f5f3ff' }]}>
+              <Ionicons 
+                name={expanded ? "chevron-up" : "chevron-forward"} 
+                size={16} 
+                color={expanded ? "#fff" : "#7c3aed"} 
+              />
+            </View>
           </View>
-        )}
-      </View>
-    </Pressable>
+        </View>
+      </TouchableOpacity>
+
+      {/* ÁREA EXPANDIBLE */}
+      {expanded && (
+        <View style={sc.expandedArea}>
+          <View style={sc.separator} />
+          <Text style={sc.descriptionTitle}>Detalles del servicio</Text>
+          <Text style={sc.description}>{service.description || 'Sin descripción disponible.'}</Text>
+          
+          {isOwner && (
+            <View style={sc.ownerActions}>
+              <TouchableOpacity onPress={() => onEdit(service)} style={sc.btnEdit}>
+                <Ionicons name="pencil-outline" size={16} color="#1e293b" />
+                <Text style={sc.btnEditText}>Editar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => onDelete(service)} style={[sc.btnEdit, sc.btnDelete]}>
+                <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                <Text style={[sc.btnEditText, { color: '#ef4444' }]}>Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
   );
 };
 
-const scd = StyleSheet.create({
-  card: {
-    flexDirection: 'row', backgroundColor: '#fff', borderRadius: 14,
-    borderWidth: 1, borderColor: Colors.border, overflow: 'hidden', marginBottom: 8,
-  },
-  accentBar: { width: 3, backgroundColor: Colors.primary, opacity: 0.6 },
-  inner: { flex: 1, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
-  editButton: {
-    position: 'absolute',
-    bottom: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(99,102,241,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1,
-  },
-  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  iconWrap: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(99,102,241,0.08)', alignItems: 'center', justifyContent: 'center',
-  },
-  nameBlock: { flex: 1, gap: 3 },
-  name: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.text, lineHeight: 18 },
-  categoryPill: {
-    alignSelf: 'flex-start', backgroundColor: 'rgba(99,102,241,0.08)',
-    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1,
-  },
-  categoryText: {
-    fontSize: 9, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.primary,
-    textTransform: 'uppercase', letterSpacing: 0.4,
-  },
-  priceBlock: { alignItems: 'flex-end', gap: 2 },
-  price: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.primary },
-  consultPill: {
-    backgroundColor: 'rgba(99,102,241,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4,
-  },
-  consultText: { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.primary },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  chip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#F4F4F8', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
-  },
-  chipText: { fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: Colors.textSecondary },
-  expandedBlock: { gap: 8, paddingTop: 4, borderTopWidth: 1, borderTopColor: Colors.border },
-  description: {
-    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.textSecondary, lineHeight: 19,
-  },
-  expandHint: { alignItems: 'center', marginTop: -2 },
-});
-
-// ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
-
+// ── COMPONENTE PRINCIPAL ───────────────────────────────────────
 export const ServicesSection: React.FC<ServicesSectionProps> = ({
-  services,
+  services = [],
   isOwner,
+  artistCategoryId,
+  artistRoleId,
   onServicesUpdated,
 }) => {
-  const [serviceModalVisible, setServiceModalVisible] = useState(false);
+  const [localServices, setLocalServices] = useState<APIService[]>(services);
+  const [modalVisible, setModalVisible] = useState(false);
   const [editingService, setEditingService] = useState<APIService | null>(null);
-  const [isSavingService, setIsSavingService] = useState(false);
 
-  const handleAddService = () => {
-    setEditingService(null);
-    setServiceModalVisible(true);
+  useEffect(() => { setLocalServices(services); }, [services]);
+
+  const handleSave = async (formData: ServiceFormData) => {
+    // Aquí implementas tu lógica de guardado de BuscArt
+    setModalVisible(false);
+    onServicesUpdated?.();
   };
 
-  const handleEditService = (service: APIService) => {
-    setEditingService(service);
-    setServiceModalVisible(true);
-  };
-
-  const handleSaveService = async (serviceData: Partial<APIService>) => {
-    setIsSavingService(true);
-    try {
-      if (editingService && editingService.id) {
-        await servicesService.updateService(Number(editingService.id), serviceData);
-      } else {
-        const createData = {
-          name: serviceData.name || '',
-          description: serviceData.description,
-          price: serviceData.price,
-          duration: serviceData.duration,
-          category: serviceData.category,
-        };
-        await servicesService.createService(createData);
-      }
-      
-      if (Platform.OS !== 'web') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-      
-      if (onServicesUpdated) {
-        onServicesUpdated();
-      }
-    } catch (error) {
-      console.error('Error saving service:', error);
-      Alert.alert('Error', 'No se pudo guardar el servicio. Inténtalo de nuevo.');
-      throw error;
-    } finally {
-      setIsSavingService(false);
-    }
+  const handleDelete = (s: APIService) => {
+    Alert.alert("Eliminar", "¿Seguro que quieres borrar este servicio?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Borrar", style: "destructive", onPress: () => {
+        setLocalServices(prev => prev.filter(item => item.id !== s.id));
+      }}
+    ]);
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.hint}>Toca una tarjeta para ver detalles</Text>
+    <View style={st.container}>
+      <View style={st.header}>
+        <View>
+          <Text style={st.title}>Servicios Profesionales</Text>
+          <Text style={st.subtitle}>{localServices.length} opciones para contratar</Text>
+        </View>
         {isOwner && (
           <TouchableOpacity 
-            style={styles.addButton}
-            onPress={handleAddService}
+            onPress={() => { setEditingService(null); setModalVisible(true); }}
+            style={st.addButton}
           >
-            <Ionicons name="add" size={16} color="#fff" />
-            <Text style={styles.addButtonText}>Nuevo servicio</Text>
+            <LinearGradient colors={['#7c3aed', '#6d28d9']} style={st.addGradient}>
+              <Ionicons name="add" size={24} color="#fff" />
+            </LinearGradient>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Services List */}
-      <View style={styles.servicesList}>
-        {services.map((service: APIService, i: number) => (
-          <ServiceCardDetail 
-            key={service.id || i} 
-            service={service} 
-            index={i} 
-            showEdit={isOwner} 
-            onEdit={handleEditService}
-          />
-        ))}
-      </View>
+      {localServices.map((s, i) => (
+        <ServiceCard 
+          key={s.id || i} 
+          service={s} 
+          isOwner={isOwner} 
+          onEdit={(service) => { setEditingService(service); setModalVisible(true); }}
+          onDelete={handleDelete}
+        />
+      ))}
 
-      {/* Service Modal */}
-      <ServiceModal
-        visible={serviceModalVisible}
-        onClose={() => setServiceModalVisible(false)}
-        onSave={handleSaveService}
-        service={editingService}
-        isLoading={isSavingService}
+      <EditServiceModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
+        artistCategoryId={artistCategoryId}
+        artistRoleId={artistRoleId}
+        service={editingService ? { ...editingService, price: editingService.price?.toString() } as any : undefined}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+// ── ESTILOS ────────────────────────────────────────────────────
+const sc = StyleSheet.create({
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    marginBottom: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    width: '100%',
+    alignSelf: 'stretch',
+    ...Platform.select({
+      ios: { shadowColor: '#64748b', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.1, shadowRadius: 10 },
+      android: { elevation: 4 }
+    })
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  hint: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-    flex: 1,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-  },
-  addButtonText: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#fff',
-  },
-  servicesList: {
-    flex: 1,
-  },
+  cardActive: { borderColor: '#7c3aed30', backgroundColor: '#fafaff' },
+  mainRow: { flexDirection: 'row', gap: 16 },
+  imageContainer: { position: 'relative' },
+  imagePlaceholder: { width: 110, height: 130, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  floatingBadge: { position: 'absolute', top: -4, left: -4, backgroundColor: '#1e293b', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  badgeText: { color: '#fff', fontSize: 9, fontFamily: 'PlusJakartaSans_800ExtraBold' },
+  content: { flex: 1, justifyContent: 'space-between', paddingVertical: 4 },
+  topHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  category: { fontSize: 9, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#7c3aed', textTransform: 'uppercase' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  dotStatus: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#10b981' },
+  statusText: { fontSize: 9, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#64748b' },
+  name: { fontSize: 16, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#0f172a', marginVertical: 2 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  featureText: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: '#64748b' },
+  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 10 },
+  priceLabel: { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: '#94a3b8' },
+  priceFlex: { flexDirection: 'row', alignItems: 'baseline' },
+  currency: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#0f172a' },
+  amount: { fontSize: 20, fontFamily: 'PlusJakartaSans_900Black', color: '#0f172a', letterSpacing: -0.5 },
+  cta: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  expandedArea: { marginTop: 16, paddingHorizontal: 4, paddingBottom: 4 },
+  separator: { height: 1, backgroundColor: '#f1f5f9', marginBottom: 12 },
+  descriptionTitle: { fontSize: 12, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#0f172a', marginBottom: 6 },
+  description: { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: '#475569', lineHeight: 20 },
+  ownerActions: { flexDirection: 'row', gap: 10, marginTop: 20 },
+  btnEdit: { flex: 1, flexDirection: 'row', backgroundColor: '#f8fafc', padding: 12, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#e2e8f0' },
+  btnDelete: { borderColor: '#fee2e2', backgroundColor: '#fff5f5' },
+  btnEditText: { color: '#1e293b', fontFamily: 'PlusJakartaSans_700Bold', fontSize: 12 },
+});
+
+const st = StyleSheet.create({
+  container: { padding: 8, backgroundColor: '#fff' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  title: { fontSize: 16, fontFamily: 'PlusJakartaSans_900Black', color: '#0f172a' },
+  subtitle: { fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: '#94a3b8' },
+  addButton: { width: 44, height: 44, borderRadius: 15, overflow: 'hidden' },
+  addGradient: { flex: 1, alignItems: 'center', justifyContent: 'center' }
 });

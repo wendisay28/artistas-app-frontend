@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import {
   Modal,
   View,
@@ -9,13 +9,17 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
-  Keyboard,
-  TouchableWithoutFeedback
+  StatusBar,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius } from '../../../../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { WorkExperienceDetail } from '../types';
+
+// Extendemos el tipo localmente para manejar IDs únicos y evitar re-renders por índice
+interface InternalExperience extends WorkExperienceDetail {
+  id: string;
+}
 
 interface Props {
   visible: boolean;
@@ -24,303 +28,240 @@ interface Props {
   onSave: (data: WorkExperienceDetail[]) => void;
 }
 
-export const ExperienceModal = ({
-  visible,
-  initialExperience,
-  onClose,
-  onSave,
-}: Props) => {
-  const [experience, setExperience] = useState<WorkExperienceDetail[]>([]);
+// ── MiniField ──────────────────────────────────────────────────────────────────
+const MiniField = memo(({ 
+  label, value, onChange, placeholder, icon, multiline, editable = true 
+}: any) => {
+  const [focused, setFocused] = useState(false);
 
-  // 🔥 Siempre iniciar con al menos una experiencia
-  useEffect(() => {
-    if (visible) {
-      if (initialExperience && initialExperience.length > 0) {
-        setExperience(initialExperience);
-      } else {
-        setExperience([
-          { company: '', position: '', period: '', description: '' },
-        ]);
-      }
-    }
-  }, [visible]);
+  return (
+    <View style={mf.wrap}>
+      <Text style={mf.label}>{label}</Text>
+      <View style={[
+        mf.container,
+        focused && mf.containerFocused,
+        multiline && mf.multilineContainer,
+        !editable && mf.containerDisabled,
+      ]}>
+        <View style={{ marginRight: 8 }}>
+          <Ionicons
+            name={icon}
+            size={14}
+            color={!editable ? 'rgba(124,58,237,0.15)' : (focused ? '#7c3aed' : 'rgba(124,58,237,0.3)')}
+          />
+        </View>
+        <TextInput
+          style={[mf.input, multiline && mf.multilineInput, !editable && mf.inputDisabled]}
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(124,58,237,0.25)"
+          multiline={multiline}
+          editable={editable}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          autoCorrect={false}
+          onFocus={() => {
+            console.log(`[BuscArt Debug] Foco ganado: ${label}`);
+            setFocused(true);
+          }}
+          onBlur={() => {
+            console.log(`[BuscArt Debug] Foco perdido: ${label}`);
+            setFocused(false);
+          }}
+        />
+      </View>
+    </View>
+  );
+});
 
-  const addWork = () => {
-    setExperience((prev) => [
-      ...prev,
-      { company: '', position: '', period: '', description: '' },
-    ]);
+// ── ExperienceCard ─────────────────────────────────────────────────────────────
+const ExperienceCard = memo(({ 
+  item, index, canDelete, onUpdate, onDelete 
+}: any) => {
+  const [start, end] = (item.period || ' - ').split(' - ');
+  const isCurrent = end === 'Actual';
+
+  const handleUpdatePeriod = (newStart: string, newEnd: string) => {
+    onUpdate('period', `${newStart || ''} - ${newEnd || ''}`);
   };
 
-  const removeWork = (index: number) => {
-    if (experience.length === 1) return; // 🔥 No permitir borrar la última
-    setExperience((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateWork = (
-    index: number,
-    field: keyof WorkExperienceDetail,
-    value: string
-  ) => {
-    setExperience((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
-      return updated;
-    });
+  const toggleCurrent = () => {
+    if (isCurrent) handleUpdatePeriod(start, '');
+    else handleUpdatePeriod(start, 'Actual');
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
-      <KeyboardAvoidingView
-        style={s.overlay}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
-      >
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+    <View style={ec.card}>
+      <View style={ec.header}>
+        <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={ec.numberGrad}>
+          <Text style={ec.numberText}>{index + 1}</Text>
+        </LinearGradient>
+        <Text style={ec.cardTitle}>Registro de Experiencia</Text>
+        {canDelete && (
+          <TouchableOpacity onPress={onDelete} style={ec.deleteBtn}>
+            <Ionicons name="trash-outline" size={15} color="#ef4444" />
+          </TouchableOpacity>
+        )}
+      </View>
 
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-          <View style={s.sheet}>
-            <View style={s.handle} />
+      <MiniField
+        label="Empresa / Proyecto"
+        icon="business-outline"
+        value={item.company}
+        onChange={(v: string) => onUpdate('company', v)}
+        placeholder="Ej. Apple Inc."
+      />
+      <View style={{ height: 16 }} />
+      <View style={ec.row}>
+        <View style={{ flex: 1 }}>
+          <MiniField
+            label="Inicio"
+            icon="calendar-outline"
+            value={start}
+            onChange={(v: string) => handleUpdatePeriod(v, end)}
+            placeholder="2022"
+          />
+        </View>
+        <View style={{ flex: 1 }}>
+          <MiniField
+            label="Fin"
+            icon="calendar-clear-outline"
+            value={isCurrent ? 'Actual' : (end || '')}
+            onChange={(v: string) => handleUpdatePeriod(start, v)}
+            placeholder="2024"
+            editable={!isCurrent}
+          />
+        </View>
+        <TouchableOpacity style={[ec.currentBtn, isCurrent && ec.currentBtnActive]} onPress={toggleCurrent}>
+          <Ionicons name={isCurrent ? 'checkbox' : 'square-outline'} size={18} color={isCurrent ? '#7c3aed' : 'rgba(124,58,237,0.3)'} />
+          <Text style={[ec.currentTxt, isCurrent && ec.currentTxtActive]}>Actual</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={{ height: 16 }} />
+      <MiniField label="Cargo desempeñado" icon="briefcase-outline" value={item.position} onChange={(v: string) => onUpdate('position', v)} placeholder="Ej. Senior UI Designer" />
+      <View style={{ height: 16 }} />
+      <MiniField label="Descripción de logros" icon="document-text-outline" value={item.description ?? ''} onChange={(v: string) => onUpdate('description', v)} placeholder="Logros..." multiline />
+    </View>
+  );
+});
 
-            {/* HEADER MEJORADO */}
-            <View style={s.header}>
-              <TouchableOpacity style={s.sideBtn} onPress={onClose}>
-                <Text style={s.cancel}>Cancelar</Text>
-              </TouchableOpacity>
+// ── ExperienceModal ────────────────────────────────────────────────────────────
+export const ExperienceModal = ({ visible, initialExperience, onClose, onSave }: Props) => {
+  const insets = useSafeAreaInsets();
+  const [experience, setExperience] = useState<InternalExperience[]>([]);
+  const isInitialized = useRef(false);
 
-              <Text style={s.title}>Experiencia Laboral</Text>
+  useEffect(() => {
+    if (visible && !isInitialized.current) {
+      const dataWithIds = (initialExperience?.length > 0 ? initialExperience : [{ company: '', position: '', period: '', description: '' }])
+        .map((item, idx) => ({ ...item, id: Math.random().toString(36).substr(2, 9) }));
+      
+      setExperience(dataWithIds);
+      isInitialized.current = true;
+    }
+    if (!visible) {
+      isInitialized.current = false;
+    }
+  }, [visible]);
 
-              <TouchableOpacity
-                style={s.sideBtn}
-                onPress={() => onSave(experience)}
-              >
-                <Text style={s.save}>Guardar</Text>
-              </TouchableOpacity>
+  const updateWork = useCallback((id: string, field: keyof WorkExperienceDetail, value: string) => {
+    setExperience(prev => prev.map(item => item.id === id ? { ...item, [field]: value } : item));
+  }, []);
+
+  const addWork = () => {
+    setExperience(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), company: '', position: '', period: '', description: '' }]);
+  };
+
+  const removeWork = (id: string) => {
+    setExperience(prev => prev.length > 1 ? prev.filter(item => item.id !== id) : prev);
+  };
+
+  const handleSave = () => {
+    // Quitamos los IDs internos antes de guardar
+    const cleanData = experience.map(({ id, ...rest }) => rest);
+    onSave(cleanData);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+      <View style={[s.safeArea, { paddingBottom: insets.bottom }]}>
+        <StatusBar barStyle="dark-content" />
+        <KeyboardAvoidingView style={s.kav} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={20}>
+          <View style={[s.header, { paddingTop: insets.top }]}>
+            <TouchableOpacity onPress={onClose} style={s.cancelBtn}><Text style={s.cancelText}>Cancelar</Text></TouchableOpacity>
+            <View style={s.headerCenter}>
+              <LinearGradient colors={['#7c3aed', '#2563eb']} style={s.accentBar} />
+              <Text style={s.title}>Experiencia</Text>
             </View>
-
-            <ScrollView
-              contentContainerStyle={s.content}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
-              {experience.map((item, index) => (
-                <View key={index} style={s.card}>
-                  <View style={s.cardHeader}>
-                    <Text style={s.cardTitle}>
-                      Experiencia {index + 1}
-                    </Text>
-
-                    {experience.length > 1 && (
-                      <TouchableOpacity onPress={() => removeWork(index)}>
-                        <Ionicons
-                          name="trash-outline"
-                          size={18}
-                          color={Colors.error}
-                        />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-
-                  <View style={s.row}>
-                    <View style={{ flex: 1.5 }}>
-                      <Text style={s.label}>Empresa</Text>
-                      <TextInput
-                        style={s.input}
-                        value={item.company}
-                        placeholder="Ej. Agency"
-                        onChangeText={(v) =>
-                          updateWork(index, 'company', v)
-                        }
-                      />
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.label}>Periodo</Text>
-                      <TextInput
-                        style={s.input}
-                        value={item.period}
-                        placeholder="2022 - Act."
-                        onChangeText={(v) =>
-                          updateWork(index, 'period', v)
-                        }
-                      />
-                    </View>
-                  </View>
-
-                  <View style={{ marginTop: 12 }}>
-                    <Text style={s.label}>Cargo</Text>
-                    <TextInput
-                      style={s.input}
-                      value={item.position}
-                      placeholder="Ej. Director Creativo"
-                      onChangeText={(v) =>
-                        updateWork(index, 'position', v)
-                      }
-                    />
-                  </View>
-
-                  <View style={{ marginTop: 12 }}>
-                    <Text style={s.label}>Descripción</Text>
-                    <TextInput
-                      style={[s.input, s.textArea]}
-                      value={item.description}
-                      multiline
-                      placeholder="Logros y responsabilidades..."
-                      onChangeText={(v) =>
-                        updateWork(index, 'description', v)
-                      }
-                    />
-                  </View>
-                </View>
-              ))}
-
-              <TouchableOpacity style={s.addBtn} onPress={addWork}>
-                <Ionicons
-                  name="add-circle-outline"
-                  size={20}
-                  color={Colors.primary}
-                />
-                <Text style={s.addText}>
-                  Agregar nueva experiencia
-                </Text>
-              </TouchableOpacity>
-
-              <View style={{ height: 60 }} />
-            </ScrollView>
+            <TouchableOpacity onPress={handleSave}>
+              <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.saveBtn}>
+                <Text style={s.saveBtnText}>Guardar</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
-        </TouchableWithoutFeedback>
-      </KeyboardAvoidingView>
+          <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} keyboardShouldPersistTaps="always">
+            {experience.map((item, index) => (
+              <ExperienceCard 
+                key={item.id} 
+                item={item} 
+                index={index} 
+                canDelete={experience.length > 1} 
+                onUpdate={(field: any, value: string) => updateWork(item.id, field, value)} 
+                onDelete={() => removeWork(item.id)} 
+              />
+            ))}
+            <TouchableOpacity style={s.addBtn} onPress={addWork}>
+              <Ionicons name="add-circle" size={20} color="#7c3aed" />
+              <Text style={s.addText}>Añadir nueva experiencia</Text>
+            </TouchableOpacity>
+            <View style={{ height: 120 }} />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
+// ── Estilos (Mantenidos) ──────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
+  safeArea: { flex: 1, backgroundColor: '#fdfcff' },
+  kav: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 14 },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  accentBar: { width: 3, height: 22, borderRadius: 2 },
+  title: { fontSize: 17, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#1e1b4b' },
+  cancelBtn: { paddingVertical: 4 },
+  cancelText: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: 'rgba(124,58,237,0.5)' },
+  saveBtn: { borderRadius: 22, paddingHorizontal: 18, paddingVertical: 9 },
+  saveBtnText: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 16 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(124,58,237,0.25)', borderRadius: 20, backgroundColor: 'rgba(124,58,237,0.02)' },
+  addText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#7c3aed' },
+});
 
-  sheet: {
-    backgroundColor: Colors.bg,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: '90%',
-  },
+const mf = StyleSheet.create({
+  wrap: { flex: 1 },
+  label: { fontSize: 9, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(124,58,237,0.45)', marginBottom: 6, textTransform: 'uppercase' },
+  container: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderWidth: 1.2, borderColor: 'rgba(167,139,250,0.2)', borderRadius: 14, paddingHorizontal: 12, height: 44 },
+  containerFocused: { borderColor: '#7c3aed' },
+  multilineContainer: { height: 90, alignItems: 'flex-start', paddingTop: 10 },
+  input: { flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_500Medium', color: '#1e1b4b' },
+  containerDisabled: { backgroundColor: 'rgba(124,58,237,0.03)' },
+  inputDisabled: { color: 'rgba(30,27,75,0.3)' },
+  multilineInput: { textAlignVertical: 'top' },
+});
 
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 6,
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-
-  sideBtn: {
-    width: 90,
-  },
-
-  title: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-
-  cancel: {
-    fontSize: 15,
-    color: Colors.text2,
-  },
-
-  save: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.primary,
-    textAlign: 'right',
-  },
-
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    flexGrow: 1,
-  },
-
-  card: {
-    backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: 18,
-  },
-
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-
-  cardTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.text2,
-    textTransform: 'uppercase',
-  },
-
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.text3,
-    marginBottom: 6,
-  },
-
-  input: {
-    backgroundColor: Colors.bg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Colors.text,
-  },
-
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: Colors.primary,
-    borderRadius: Radius.md,
-  },
-
-  addText: {
-    color: Colors.primary,
-    fontWeight: '600',
-    fontSize: 14,
-  },
+const ec = StyleSheet.create({
+  card: { backgroundColor: '#fff', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(167,139,250,0.15)', marginBottom: 16 },
+  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 10 },
+  numberGrad: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  numberText: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
+  cardTitle: { flex: 1, fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#6d28d9', textTransform: 'uppercase' },
+  deleteBtn: { width: 32, height: 32, borderRadius: 12, backgroundColor: 'rgba(239,68,68,0.06)', alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', gap: 10, alignItems: 'flex-end' },
+  currentBtn: { height: 44, backgroundColor: 'rgba(124,58,237,0.05)', borderRadius: 14, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(124,58,237,0.1)' },
+  currentBtnActive: { backgroundColor: 'rgba(124,58,237,0.12)', borderColor: 'rgba(124,58,237,0.3)' },
+  currentTxt: { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(124,58,237,0.4)' },
+  currentTxtActive: { color: '#7c3aed' },
 });

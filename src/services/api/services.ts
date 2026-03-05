@@ -8,8 +8,15 @@ export interface Service {
   name: string;
   description?: string;
   price?: number;
+  currency?: string;
   duration?: string;
   category?: string;
+  icon?: string;
+  deliveryTag?: string;
+  packageType?: 'single' | 'weekly' | 'monthly';
+  includedCount?: number;
+  deliveryDays?: number;
+  weeklyFrequency?: number;
   images?: string[];
   isActive?: boolean;
   createdAt?: string;

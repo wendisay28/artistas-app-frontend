@@ -4,9 +4,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { LiveRequest, ScheduleItem, CalendarDay } from '../types';
-import { Colors, Radius, Spacing } from '../../../../theme';
-import { EditButton } from '../shared/EditButton';
+import { LiveRequest, ScheduleItem, CalendarDay } from '../../types';
+import { Colors, Radius, Spacing } from '../../../../../theme';
+import { EditButton } from '../../shared/EditButton';
 
 // ─── Calendar ───────────────────────────────────────────────────────────────
 
@@ -88,10 +88,10 @@ const cal = StyleSheet.create({
     borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  navTxt: { fontSize: 12, color: Colors.text2 },
+  navTxt: { fontSize: 12, color: Colors.text },
   labelsRow: { flexDirection: 'row', marginBottom: 4 },
   labelCell: { flex: 1, alignItems: 'center', paddingVertical: 4 },
-  labelTxt: { fontSize: 10, fontWeight: '600', color: Colors.text3 },
+  labelTxt: { fontSize: 10, fontWeight: '600', color: Colors.textMuted },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: {
     width: `${100 / 7}%`,
@@ -104,7 +104,8 @@ const cal = StyleSheet.create({
   dayToday: { backgroundColor: 'rgba(212,168,83,0.12)' },
   dayBooked: { backgroundColor: 'rgba(62,207,142,0.1)' },
   dayUnavail: { backgroundColor: 'rgba(224,82,82,0.08)' },
-  dayTxt: { fontSize: 12, fontWeight: '500', color: Colors.text2 },
+  daylegendTxt: { fontSize: 10, fontWeight: '500', color: Colors.textMuted },
+  dayTxt: { fontSize: 12, fontWeight: '500', color: Colors.text },
   dayTxtToday: { color: Colors.accent, fontWeight: '700' },
   dayTxtBooked: { color: Colors.green },
   dayTxtUnavail: { color: 'rgba(224,82,82,0.5)', textDecorationLine: 'line-through' },
@@ -116,7 +117,7 @@ const cal = StyleSheet.create({
   legend: { flexDirection: 'row', gap: 12, marginTop: 10, flexWrap: 'wrap' },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 8, height: 8, borderRadius: 3, borderWidth: 1 },
-  legendTxt: { fontSize: 10, color: Colors.text3 },
+  legendTxt: { fontSize: 10, color: Colors.textMuted },
 });
 
 // ─── Schedule Item ───────────────────────────────────────────────────────────
@@ -152,11 +153,11 @@ const sch = StyleSheet.create({
     paddingVertical: 7, paddingHorizontal: 10,
     alignItems: 'center', minWidth: 44,
   },
-  month: { fontSize: 9, color: Colors.text3, textTransform: 'uppercase', fontWeight: '700' },
+  month: { fontSize: 9, color: Colors.textMuted, textTransform: 'uppercase', fontWeight: '700' },
   day: { fontSize: 18, fontWeight: '700', color: Colors.text, fontFamily: 'PlusJakartaSans_700Bold', lineHeight: 22 },
   body: { flex: 1 },
   title: { fontSize: 13, fontWeight: '600', color: Colors.text, marginBottom: 2 },
-  meta: { fontSize: 11, color: Colors.text2 },
+  meta: { fontSize: 11, color: Colors.textMuted },
   status: {
     borderRadius: Radius.sm, borderWidth: 1,
     paddingHorizontal: 9, paddingVertical: 4,
@@ -216,6 +217,6 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase',
-    letterSpacing: 1.4, color: Colors.text3, marginBottom: Spacing.md,
+    letterSpacing: 1.4, color: Colors.textMuted, marginBottom: Spacing.md,
   },
 });

@@ -29,7 +29,7 @@ async function pickAndUpload(
 
   // Launch picker
   const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    mediaTypes: ['images'],
     allowsEditing: true,
     aspect: folder === 'covers' ? [16, 9] : [1, 1],
     quality: 0.85,
@@ -37,21 +37,28 @@ async function pickAndUpload(
 
   if (result.canceled || !result.assets?.length) return null;
 
-  const asset = result.assets[0];
-  const uri = asset.uri;
-  const filename = uri.split('/').pop() ?? `${folder}_${Date.now()}.jpg`;
-  const type = asset.mimeType ?? 'image/jpeg';
+  return uploadToServer(result.assets[0].uri, folder, result.assets[0].mimeType);
+}
 
-  // Build FormData
+/**
+ * Sube una imagen local al backend y devuelve la URL pública.
+ * Úsalo cuando ya tienes la URI (de ImagePicker u otra fuente).
+ */
+export async function uploadToServer(
+  uri: string,
+  folder: 'avatars' | 'covers',
+  mimeType?: string | null
+): Promise<string> {
+  const filename = uri.split('/').pop() ?? `${folder}_${Date.now()}.jpg`;
+  const type = mimeType ?? 'image/jpeg';
+
   const form = new FormData();
   form.append('file', { uri, name: filename, type } as any);
-  form.append('bucket', 'artistas-uploads');
-  form.append('path', folder);
+  form.append('path', folder); // el backend decide el bucket
 
-  // Get fresh Firebase token
   const token = await refreshToken();
 
-  const response = await fetch(`${BACKEND_URL}/api/v1/upload/image`, {
+  const response = await fetch(`${BACKEND_URL}/upload/image`, {
     method: 'POST',
     headers: {
       Authorization: token ? `Bearer ${token}` : '',

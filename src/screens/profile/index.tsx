@@ -1,14 +1,18 @@
 // src/screens/profile/index.tsx — Pantalla de perfil moderna
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Share } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, StyleSheet, Alert, ActivityIndicator, TouchableOpacity, Share, Modal, Animated, PanResponder, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { auth } from '../../services/firebase/config';
 import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
+import { uploadToServer } from '../../hooks/useProfileImageUpload';
+import { useModalStore } from '../../store/modalStore';
 import TopBar from '../../components/shared/TopBar';
 import { AppFooter } from '../../components/shared/AppFooter';
+import { ModalContainer } from '../../components/ModalContainer';
 import { Ionicons } from '@expo/vector-icons';
 
 // ── Profile components modernos
@@ -16,13 +20,11 @@ import { ProfileHero } from './components/header/Profilehero';
 import { ProfileIdentity } from './components/header/Profileidentity';
 import { ProfileSkeleton } from './components/header/ProfileSkeleton';
 import { TabBar } from './components/shared/TabBar';
-import { BioModal } from './components/modals/BioModal';
-import { PortfolioSection } from './components/sections/PortfolioSection';
-import { ServicesSection } from './components/sections/ServicesSection';
+// BioModal ahora está en ModalContainer
 import { SobreMiSection } from './components/sections/SobremiSection';
-import { EventosSection } from './components/sections/Eventossection';
-import { AgendaSection } from './components/sections/Agendasection';
-import { TiendaSection } from './components/sections/TiendaSection';
+import { EventosSection } from './components/sections/eventos/Eventossection';
+import { AgendaSection } from './components/sections/agenda/Agendasection';
+import { TiendaSectionRefactored as TiendaSection } from './components/sections/tienda/TiendaSectionRefactored';
 
 // ── Profile modals
 import {
@@ -49,6 +51,7 @@ import { portfolioService } from '../../services/api/portfolio';
 import { reviewsService } from '../../services/api/reviews';
 import { eventsService } from '../../services/api/events';
 import { productsService } from '../../services/api/products';
+import { updateArtistProfile } from '../../services/api/profile';
 
 // Tipo combinado para reseñas (compatible con componente y backend)
 type Review = {
@@ -101,31 +104,63 @@ export default function ProfileScreen() {
     isSaving,
     loadProfile,
     saveHeader,
-    saveBio,
     saveProInfo,
     saveStudies,
     saveExperience,
     saveSocialLinks,
     saveAvatar,
     saveCoverImage,
+    saveDescription,
     setArtistData,
   } = useProfileStore();
 
-  const [activeMainTab,    setActiveMainTab]    = useState<string>('sobre');
-  const [viewingAsClient,  setViewingAsClient]  = useState(false);
+  // ModalStore para modales globales
+  const { 
+    openAcercaDeMiModal, closeAcercaDeMiModal, 
+    openExperienceModal, closeExperienceModal, 
+    openEditServiceModal, closeEditServiceModal,
+    openSocialLinksModal, closeSocialLinksModal,
+    openStudiesModal, closeStudiesModal,
+    openCategoryModal, closeCategoryModal,
+    openInfoProfesionalModal, closeInfoProfesionalModal,
+    openEditHeaderModal, closeEditHeaderModal,
+    openEditProductModal, closeEditProductModal,
+    openEditEventModal, closeEditEventModal,
+    openCompanyModal, closeCompanyModal,
+    openVideoModal, closeVideoModal
+  } = useModalStore();
 
-  // ── Modals state
-  const [editHeaderModalVisible,    setEditHeaderModalVisible]    = useState(false);
-  const [bioModalVisible,           setBioModalVisible]           = useState(false);
-  const [editServiceModalVisible,   setEditServiceModalVisible]   = useState(false);
-  const [editProductModalVisible,   setEditProductModalVisible]   = useState(false);
-  const [editEventModalVisible,     setEditEventModalVisible]     = useState(false);
-  const [infoProfesionalModalVisible, setInfoProfesionalModalVisible] = useState(false);
-  const [experienceModalVisible,    setExperienceModalVisible]    = useState(false);
-  const [studiesModalVisible,       setStudiesModalVisible]       = useState(false);
-  const [categoryModalVisible,      setCategoryModalVisible]      = useState(false);
-  const [socialLinksModalVisible,   setSocialLinksModalVisible]   = useState(false);
-  const [companyModalVisible,       setCompanyModalVisible]       = useState(false);
+  const [activeMainTab,       setActiveMainTab]       = useState<string>('sobre');
+  const [viewingAsClient,     setViewingAsClient]     = useState(false);
+  const [pendingCoverAsset,   setPendingCoverAsset]   = useState<{ uri: string; width: number; height: number } | null>(null);
+  const [uploadingCover,      setUploadingCover]      = useState(false);
+
+  // ── Interactive cover crop ──────────────────────────────────────────
+  const panAnim    = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const panRef     = useRef({ x: 0, y: 0 });
+  const limitsRef  = useRef({ maxX: 0, maxY: 0 });
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:  () => true,
+      onPanResponderMove: (_, g) => {
+        const x = Math.max(-limitsRef.current.maxX, Math.min(limitsRef.current.maxX, panRef.current.x + g.dx));
+        const y = Math.max(-limitsRef.current.maxY, Math.min(limitsRef.current.maxY, panRef.current.y + g.dy));
+        panAnim.setValue({ x, y });
+      },
+      onPanResponderRelease: (_, g) => {
+        const x = Math.max(-limitsRef.current.maxX, Math.min(limitsRef.current.maxX, panRef.current.x + g.dx));
+        const y = Math.max(-limitsRef.current.maxY, Math.min(limitsRef.current.maxY, panRef.current.y + g.dy));
+        panRef.current = { x, y };
+        panAnim.setValue({ x, y });
+      },
+    })
+  ).current;
+
+
+  // ── Modals state (solo los que no están en modalStore)
+  // bioModal, experienceModal, editServiceModal, socialLinksModal, studiesModal, categoryModal, infoProfesionalModal, editHeaderModal, editProductModal, editEventModal, companyModal y videoModal ahora se manejan con modalStore
 
   // ── Cargar perfil desde el backend al montar
   useEffect(() => {
@@ -134,63 +169,103 @@ export default function ProfileScreen() {
       firebaseUser?.photoURL,
       firebaseUser?.displayName,
     ).catch((e) => {
-      console.warn('[ProfileScreen] No se pudo cargar el perfil del backend:', e?.message);
+      // Silenciar error de carga de perfil
     });
   }, []);
 
-  // Forzar recarga cada 30 segundos para actualizar datos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      console.log('[ProfileScreen] Forzando recarga de perfil...');
-      loadProfile(
-        firebaseUser?.uid,
-        firebaseUser?.photoURL,
-        firebaseUser?.displayName,
-      ).catch((e) => {
-        console.warn('[ProfileScreen] Error en recarga:', e?.message);
-      });
-    }, 30000); // 30 segundos
 
-    return () => clearInterval(interval);
-  }, []);
+  // Resetear pan y calcular límites cuando se selecciona una nueva imagen
+  useEffect(() => {
+    if (!pendingCoverAsset) return;
+    const CROP_W = Dimensions.get('window').width - 48;
+    const CROP_H = CROP_W * (5 / 16);
+    const scale  = Math.max(CROP_W / pendingCoverAsset.width, CROP_H / pendingCoverAsset.height);
+    limitsRef.current = {
+      maxX: Math.max(0, (pendingCoverAsset.width  * scale - CROP_W) / 2),
+      maxY: Math.max(0, (pendingCoverAsset.height * scale - CROP_H) / 2),
+    };
+    panRef.current = { x: 0, y: 0 };
+    panAnim.setValue({ x: 0, y: 0 });
+  }, [pendingCoverAsset]);
 
   // ── Fallback: si no hay datos en el store, construir desde Firebase
-  const effectiveArtist: Artist = artistData ?? {
-    id: firebaseUser?.uid ?? '1',
-    name: artistData?.name ?? firebaseUser?.displayName ?? firebaseUser?.email?.split('@')[0] ?? 'Artista',
-    handle: artistData?.handle ?? `@${(firebaseUser?.displayName ?? firebaseUser?.email?.split('@')[0] ?? 'artista').toLowerCase().replace(/\s+/g, '_')}`,
-    location: artistData?.location ?? '',
-    avatar: artistData?.avatar ?? firebaseUser?.photoURL ?? '',
-    isVerified: artistData?.isVerified ?? false,
-    isOnline: artistData?.isOnline ?? true,
-    schedule: artistData?.schedule ?? '',
-    bio: artistData?.bio ?? '',
-    description: artistData?.description ?? '',
-    tags: artistData?.tags ?? [],
-    stats: artistData?.stats ?? [
-      { value: '0', label: 'Obras' },
-      { value: '5.0', label: 'Rating' },
-      { value: '0', label: 'Seguidores' },
-      { value: '0', label: 'Visitas' },
-    ],
-    socialLinks: artistData?.socialLinks ?? [],
-    info: artistData?.info ?? [],
-    isOwner: artistData?.isOwner ?? true,
-    role: artistData?.role ?? '',
-    userType: artistData?.userType ?? 'artist',
-  };
+  const effectiveArtist: Artist = React.useMemo(() => {
+    try {
+      const baseArtist = artistData || {} as Partial<Artist>;
+      return {
+        id: baseArtist.id ?? firebaseUser?.uid ?? '1',
+        name: baseArtist.name ?? firebaseUser?.displayName ?? firebaseUser?.email?.split('@')[0] ?? 'Artista',
+        handle: baseArtist.handle ?? `@${(firebaseUser?.displayName ?? firebaseUser?.email?.split('@')[0] ?? 'artista').toLowerCase().replace(/\s+/g, '_')}`,
+        location: baseArtist.location ?? '',
+        avatar: baseArtist.avatar ?? firebaseUser?.photoURL ?? '',
+        coverImage: baseArtist.coverImage,
+        isVerified: baseArtist.isVerified ?? false,
+        isOnline: baseArtist.isOnline ?? true,
+        schedule: baseArtist.schedule ?? '',
+        bio: baseArtist.bio ?? '',
+        description: baseArtist.description ?? '',
+        tags: Array.isArray(baseArtist.tags) ? baseArtist.tags : [],
+        stats: Array.isArray(baseArtist.stats) ? baseArtist.stats : [
+          { value: '0', label: 'Obras' },
+          { value: '5.0', label: 'Rating' },
+          { value: '0', label: 'Seguidores' },
+          { value: '0', label: 'Visitas' },
+        ],
+        socialLinks: Array.isArray(baseArtist.socialLinks) ? baseArtist.socialLinks : [],
+        info: Array.isArray(baseArtist.info) ? baseArtist.info : [],
+        isOwner: baseArtist.isOwner ?? true,
+        role: baseArtist.role ?? '',
+        userType: baseArtist.userType ?? 'artist',
+        category: baseArtist.category,
+        specialty: baseArtist.specialty ?? '',
+        niche: baseArtist.niche ?? '',
+        workExperience: Array.isArray(baseArtist.workExperience) ? baseArtist.workExperience : [],
+        studies: Array.isArray(baseArtist.studies) ? baseArtist.studies : [],
+        certifications: Array.isArray(baseArtist.certifications) ? baseArtist.certifications : [],
+        yearsOfExperience: baseArtist.yearsOfExperience ?? 0,
+      };
+    } catch (error) {
+      console.error('Error creating effectiveArtist:', error);
+      // Return safe fallback
+      return {
+        id: firebaseUser?.uid ?? '1',
+        name: firebaseUser?.displayName ?? 'Artista',
+        handle: '@artista',
+        location: '',
+        avatar: firebaseUser?.photoURL ?? '',
+        isVerified: false,
+        isOnline: true,
+        schedule: '',
+        bio: '',
+        description: '',
+        tags: [],
+        stats: [
+          { value: '0', label: 'Obras' },
+          { value: '5.0', label: 'Rating' },
+          { value: '0', label: 'Seguidores' },
+          { value: '0', label: 'Visitas' },
+        ],
+        socialLinks: [],
+        info: [],
+        isOwner: true,
+        role: '',
+        userType: 'artist',
+        category: undefined,
+        specialty: '',
+        niche: '',
+        workExperience: [],
+        studies: [],
+        certifications: [],
+        yearsOfExperience: 0,
+      };
+    }
+  }, [artistData, firebaseUser]);
 
   // Debug: verificar qué nombre se está usando (se ejecuta en cada render)
   React.useEffect(() => {
-    console.log('[ProfileScreen] Nombre a mostrar:', effectiveArtist.name);
-    console.log('[ProfileScreen] ArtistData completo:', artistData);
-    console.log('[ProfileScreen] Firebase user:', firebaseUser?.displayName);
+    // Debug silenciado
   }, [effectiveArtist.name, artistData]);
 
-  // Debug adicional para forzar re-render si hay cambios
-  React.useEffect(() => {
-    console.log('[ProfileScreen] Render de ProfileScreen - nombre:', effectiveArtist.name);
-  });
 
   // ── Memoized initial data para modales
   const infoProfesionalInitialData = React.useMemo(() => ({
@@ -227,16 +302,15 @@ export default function ProfileScreen() {
     };
 
     const ig  = getUrl('Instagram');
-    const tw  = getUrl('Twitter') || getUrl('x');
+    const tt  = getUrl('TikTok');
     const yt  = getUrl('YouTube');
     const sp  = getUrl('Spotify');
 
     return {
       instagram: extractHandle(ig, 'instagram.com'),
-      x:         extractHandle(tw, 'twitter.com'),
+      tiktok:   extractHandle(tt, 'tiktok.com'),
       youtube:   extractHandle(yt, 'youtube.com/@'),
       spotify:   extractHandle(sp, 'open.spotify.com/artist'),
-      tiktok:    '', // Agregar propiedad tiktok requerida
     };
   }, [effectiveArtist.info]);
 
@@ -250,39 +324,81 @@ export default function ProfileScreen() {
   const [calendarDays, setCalendarDays] = useState<any[]>([]);
   const [schedule, setSchedule] = useState<any[]>([]);
 
+  const reloadPortfolio = useCallback(async () => {
+    try {
+      const portfolioData = await portfolioService.getMyPortfolio();
+      setPortfolio(portfolioData?.photos ?? []);
+      setVideos(portfolioData?.videos ?? []);
+    } catch (e) {
+      console.warn('Error reloading portfolio:', e);
+    }
+  }, []);
+
+  const reloadServices = useCallback(async () => {
+    try {
+      const servicesData = await servicesService.getMyServices();
+      setServices(servicesData || []);
+    } catch (e) {
+      console.warn('Error reloading services:', e);
+    }
+  }, []);
+
   // Cargar servicios, portafolio y reseñas al montar
   useEffect(() => {
     const loadProfileData = async () => {
       try {
-        // Cargar servicios
-        const servicesData = await servicesService.getMyServices();
-        setServices(servicesData);
+        // Cargar servicios con manejo de error
+        try {
+          const servicesData = await servicesService.getMyServices();
+          setServices(servicesData || []);
+        } catch (e) {
+          console.warn('Error loading services:', e);
+          setServices([]);
+        }
 
-        // Cargar portafolio
-        const portfolioData = await portfolioService.getMyPortfolio();
-        setPortfolio(portfolioData.photos);
-        setVideos(portfolioData.videos);
+        // Cargar portafolio con manejo de error
+        try {
+          const portfolioData = await portfolioService.getMyPortfolio();
+          setPortfolio(portfolioData?.photos ?? []);
+          setVideos(portfolioData?.videos ?? []);
+        } catch (e) {
+          console.warn('Error loading portfolio:', e);
+          setPortfolio([]);
+          setVideos([]);
+        }
 
-        // Cargar reseñas
-        const reviewsData = await reviewsService.getMyReviews();
-        const mappedReviews = reviewsData.reviews.map(mapBackendReviewToComponent);
-        setReviews(mappedReviews);
+        // Cargar reseñas con manejo de error
+        try {
+          const reviewsData = await reviewsService.getMyReviews();
+          const mappedReviews = (reviewsData?.reviews || []).map(mapBackendReviewToComponent);
+          setReviews(mappedReviews);
+        } catch (e) {
+          console.warn('Error loading reviews:', e);
+          setReviews([]);
+        }
 
-        // Cargar productos
-        const productsData = await productsService.getMyProducts();
-        setProducts(productsData);
+        // Cargar productos con manejo de error
+        try {
+          const productsData = await productsService.getMyProducts();
+          setProducts(productsData || []);
+        } catch (e) {
+          console.warn('Error loading products:', e);
+          setProducts([]);
+        }
 
-        // Cargar eventos
-        const eventsData = await eventsService.getMyEvents();
-        setEvents(eventsData);
+        // Cargar eventos con manejo de error
+        try {
+          const eventsData = await eventsService.getMyEvents();
+          setEvents(eventsData || []);
+        } catch (e) {
+          console.warn('Error loading events:', e);
+          setEvents([]);
+        }
 
         // TODO: Cargar calendarDays y schedule cuando estén listos los servicios
       } catch (error: any) {
-        // 401/404 = backend no tiene el perfil aún (usuario nuevo) — silenciar
-        const status = error?.response?.status;
-        if (status !== 401 && status !== 404) {
-          console.warn('Error loading profile data:', error);
-        }
+        // Error general - solo loggear para no causar crash
+        console.warn('General error loading profile data:', error);
       }
     };
 
@@ -326,199 +442,382 @@ export default function ProfileScreen() {
   const handleExitClientView = useCallback(() => setViewingAsClient(false), []);
 
   // ── Modal handlers
-  const handleEditProfile   = useCallback(() => setEditHeaderModalVisible(true), []);
+  const handleEditProfile   = useCallback(() => openEditHeaderModal(effectiveArtist), [effectiveArtist]);
   
   const handleEditAvatar = useCallback(async () => {
     try {
-      // Request permissions
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permissionResult.granted) {
         Alert.alert('Permiso requerido', 'Necesitas dar permiso para acceder a tus fotos.');
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
-        await saveAvatar(result.assets[0].uri);
+        const asset = result.assets[0];
+        // Previsualización inmediata con URI local
+        setArtistData({ avatar: asset.uri });
+        // Subir al servidor y guardar URL pública
+        const publicUrl = await uploadToServer(asset.uri, 'avatars', asset.mimeType);
+        await saveAvatar(publicUrl);
         Alert.alert('Éxito', 'Foto de perfil actualizada correctamente.');
       }
     } catch (error) {
       console.error('Error al actualizar avatar:', error);
       Alert.alert('Error', 'No se pudo actualizar tu foto de perfil.');
     }
-  }, [saveAvatar]);
+  }, [saveAvatar, setArtistData]);
 
-  const handleEditCover = useCallback(async () => {
+  const pickCoverImage = useCallback(async (useCamera: boolean) => {
     try {
-      // Request permissions
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult = useCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
       if (!permissionResult.granted) {
-        Alert.alert('Permiso requerido', 'Necesitas dar permiso para acceder a tus fotos.');
+        Alert.alert('Permiso requerido', `Necesitas acceso a tu ${useCamera ? 'cámara' : 'galería'}.`);
         return;
       }
 
-      // Launch image picker
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [16, 9],
-        quality: 0.8,
-      });
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
 
-      if (!result.canceled && result.assets[0]) {
-        await saveCoverImage(result.assets[0].uri);
-        Alert.alert('Éxito', 'Imagen de portada actualizada correctamente.');
-      }
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const { uri, width, height } = result.assets[0];
+      setPendingCoverAsset({ uri, width, height });
     } catch (error) {
-      console.error('Error al actualizar cover:', error);
-      Alert.alert('Error', 'No se pudo actualizar tu imagen de portada.');
+      console.error('pickCoverImage error:', error);
+      Alert.alert('Error', 'No se pudo cargar la imagen.');
     }
   }, []);
 
-  const handleEditProInfo   = useCallback(() => setInfoProfesionalModalVisible(true), []);
-  const handleEditExperience = useCallback(() => setExperienceModalVisible(true), []);
-  const handleEditStudies   = useCallback(() => setStudiesModalVisible(true), []);
-  const handleEditCategory  = useCallback(() => setCategoryModalVisible(true), []);
-  const handleEditSocialLinks = useCallback(() => setSocialLinksModalVisible(true), []);
-  const handleEditSobreMi   = useCallback(() => setBioModalVisible(true), []);
+  const confirmCoverImage = useCallback(async () => {
+    if (!pendingCoverAsset) return;
+    try {
+      setUploadingCover(true);
+      const CROP_W = Dimensions.get('window').width - 48;
+      const CROP_H = CROP_W * (5 / 16);
+      const { uri, width: imgW, height: imgH } = pendingCoverAsset;
+      const scale  = Math.max(CROP_W / imgW, CROP_H / imgH);
+      const dispW  = imgW * scale;
+      const dispH  = imgH * scale;
+      const dx = panRef.current.x;
+      const dy = panRef.current.y;
+      // Translate pan offset into image-space crop origin
+      const originX = Math.max(0, Math.round((dispW / 2 - CROP_W / 2 - dx) / scale));
+      const originY = Math.max(0, Math.round((dispH / 2 - CROP_H / 2 - dy) / scale));
+      const cropW   = Math.min(Math.round(CROP_W / scale), imgW - originX);
+      const cropH   = Math.min(Math.round(CROP_H / scale), imgH - originY);
+
+      const ctx   = ImageManipulator.manipulate(uri);
+      ctx.crop({ originX, originY, width: cropW, height: cropH });
+      const img   = await ctx.renderAsync();
+      const saved = await img.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
+
+      setArtistData({ coverImage: saved.uri });
+      const publicUrl = await uploadToServer(saved.uri, 'covers', 'image/jpeg');
+      await saveCoverImage(publicUrl);
+      setPendingCoverAsset(null);
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo subir la imagen de portada.');
+    } finally {
+      setUploadingCover(false);
+    }
+  }, [pendingCoverAsset, saveCoverImage, setArtistData]);
+
+  // Presionar el ícono de cámara en la portada → Alert nativo con opciones de fuente
+  // (no hay Modal personalizado → cero conflictos de animaciones en iOS)
+  const handleEditCover = useCallback(() => {
+    pickCoverImage(false);
+  }, [pickCoverImage]);
+
+  const handleEditProInfo   = useCallback(() => {
+    openInfoProfesionalModal(infoProfesionalInitialData);
+  }, [infoProfesionalInitialData, openInfoProfesionalModal]);
+  const handleEditExperience = useCallback(() => {
+    openExperienceModal(effectiveArtist.workExperience || []);
+  }, [effectiveArtist.workExperience, openExperienceModal]);
+  const handleEditStudies   = useCallback(() => {
+    openStudiesModal(effectiveArtist.studies || []);
+  }, [effectiveArtist.studies, openStudiesModal]);
+  const handleEditCategory  = useCallback(() => {
+    openCategoryModal(categoryInitialData);
+  }, [categoryInitialData, openCategoryModal]);
+  const handleEditSocialLinks = useCallback(() => {
+    const getInfoValue = (label: string) =>
+      effectiveArtist.info?.find((i) => i.label === label)?.value || '';
+
+    const instagramUrl = getInfoValue('Instagram');
+    const tiktokUrl = getInfoValue('TikTok');
+    const twitterUrl = getInfoValue('Twitter');
+    const youtubeUrl = getInfoValue('YouTube');
+    const spotifyUrl = getInfoValue('Spotify');
+
+    const instagram = instagramUrl
+      ? instagramUrl.replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/^@/, '').replace(/\/$/, '')
+      : '';
+
+    const tiktok = tiktokUrl
+      ? tiktokUrl.replace(/^https?:\/\/(www\.)?tiktok\.com\/@/, '').replace(/^@/, '').replace(/\/$/, '')
+      : '';
+
+    const x = twitterUrl
+      ? twitterUrl.replace(/^https?:\/\/(www\.)?twitter\.com\//, '').replace(/^@/, '').replace(/\/$/, '')
+      : '';
+
+    const youtube = youtubeUrl
+      ? youtubeUrl
+          .replace(/^https?:\/\/(www\.)?youtube\.com\/@/, '')
+          .replace(/^@/, '')
+          .replace(/\/$/, '')
+      : '';
+
+    const spotify = spotifyUrl
+      ? spotifyUrl.replace(/^https?:\/\/(www\.)?open\.spotify\.com\/artist\//, '').replace(/\?.*$/, '').replace(/\/$/, '')
+      : '';
+
+    openSocialLinksModal({ instagram, tiktok, youtube, spotify, x });
+  }, [effectiveArtist.info, openSocialLinksModal]);
+  const handleEditSobreMi = useCallback(() => {
+    openAcercaDeMiModal(effectiveArtist.description || '');
+  }, [effectiveArtist.description, openAcercaDeMiModal]);
   const handleAddService    = useCallback(async (serviceData: any) => {
     try {
-      const newService = await servicesService.createService(serviceData);
+      const payload = {
+        ...serviceData,
+        price: typeof serviceData?.price === 'string' ? (parseFloat(serviceData.price) || 0) : (serviceData?.price || 0),
+        includedCount: typeof serviceData?.includedCount === 'string' ? (parseInt(serviceData.includedCount, 10) || 1) : (serviceData?.includedCount ?? 1),
+        deliveryDays: typeof serviceData?.deliveryDays === 'string' ? (parseInt(serviceData.deliveryDays, 10) || 0) : (serviceData?.deliveryDays ?? 0),
+        weeklyFrequency: typeof serviceData?.weeklyFrequency === 'string' ? (parseInt(serviceData.weeklyFrequency, 10) || 1) : (serviceData?.weeklyFrequency ?? 1),
+        packageType: serviceData?.packageType === 'simple' ? 'single' : serviceData?.packageType,
+      };
+
+      const newService = await servicesService.createService(payload);
       setServices(prev => [...prev, newService]);
-      setEditServiceModalVisible(false);
+      closeEditServiceModal();
       Alert.alert('Éxito', 'Servicio creado correctamente.');
     } catch (error) {
       console.error('Error creating service:', error);
       Alert.alert('Error', 'No se pudo crear el servicio.');
     }
-  }, []);
+  }, [closeEditServiceModal]);
 
   const handleAddProduct    = useCallback(async (productData: any) => {
     try {
       const newProduct = await productsService.createProduct(productData);
       setProducts(prev => [...prev, newProduct]);
-      setEditProductModalVisible(false);
+      closeEditProductModal();
       Alert.alert('Éxito', 'Producto creado correctamente.');
     } catch (error) {
       console.error('Error creating product:', error);
       Alert.alert('Error', 'No se pudo crear el producto.');
     }
-  }, []);
+  }, [closeEditProductModal]);
 
   const handleAddEvent      = useCallback(async (eventData: any) => {
     try {
       const newEvent = await eventsService.createEvent(eventData);
       setEvents(prev => [...prev, newEvent]);
-      setEditEventModalVisible(false);
+      closeEditEventModal();
       Alert.alert('Éxito', 'Evento creado correctamente.');
     } catch (error) {
       console.error('Error creating event:', error);
       Alert.alert('Error', 'No se pudo crear el evento.');
     }
-  }, []);
+  }, [closeEditEventModal]);
 
   // ── Modal save handlers — conectados al backend vía profileStore
 
   const handleSaveHeader = useCallback(async (data: any) => {
-    console.log('[ProfileScreen] Guardando header:', data);
     try {
       await saveHeader({
         name:     data.name,
         handle:   data.handle.replace(/^@/, ''),
-        role:     data.role,
         location: data.location,
         schedule: data.schedule,
         bio:      data.bio,
         tags:     data.tags as [string, string, string],
       });
-      setEditHeaderModalVisible(false);
+      await loadProfile(
+        auth.currentUser?.uid ?? '',
+        auth.currentUser?.photoURL ?? '',
+        auth.currentUser?.displayName ?? '',
+      );
+      closeEditHeaderModal();
       Alert.alert('Éxito', 'Perfil actualizado correctamente.');
-      console.log('[ProfileScreen] Header guardado exitosamente');
     } catch (error) {
-      console.error('[ProfileScreen] Error guardando header:', error);
       Alert.alert('Error', 'No se pudo guardar el perfil. Revisa tu conexión.');
     }
-  }, [saveHeader]);
+  }, [saveHeader, loadProfile]);
 
-  const handleSaveBio = useCallback(async (description: string) => {
-    // "Acerca de mí" guarda en `description` (texto largo), no en `bio` (resumen corto del header)
-    setArtistData({ description });
-    setBioModalVisible(false);
-  }, [setArtistData]);
+  const handleSaveDescription = useCallback(async (description: string) => {
+    await saveDescription(description);
+    closeAcercaDeMiModal();
+    // Recargar perfil para asegurar que los datos estén actualizados
+    await loadProfile(auth.currentUser?.uid || '', auth.currentUser?.photoURL || '', auth.currentUser?.displayName || '');
+  }, [saveDescription, closeAcercaDeMiModal, loadProfile]);
 
   const handleSaveProInfo = useCallback(async (data: any) => {
     try {
       await saveProInfo({
         yearsExperience: data.yearsExperience,
-        style:           data.style,
+        style: data.style,
         availability:    data.availability,
         responseTime:    data.responseTime,
       });
-      setInfoProfesionalModalVisible(false);
-    } catch {
+      // Recargar perfil para asegurar que los datos estén actualizados
+      await loadProfile(auth.currentUser?.uid || '', auth.currentUser?.photoURL || '', auth.currentUser?.displayName || '');
+      closeInfoProfesionalModal();
+      Alert.alert('Éxito', 'Información profesional actualizada correctamente.');
+    } catch (error) {
+      console.error('Error guardando información profesional:', error);
       Alert.alert('Error', 'No se pudo guardar la información profesional.');
     }
-  }, [saveProInfo]);
+  }, [saveProInfo, closeInfoProfesionalModal, loadProfile]);
 
   const handleSaveExperience = useCallback(async (experience: any[]) => {
     try {
       await saveExperience(experience);
-      setExperienceModalVisible(false);
+      closeExperienceModal();
     } catch {
       Alert.alert('Error', 'No se pudo guardar la experiencia laboral.');
     }
-  }, [saveExperience]);
+  }, [saveExperience, closeExperienceModal]);
 
   const handleSaveStudies = useCallback(async (studies: any[]) => {
     try {
       await saveStudies(studies);
-      setStudiesModalVisible(false);
+      closeStudiesModal();
     } catch {
       Alert.alert('Error', 'No se pudo guardar los estudios.');
     }
-  }, [saveStudies]);
+  }, [saveStudies, closeStudiesModal]);
 
-  const handleSaveCategory = useCallback((data: any) => {
-    // Categoría: por ahora solo actualiza local (requiere endpoint específico)
+  const handleSaveCategory = useCallback(async (data: any) => {
+    console.log('🔥 [handleSaveCategory] Guardando categoría:', data);
+    // Actualizar local inmediatamente (optimistic update) - SIEMPRE se ejecuta
     useProfileStore.getState().setArtistData({
       category:  data.category,
       specialty: data.specialty,
       niche:     data.niche,
     });
-    setCategoryModalVisible(false);
-  }, []);
+    console.log('🔥 [handleSaveCategory] Actualizado localmente');
+    closeCategoryModal();
+    
+    // Persistir al backend para que loadProfile lo recupere en futuras sesiones
+    if (data.category?.categoryId) {
+      try {
+        await updateArtistProfile({
+          categoryId:   data.category.categoryId,
+          disciplineId: data.category.disciplineId || undefined,
+          roleId:       data.category.roleId || undefined,
+          specialty:    data.specialty || undefined,
+          niche:        data.niche || undefined,
+        });
+        console.log('🔥 [handleSaveCategory] Guardado en backend correctamente');
+      } catch (e) {
+        console.warn('[handleSaveCategory] Error al guardar categoría en backend:', e);
+      }
+    } else {
+      console.warn('[handleSaveCategory] No se guardó en backend: falta categoryId');
+    }
+  }, [closeCategoryModal]);
 
-  const handleSaveSocialLinks = useCallback((data: any) => {
-    saveSocialLinks(data);
-    setSocialLinksModalVisible(false);
-  }, [saveSocialLinks]);
-
-  const handleConvertToCompany = useCallback(async (data: { companyName: string; companyDescription: string; taxId: string }) => {
+  const handleSaveSocialLinks = useCallback(async (data: any) => {
     try {
-      await useProfileStore.getState().convertToCompany({
+      console.log('🔗 Guardando social links:', data);
+      await saveSocialLinks(data);
+      // Refresco en background (no bloquear el cierre del modal)
+      loadProfile(
+        auth.currentUser?.uid || '',
+        auth.currentUser?.photoURL || '',
+        auth.currentUser?.displayName || ''
+      ).catch(() => {});
+      Alert.alert('Éxito', 'Redes sociales actualizadas correctamente.');
+    } catch {
+      Alert.alert('Error', 'No se pudieron guardar las redes sociales.');
+      throw new Error('saveSocialLinks failed');
+    }
+  }, [saveSocialLinks, loadProfile]);
+
+  const handleConvertToCompany = useCallback(async (data: any) => {
+    try {
+      // Por ahora solo actualizamos los datos locales hasta tener el endpoint real
+      setArtistData({
+        ...effectiveArtist,
         companyName: data.companyName,
         companyDescription: data.companyDescription,
-        taxId: data.taxId,
       });
-      setCompanyModalVisible(false);
+      closeCompanyModal();
+      Alert.alert('Éxito', 'Perfil convertido a empresa correctamente.');
     } catch {
       Alert.alert('Error', 'No se pudo convertir el perfil a empresa. Revisa tu conexión.');
     }
-  }, []);
+  }, [closeCompanyModal, effectiveArtist, setArtistData]);
 
   // ── Render de contenido según tab activa
   const renderContent = () => {
     switch (activeMainTab) {
+      case 'agenda':
+        try {
+          return (
+            <AgendaSection
+              liveRequest={undefined} // Sin live requests por ahora
+              calendarDays={calendarDays}
+              schedule={schedule}
+              isOwner={true}
+            />
+          );
+        } catch (error) {
+          console.error('Error en AgendaSection:', error);
+          return (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#666' }}>Error cargando agenda</Text>
+            </View>
+          );
+        }
+      case 'eventos':
+        try {
+          return (
+            <EventosSection 
+              events={events} 
+              isOwner={true} 
+            />
+          );
+        } catch (error) {
+          console.error('Error en EventosSection:', error);
+          return (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#666' }}>Error cargando eventos</Text>
+            </View>
+          );
+        }
+      case 'tienda':
+        try {
+          return (
+            <TiendaSection 
+              onEditProduct={() => openEditProductModal(null)} 
+            />
+          );
+        } catch (error) {
+          console.error('Error en TiendaSection:', error);
+          return (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#666' }}>Error cargando tienda</Text>
+            </View>
+          );
+        }
       case 'sobre':
-        return (
-          <>
+        try {
+          return (
             <SobreMiSection
               artist={effectiveArtist}
               services={services}
@@ -531,51 +830,23 @@ export default function ProfileScreen() {
               onEditStudies={handleEditStudies}
               onEditCategory={handleEditCategory}
               onEditSocialLinks={handleEditSocialLinks}
-              onServicesUpdated={() => {
-                // Recargar servicios cuando se actualicen
-                servicesService.getMyServices().then(setServices);
-              }}
-              onPortfolioUpdated={() => {
-                // Recargar portafolio cuando se actualice
-                portfolioService.getMyPortfolio().then(data => {
-                  setPortfolio(data.photos);
-                  setVideos(data.videos);
-                });
-              }}
+              onServicesUpdated={reloadServices}
+              onPortfolioUpdated={reloadPortfolio}
             />
-            {/* Opción de convertir a empresa */}
-            {effectiveArtist.isOwner && (
-              <TouchableOpacity
-                style={styles.companyConvertBtn}
-                onPress={() => setCompanyModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons
-                  name={effectiveArtist.userType === 'company' ? 'business' : 'business-outline'}
-                  size={18}
-                  color={effectiveArtist.userType === 'company' ? '#1E40AF' : Colors.textMuted}
-                />
-                <Text style={styles.companyConvertText}>
-                  {effectiveArtist.userType === 'company' ? 'Gestionar perfil de empresa' : 'Convertir a perfil de empresa'}
-                </Text>
-                <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </>
-        );
-      case 'tienda':
-        return <TiendaSection products={products} isOwner={true} />;
-      case 'eventos':
-        return <EventosSection events={events} isOwner={true} />;
-      case 'agenda':
-        return (
-          <AgendaSection
-            liveRequest={undefined} // Sin live requests por ahora
-            calendarDays={calendarDays}
-            schedule={schedule}
-            isOwner={true}
-          />
-        );
+          );
+        } catch (error) {
+          console.error('Error en sección sobre mí:', error);
+          console.error('Error details:', error.message);
+          console.error('Error stack:', error.stack);
+          return (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#666' }}>Error cargando sección sobre mí</Text>
+              <Text style={{ fontSize: 12, color: '#999', marginTop: 5 }}>
+                Revisa la consola para más detalles
+              </Text>
+            </View>
+          );
+        }
       default:
         return null;
     }
@@ -616,7 +887,7 @@ export default function ProfileScreen() {
             )}
 
             <ProfileHero
-              coverImage={effectiveArtist.coverImage ?? 'https://picsum.photos/800/300?random=cover'}
+              coverImage={effectiveArtist.coverImage}
               isOwner={true}
               onEditCover={handleEditCover}
             />
@@ -647,79 +918,81 @@ export default function ProfileScreen() {
       </ScrollView>
 
       {/* ── Modals ── */}
-      <EditHeaderModal
-        visible={editHeaderModalVisible}
-        artist={effectiveArtist}
-        onClose={() => setEditHeaderModalVisible(false)}
-        onSave={handleSaveHeader}
+      {/* ModalContainer con todos los modales de edición */}
+      <ModalContainer
+        onSaveSocialLinks={handleSaveSocialLinks}
+        onSaveExperience={handleSaveExperience}
+        onSaveStudies={handleSaveStudies}
+        onSaveDescription={handleSaveDescription}
+        onSaveService={handleAddService}
+        onSaveCategory={handleSaveCategory}
+        onSaveInfoProfesional={handleSaveProInfo}
+        onSaveEditHeader={handleSaveHeader}
+        onSaveEditProduct={handleAddProduct}
+        onSaveEditEvent={handleAddEvent}
+        onSaveCompany={handleConvertToCompany}
+        onSaveVideo={async (data: any) => {
+          // Esta función será manejada por el PortfolioSection
+          // Por ahora dejamos una implementación vacía ya que el VideoModal
+          // se maneja directamente desde PortfolioSection
+          console.log('Video guardado:', data);
+        }}
       />
 
-      <BioModal
-        visible={bioModalVisible}
-        initialValue={effectiveArtist.description ?? effectiveArtist.bio ?? ''}
-        onClose={() => setBioModalVisible(false)}
-        onSave={handleSaveBio}
-      />
+      {/* ── Preview portada con recorte interactivo ── */}
+      <Modal visible={!!pendingCoverAsset} transparent animationType="fade">
+        <View style={styles.coverPreviewOverlay}>
+          <Text style={styles.coverPreviewTitle}>Ajusta tu portada</Text>
+          {pendingCoverAsset && (() => {
+            const CROP_W  = Dimensions.get('window').width - 48;
+            const CROP_H  = CROP_W * (5 / 16);
+            const scale   = Math.max(CROP_W / pendingCoverAsset.width, CROP_H / pendingCoverAsset.height);
+            const dispW   = pendingCoverAsset.width  * scale;
+            const dispH   = pendingCoverAsset.height * scale;
+            return (
+              <View
+                style={[styles.coverCropFrame, { width: CROP_W, height: CROP_H }]}
+                {...panResponder.panHandlers}
+              >
+                <Animated.Image
+                  source={{ uri: pendingCoverAsset.uri }}
+                  style={{
+                    width:  dispW,
+                    height: dispH,
+                    transform: [
+                      { translateX: panAnim.x },
+                      { translateY: panAnim.y },
+                    ],
+                  }}
+                  resizeMode="cover"
+                />
+              </View>
+            );
+          })()}
+          <Text style={styles.coverPreviewHint}>Arrastra para ajustar el encuadre</Text>
+          <View style={styles.coverPreviewBtns}>
+            <TouchableOpacity
+              style={styles.coverPreviewBtnSecondary}
+              onPress={() => { setPendingCoverAsset(null); pickCoverImage(false); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.coverPreviewBtnSecondaryText}>Elegir otra</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.coverPreviewBtnPrimary}
+              onPress={confirmCoverImage}
+              activeOpacity={0.8}
+              disabled={uploadingCover}
+            >
+              {uploadingCover
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.coverPreviewBtnPrimaryText}>Usar esta foto</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-      <EditServiceModal
-        visible={editServiceModalVisible}
-        onClose={() => setEditServiceModalVisible(false)}
-        onSave={handleAddService}
-      />
-
-      <EditProductModal
-        visible={editProductModalVisible}
-        onClose={() => setEditProductModalVisible(false)}
-        onSave={handleAddProduct}
-      />
-
-      <EditEventModal
-        visible={editEventModalVisible}
-        onClose={() => setEditEventModalVisible(false)}
-        onSave={handleAddEvent}
-      />
-
-      <InfoProfesionalModal
-        visible={infoProfesionalModalVisible}
-        initialData={infoProfesionalInitialData}
-        onClose={() => setInfoProfesionalModalVisible(false)}
-        onSave={handleSaveProInfo}
-      />
-
-      <ExperienceModal
-        visible={experienceModalVisible}
-        initialExperience={experienceInitialData}
-        onClose={() => setExperienceModalVisible(false)}
-        onSave={handleSaveExperience}
-      />
-
-      <StudiesModal
-        visible={studiesModalVisible}
-        initialStudies={studiesInitialData}
-        onClose={() => setStudiesModalVisible(false)}
-        onSave={handleSaveStudies}
-      />
-
-      <CategoryModal
-        visible={categoryModalVisible}
-        initialData={categoryInitialData}
-        onClose={() => setCategoryModalVisible(false)}
-        onSave={handleSaveCategory}
-      />
-
-      <SocialLinksModal
-        visible={socialLinksModalVisible}
-        initialData={socialLinksInitialData}
-        onClose={() => setSocialLinksModalVisible(false)}
-        onSave={handleSaveSocialLinks}
-      />
-
-      <CompanyModal
-        visible={companyModalVisible}
-        artist={effectiveArtist}
-        onClose={() => setCompanyModalVisible(false)}
-        onSave={handleConvertToCompany}
-      />
     </View>
   );
 }
@@ -727,7 +1000,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
   },
   scroll: {
     flex: 1,
@@ -753,7 +1026,7 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
   mainTabsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#fff', // Mismo color que el header
     marginHorizontal: 0,
     marginTop: -8,
     borderRadius: 12,
@@ -821,5 +1094,65 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#7c3aed',
+  },
+
+  // ── Cover preview modal ───────────────────────────────────────────
+  coverPreviewOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.82)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  coverPreviewTitle: {
+    fontSize: 16,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
+    marginBottom: 16,
+  },
+  coverCropFrame: {
+    borderRadius: 10,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverPreviewHint: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  coverPreviewBtns: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  coverPreviewBtnSecondary: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverPreviewBtnSecondaryText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#fff',
+  },
+  coverPreviewBtnPrimary: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#7c3aed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  coverPreviewBtnPrimaryText: {
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
   },
 });

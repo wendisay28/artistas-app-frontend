@@ -2,6 +2,7 @@ import apiClient from './config';
 import { API_ENDPOINTS } from './endpoints';
 import type { Artist } from '../../types/explore'; // Cambiado a explore types
 import type { ExploreFilters } from '../../types/explore';
+import { getCategoryById } from '../../constants/artistCategories';
 
 // ── Tipos para la API ─────────────────────────────────────────────────────
 
@@ -43,6 +44,14 @@ export const artistsService = {
    */
   async getExploreArtists(params: ExploreArtistsParams = {}): Promise<ArtistsResponse> {
     try {
+      console.log('🎯 BuscArt: Llamando a endpoint:', API_ENDPOINTS.ARTISTS.LIST);
+      console.log('🎯 BuscArt: Parámetros:', {
+        page: params.page || 1,
+        limit: params.limit || 20,
+        category: params.category !== 'all' ? params.category : undefined,
+        sortBy: params.sortBy || 'rating',
+      });
+      
       const response = await apiClient.get(API_ENDPOINTS.ARTISTS.LIST, {
         params: {
           page: params.page || 1,
@@ -61,10 +70,38 @@ export const artistsService = {
         },
       });
 
-      return response.data;
+      console.log('🎯 BuscArt: Respuesta del API:', response.data);
+
+      // Normalizar respuesta: algunos endpoints devuelven { artists, total, ... } y otros un array plano.
+      const raw = response.data as any;
+      const rawArtists: any[] = Array.isArray(raw)
+        ? raw
+        : (Array.isArray(raw?.artists) ? raw.artists : []);
+
+      const mappedArtists = rawArtists.map((a) => this.mapBackendArtistToFrontend(a));
+      const total = typeof raw?.total === 'number' ? raw.total : mappedArtists.length;
+      const page = typeof raw?.page === 'number' ? raw.page : (params.page || 1);
+      const limit = typeof raw?.limit === 'number' ? raw.limit : (params.limit || 20);
+      const hasMore = typeof raw?.hasMore === 'boolean' ? raw.hasMore : false;
+
+      return {
+        artists: mappedArtists,
+        total,
+        page,
+        limit,
+        hasMore,
+      };
     } catch (error) {
       console.error('[artistsService] Error getting explore artists:', error);
-      throw error;
+      
+      // Fallback: retornar datos vacíos para que la app no se rompa
+      return {
+        artists: [],
+        total: 0,
+        page: 1,
+        limit: 20,
+        hasMore: false,
+      };
     }
   },
 
@@ -111,33 +148,87 @@ export const artistsService = {
    * Mapear datos del backend al formato del frontend
    */
   mapBackendArtistToFrontend(backendArtist: any): Artist {
+    console.log('[artistsService] Mapeando artista del backend:', {
+      id: backendArtist.id,
+      name: backendArtist.displayName || backendArtist.artistName,
+      bio: backendArtist.bio,
+      description: backendArtist.description,
+      userBio: backendArtist.user?.bio,
+      userDescription: backendArtist.user?.description,
+    });
+
+    const yearsExp = backendArtist.yearsOfExperience ?? backendArtist.experience;
+    const experienceStr = typeof yearsExp === 'number'
+      ? `${yearsExp} ${yearsExp === 1 ? 'año' : 'años'}`
+      : (yearsExp || '');
+
+    // socialMedia puede venir directo o anidado en user
+    const socialMedia = backendArtist.socialMedia || backendArtist.user?.socialMedia;
+
+    const rawCategoryId = backendArtist.categoryId || backendArtist.artistCategory?.categoryId;
+    const rawDisciplineId = backendArtist.disciplineId || backendArtist.artistCategory?.disciplineId;
+    const rawRoleId = backendArtist.roleId || backendArtist.artistCategory?.roleId;
+
+    const categoryId = typeof rawCategoryId === 'string' && getCategoryById(rawCategoryId)
+      ? rawCategoryId
+      : undefined;
+    const disciplineId = typeof rawDisciplineId === 'string' ? rawDisciplineId : undefined;
+    const roleId = typeof rawRoleId === 'string' ? rawRoleId : undefined;
+
     return {
-      id: backendArtist.id.toString(),
+      // En Explore, `id` se usa como userId (Firebase UID) para cargar servicios/portfolio.
+      id: (backendArtist.userId || backendArtist.user?.id || backendArtist.id).toString(),
       type: 'artist' as const,
-      name: backendArtist.displayName || backendArtist.name || 'Artista',
-      category: backendArtist.category || 'Artista',
-      location: backendArtist.city || 'Monterrey',
+      userId: backendArtist.userId || backendArtist.user?.id,
+      name: backendArtist.displayName || backendArtist.artistName || backendArtist.name || 'Artista',
+      // Intentar construir la categoría como objeto si vienen los campos individuales
+      category: (categoryId || disciplineId || roleId) ? {
+        categoryId: categoryId,
+        disciplineId: disciplineId,
+        roleId: roleId,
+      } : (backendArtist.category || 'Artista'),
+      location: backendArtist.city || backendArtist.user?.city || 'Colombia',
       rating: backendArtist.rating || 5.0,
       reviews: backendArtist.reviewsCount || 0,
       responseTime: backendArtist.responseTime || '~2 horas',
-      price: backendArtist.pricePerHour || 0,
-      image: backendArtist.avatarUrl || backendArtist.profileImageUrl || '',
-      gallery: backendArtist.portfolio?.photos?.slice(0, 3).map((p: any) => p.url) || [],
-      tags: backendArtist.tags?.slice(0, 3) || [],
-      bio: backendArtist.bio || backendArtist.description || '',
-      availability: backendArtist.isAvailable ? 'Disponible' : 'Ocupado',
-      experience: backendArtist.experience || '',
-      style: backendArtist.style || '',
+      price: Number(backendArtist.pricePerHour ?? backendArtist.hourlyRate ?? 0),
+      image: backendArtist.avatarUrl || backendArtist.profileImageUrl || backendArtist.user?.profileImageUrl || '',
+      gallery: backendArtist.portfolio?.photos?.map((p: any) => p.imageUrl || p.url) || [],
+      tags: backendArtist.tags || [],
+      bio: backendArtist.bio || backendArtist.user?.bio || backendArtist.shortBio || '',
+      description: backendArtist.description || backendArtist.details?.description || backendArtist.user?.description || '',
+      availability: backendArtist.availability || (backendArtist.isAvailable ? 'Disponible' : 'Ocupado'),
+      experience: experienceStr,
+      style: backendArtist.style || backendArtist.roleId || '',
       services: backendArtist.serviceTypes || [],
       distance: backendArtist.distance ? `${backendArtist.distance.toFixed(1)} km` : undefined,
-      verified: backendArtist.isVerified || false,
+      verified: backendArtist.isVerified || backendArtist.user?.isVerified || false,
       artistCategory: backendArtist.artistCategory,
+      specialty: backendArtist.specialty || backendArtist.user?.specialty,
+      niche: backendArtist.niche || backendArtist.user?.niche,
+      socialLinks: socialMedia ? {
+        instagram: socialMedia.instagram,
+        tiktok: socialMedia.tiktok,
+        youtube: socialMedia.youtube,
+        spotify: socialMedia.spotify,
+        facebook: socialMedia.facebook,
+        twitter: socialMedia.twitter,
+      } as {
+        instagram?: string;
+        tiktok?: string;
+        youtube?: string;
+        spotify?: string;
+        facebook?: string;
+        twitter?: string;
+      } : undefined,
+      workExperience: backendArtist.workExperience || [],
+      education: backendArtist.education || [],
     };
   },
 
-  // Obtener detalle de un artista
-  getArtistById: async (id: number) => {
-    const response = await apiClient.get(API_ENDPOINTS.ARTISTS.DETAIL(id));
+  // Obtener detalle de un artista (acepta userId string o id numérico)
+  getArtistById: async (id: string | number) => {
+    const response = await apiClient.get(`/artists/${id}`);
     return response.data;
   },
 

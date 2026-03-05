@@ -30,6 +30,15 @@ export interface BackendUser {
   worksCount?: number;
   rating?: number;
   reviewsCount?: number;
+  // Redes sociales (jsonb en backend)
+  socialMedia?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+    facebook?: string;
+    twitter?: string;
+  };
 }
 
 /** Categorías de artista usan IDs string (slugs), alineados con constants/artistCategories. */
@@ -79,7 +88,9 @@ export interface CertificationItem {
 export interface ArtistProfileResponse {
   artist: BackendArtist;
   user: BackendUser;
-  category?: { id: string; name: string };
+  category?: { id: number; code: string; name: string };
+  discipline?: { id: number; code: string; name: string };
+  role?: { id: number; code: string; name: string };
 }
 
 // ── Payload para actualizar el usuario ────────────────────────────────────────
@@ -97,11 +108,15 @@ export interface UpdateUserPayload {
   companyDescription?: string;
   companyLogoUrl?: string;
   taxId?: string;
-  // Social links
-  instagramUrl?: string;
-  twitterUrl?: string;
-  youtubeUrl?: string;
-  spotifyUrl?: string;
+  // Redes sociales (jsonb en backend)
+  socialMedia?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+    facebook?: string;
+    twitter?: string;
+  };
 }
 
 // ── Payload para actualizar el artista ────────────────────────────────────────
@@ -120,8 +135,14 @@ export interface UpdateArtistPayload {
   categoryId?: string;
   disciplineId?: string;
   roleId?: string;
+  specialty?: string;
+  niche?: string;
+  style?: string;
+  artistAvailability?: string;
+  responseTime?: string;
   pricePerHour?: number;
   hourlyRate?: number;
+  metadata?: Record<string, any>;
 }
 
 // ── Servicios ─────────────────────────────────────────────────────────────────

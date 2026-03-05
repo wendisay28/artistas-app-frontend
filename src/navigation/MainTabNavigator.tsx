@@ -21,7 +21,7 @@ export type MainTabParams = {
   Profile: undefined;
 };
 
-const Tab = createBottomTabNavigator<MainTabParams>();
+const Tab = createBottomTabNavigator();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 

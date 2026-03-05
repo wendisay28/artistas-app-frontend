@@ -1,6 +1,8 @@
 // src/services/firebase/config.ts
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { getAuth, initializeAuth } from 'firebase/auth';
+// @ts-ignore – Metro resuelve @firebase/auth con condición react-native que sí exporta esto
+import { getReactNativePersistence } from '@firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
@@ -15,11 +17,16 @@ const firebaseConfig = {
 // Evita reinicializar si ya existe la app
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Usa initializeAuth con AsyncStorage para persistir la sesión entre reinicios
-export const auth = getApps().length === 1
-  ? initializeAuth(app, {
+// Persistencia en AsyncStorage para que la sesión sobreviva hot-reloads y cierres de app
+export const auth = (() => {
+  try {
+    return initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
-    })
-  : getAuth(app);
+    });
+  } catch {
+    // Auth ya fue inicializado (hot-reload o módulo cacheado) — devolver instancia existente
+    return getAuth(app);
+  }
+})();
 
 export default app;

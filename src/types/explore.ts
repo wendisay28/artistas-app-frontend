@@ -44,16 +44,46 @@ export interface BaseCard {
 
 // ── Artist ───────────────────────────────────────────────────────────────────
 
+export interface ArtistWorkExperience {
+  company: string;
+  position: string;
+  period: string;
+  description: string;
+}
+
+export interface ArtistEducation {
+  institution: string;
+  degree: string;
+  year: string;
+  details: string;
+}
+
 export interface Artist extends BaseCard {
   type: 'artist';
-  category: string;           // e.g. "Pintora Contemporánea"
+  category: string | ArtistCategorySelection;  // Puede ser string o objeto
   experience: string;         // e.g. "10 años"
   style: string;              // e.g. "Contemporáneo"
   services: string[];         // e.g. ["Murales", "Retratos"]
+  servicesData?: any[];       // Datos completos de servicios (para Explore)
   distance?: string;           // e.g. "2.3 km"
   verified?: boolean;           // e.g. true
+  specialty?: string;         // Especialidad del artista (viene del onboarding/perfil)
+  niche?: string;             // Nicho del artista
+  description?: string;        // Descripción larga "Acerca de mí" (como en el perfil)
   // Nueva estructura de categorías (sincronizado con profile/types)
   artistCategory?: ArtistCategorySelection;
+  // Campos completos del perfil
+  userId?: string;             // ID del usuario en el backend
+  socialLinks?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+    facebook?: string;
+    twitter?: string;
+  };
+  workExperience?: ArtistWorkExperience[];
+  education?: ArtistEducation[];
 }
 
 // ── Event ────────────────────────────────────────────────────────────────────

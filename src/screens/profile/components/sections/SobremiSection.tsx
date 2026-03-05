@@ -1,16 +1,24 @@
+// src/screens/artist/profile/sections/SobreMiSection.tsx
+// Rediseño sistema BuscArt · colores morado/azul · glass cards · acento lateral
+
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Pressable, Linking, Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Artist, Review, InnerTab } from '../types';
 import { Service as APIService } from '../../../../services/api/services';
 import { GalleryItem, FeaturedItem } from '../../../../services/api/portfolio';
 import ReviewCard from '../../../../components/explore/shared/ReviewCard';
-import { Colors } from '../../../../theme/colors';
 import InfoPair from '../../../../components/explore/shared/InfoPair';
 import GalleryModal from '../../../../components/explore/shared/GalleryModal';
+import {
+  getLocalizedCategoryName,
+  getLocalizedDisciplineName,
+  getLocalizedRoleName,
+} from '../../../../constants/artistCategories';
 import { EditButton } from '../shared/EditButton';
 import { ServicesSection } from './ServicesSection';
 import { PortfolioSection } from './PortfolioSection';
@@ -31,11 +39,16 @@ type Props = {
   onPortfolioUpdated?: () => void;
 };
 
-// ── CONSTANTES Y TIPOS ────────────────────────────────────────────────────────
-const INNER_TABS: Array<{ key: InnerTab; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }> = [
-  { key: 'servicios' as InnerTab, label: 'Servicios', icon: 'briefcase-outline' },
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+
+const INNER_TABS: Array<{
+  key: InnerTab;
+  label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+}> = [
+  { key: 'servicios'  as InnerTab, label: 'Servicios',  icon: 'briefcase-outline' },
   { key: 'portafolio' as InnerTab, label: 'Portafolio', icon: 'grid-outline' },
-  { key: 'resenas' as InnerTab, label: 'Reseñas', icon: 'star-outline' },
+  { key: 'resenas'    as InnerTab, label: 'Reseñas',    icon: 'star-outline' },
 ];
 
 type SocialItem = {
@@ -45,293 +58,649 @@ type SocialItem = {
   url?: string;
 };
 
-// ── COMPONENTES AUXILIARES ────────────────────────────────────────────────────
-
-const EmptyItem = ({ label1, label2, label3, icon }: { label1: string, label2: string, label3: string, icon: any }) => (
-  <View style={vs.emptyItemRow}>
-    <View style={vs.iconCircle}>
-      <Ionicons name={icon} size={20} color={Colors.text ?? '#aaa'} />
-    </View>
-    <View style={vs.emptyTextColumn}>
-      <Text style={vs.placeholderMain}>{label1}</Text>
-      <View style={vs.rowCenter}>
-        <Text style={vs.placeholderSub}>{label2}</Text>
-        <Text style={vs.placeholderDot}>•</Text>
-        <Text style={vs.placeholderSub}>{label3}</Text>
-      </View>
-    </View>
-  </View>
-);
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function buildSocials(artist: Artist): SocialItem[] {
   const get = (label: string) =>
     artist.info?.find((i) => i.label.toLowerCase() === label.toLowerCase())?.value;
   return [
-    { label: 'Instagram', icon: 'logo-instagram', color: '#E1306C', url: get('instagram') ? `https://instagram.com/${get('instagram')}` : undefined },
-    { label: 'X', icon: 'logo-x', color: '#000000', url: get('twitter') || get('x') ? `https://twitter.com/${get('twitter') || get('x')}` : undefined },
-    { label: 'YouTube', icon: 'logo-youtube', color: '#FF0000', url: get('youtube') ? `https://youtube.com/@${get('youtube')}` : undefined },
-    { label: 'Spotify', icon: 'musical-notes', color: '#1DB954', url: get('spotify') ? `https://open.spotify.com/artist/${get('spotify')}` : undefined },
+    { label: 'Instagram', icon: 'logo-instagram', color: '#E1306C', url: get('Instagram') },
+    { label: 'TikTok',    icon: 'logo-tiktok',    color: '#fe2c55', url: get('TikTok') },
+    { label: 'YouTube',   icon: 'logo-youtube',   color: '#FF0000', url: get('YouTube') },
+    { label: 'Spotify',   icon: 'musical-notes',  color: '#1DB954', url: get('Spotify') },
   ];
 }
 
-const SocialRow: React.FC<{ artist: Artist; onEditSocialLinks?: () => void }> = ({ artist, onEditSocialLinks }) => {
+// ── SectionHeader con acento lateral ─────────────────────────────────────────
+
+const CardHeader: React.FC<{
+  title: string;
+  isOwner?: boolean;
+  onEdit?: () => void;
+}> = ({ title, isOwner, onEdit }) => (
+  <View style={ch.row}>
+    <Text style={ch.title}>{title}</Text>
+    {isOwner && onEdit && <EditButton onPress={onEdit} />}
+  </View>
+);
+
+const ch = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 10, marginBottom: 14,
+  },
+  title: {
+    flex: 1,
+    fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
+  },
+});
+
+// ── Glass Card base ───────────────────────────────────────────────────────────
+
+const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style }) => (
+  <View style={[gc.card, style]}>
+    {children}
+  </View>
+);
+
+const gc = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 20,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(167,139,250,0.2)',
+    shadowColor: '#6d28d9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+});
+
+// ── SectionEmpty — empty state con preview punteado morado ───────────────────
+
+const SectionEmpty: React.FC<{
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  title: string;
+  subtitle: string;
+  preview: React.ReactNode;
+}> = ({ icon, title, subtitle, preview }) => (
+  <View style={ep.container}>
+    <View style={ep.iconWrap}>
+      <Ionicons name={icon} size={28} color="rgba(124,58,237,0.3)" />
+    </View>
+    <Text style={ep.title}>{title}</Text>
+    <Text style={ep.subtitle}>{subtitle}</Text>
+    <View style={ep.sep}>
+      <View style={ep.sepLine} />
+      <Text style={ep.sepText}>Así se verá</Text>
+      <View style={ep.sepLine} />
+    </View>
+    <View style={{ width: '100%', opacity: 0.45 }}>{preview}</View>
+  </View>
+);
+
+const ep = StyleSheet.create({
+  container: {
+    alignItems: 'center', paddingVertical: 22, paddingHorizontal: 14, gap: 7,
+    borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.18)',
+    borderRadius: 14, borderStyle: 'dashed',
+    backgroundColor: 'rgba(245,243,255,0.4)',
+  },
+  iconWrap: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: 'rgba(124,58,237,0.07)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 2,
+  },
+  title: { fontSize: 13.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b' },
+  subtitle: {
+    fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(124,58,237,0.4)', textAlign: 'center', lineHeight: 17,
+  },
+  sep: { flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', marginTop: 4 },
+  sepLine: { flex: 1, height: 1, backgroundColor: 'rgba(124,58,237,0.1)' },
+  sepText: {
+    fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: 'rgba(124,58,237,0.3)',
+  },
+});
+
+// ── SocialRow ─────────────────────────────────────────────────────────────────
+
+const SocialRow: React.FC<{
+  artist: Artist;
+  onEditSocialLinks?: () => void;
+}> = ({ artist, onEditSocialLinks }) => {
   const socials = buildSocials(artist);
   return (
-    <View style={sr.card}>
-      <Text style={sr.title}>Redes sociales</Text>
-      <View style={sr.row}>
+    <GlassCard>
+      <View style={so.headerRow}>
+        <CardHeader title="Redes sociales" />
+        {onEditSocialLinks && (
+          <TouchableOpacity 
+            style={so.editBtn} 
+            onPress={onEditSocialLinks}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={14} color="#6d28d9" />
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={so.row}>
         {socials.map((item) => {
           const active = Boolean(item.url);
           return (
             <TouchableOpacity
               key={item.label}
-              activeOpacity={active ? 0.7 : 1}
-              style={[sr.iconWrap, active ? { backgroundColor: item.color } : sr.iconInactive]}
+              activeOpacity={0.8}
+              style={so.itemWrap}
               onPress={async () => {
+                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 if (active && item.url) {
-                  // Si hay URL, abrir la red social
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   Linking.openURL(item.url);
-                } else {
-                  // Si no hay URL, abrir el modal para agregar redes sociales
-                  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  onEditSocialLinks?.();
                 }
               }}
             >
-              <Ionicons name={item.icon} size={22} color={active ? '#fff' : (Colors.text ?? '#aaa')} />
-              <Text style={[sr.label, !active && sr.labelInactive]}>{item.label}</Text>
+              {active ? (
+                <View style={[so.iconActive, { backgroundColor: item.color }]}>
+                  <Ionicons name={item.icon} size={20} color="#fff" />
+                </View>
+              ) : (
+                <View style={so.iconInactive}>
+                  <Ionicons name={item.icon} size={20} color="rgba(124,58,237,0.3)" />
+                </View>
+              )}
+              <Text style={[so.label, !active && so.labelInactive]}>{item.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
-    </View>
+    </GlassCard>
   );
 };
 
-// ── COMPONENTE PRINCIPAL ──────────────────────────────────────────────────────
+const so = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingRight: 16,
+  },
+  editBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(124,58,237,0.08)',
+  },
+  row:  { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  itemWrap: { flex: 1, alignItems: 'center', gap: 6 },
+  iconActive: {
+    width: 52, height: 52, borderRadius: 52 * 0.28,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15, shadowRadius: 6, elevation: 3,
+  },
+  iconInactive: {
+    width: 52, height: 52, borderRadius: 52 * 0.28,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(124,58,237,0.06)',
+    borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.2)',
+  },
+  label:        { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1e1b4b' },
+  labelInactive:{ color: 'rgba(124,58,237,0.3)' },
+});
+
+// ── Experience Item ───────────────────────────────────────────────────────────
+
+const ExperienceItem: React.FC<{
+  position: string;
+  company: string;
+  period: string;
+  description?: string;
+  last?: boolean;
+}> = ({ position, company, period, description, last }) => (
+  <View style={[exp.item, !last && exp.itemBorder]}>
+    {/* Dot de timeline */}
+    <View style={exp.dotWrap}>
+      <LinearGradient colors={['#7c3aed', '#2563eb']} style={exp.dot} />
+    </View>
+    <View style={exp.content}>
+      <View style={exp.headerRow}>
+        <Text style={exp.position}>{position}</Text>
+        <View style={exp.periodPill}>
+          <Text style={exp.period}>{period}</Text>
+        </View>
+      </View>
+      <Text style={exp.company}>{company}</Text>
+      {description && <Text style={exp.desc}>{description}</Text>}
+    </View>
+  </View>
+);
+
+const exp = StyleSheet.create({
+  item:       { flexDirection: 'row', gap: 12, paddingBottom: 16 },
+  itemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(167,139,250,0.1)', marginBottom: 16 },
+  dotWrap:    { paddingTop: 4 },
+  dot:        { width: 10, height: 10, borderRadius: 5 },
+  content:    { flex: 1 },
+  headerRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 3 },
+  position: {
+    flex: 1, fontSize: 14.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
+  },
+  periodPill: {
+    backgroundColor: 'rgba(124,58,237,0.08)',
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
+    marginLeft: 8,
+  },
+  period: { fontSize: 10.5, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
+  company: {
+    fontSize: 12.5, fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(109,40,217,0.55)', marginBottom: 4,
+  },
+  desc: {
+    fontSize: 12.5, fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(30,27,75,0.55)', lineHeight: 18,
+  },
+});
+
+// ── Study Item ────────────────────────────────────────────────────────────────
+
+const StudyItem: React.FC<{
+  degree: string;
+  institution: string;
+  year: string;
+  details?: string;
+  last?: boolean;
+}> = ({ degree, institution, year, details, last }) => (
+  <View style={[st.item, !last && st.itemBorder]}>
+    <View style={st.dotWrap}>
+      <LinearGradient colors={['#7c3aed', '#2563eb']} style={st.dot} />
+    </View>
+    <View style={st.content}>
+      <View style={st.headerRow}>
+        <Text style={st.degree}>{degree}</Text>
+        <View style={st.yearPill}>
+          <Text style={st.year}>{year}</Text>
+        </View>
+      </View>
+      <Text style={st.institution}>{institution}</Text>
+      {details && <Text style={st.details}>{details}</Text>}
+    </View>
+  </View>
+);
+
+const st = StyleSheet.create({
+  item:       { flexDirection: 'row', gap: 12, paddingBottom: 16 },
+  itemBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(167,139,250,0.1)', marginBottom: 16 },
+  dotWrap:    { paddingTop: 4 },
+  dot:        { width: 10, height: 10, borderRadius: 5 },
+  content:    { flex: 1 },
+  headerRow:  { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 3 },
+  degree: {
+    flex: 1, fontSize: 14.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
+  },
+  yearPill: {
+    backgroundColor: 'rgba(124,58,237,0.08)',
+    borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8,
+  },
+  year:        { fontSize: 10.5, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
+  institution: {
+    fontSize: 12.5, fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(109,40,217,0.55)', marginBottom: 4,
+  },
+  details: {
+    fontSize: 12.5, fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(30,27,75,0.5)', lineHeight: 18, fontStyle: 'italic',
+  },
+});
+
+// ── SobreMiSection (principal) ────────────────────────────────────────────────
+
 export const SobreMiSection: React.FC<Props> = ({
   artist, services, portfolio, videos, reviews,
-  onEditBio, onEditProInfo, onEditExperience, onEditStudies, onEditCategory, onEditSocialLinks, onServicesUpdated, onPortfolioUpdated,
+  onEditBio, onEditProInfo, onEditExperience,
+  onEditStudies, onEditCategory, onEditSocialLinks,
+  onServicesUpdated, onPortfolioUpdated,
 }) => {
-  const [inner, setInner] = useState<InnerTab>('servicios' as InnerTab);
+  const [inner, setInner]             = useState<InnerTab>('servicios' as InnerTab);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [galleryIdx, setGalleryIdx] = useState(0);
+  const [galleryIdx, setGalleryIdx]   = useState(0);
 
   const experienceValue = artist.info?.find((i) => i.label === 'Experiencia')?.value ?? 'No especificado';
-  const artStyle = artist.info?.find((i) => i.label === 'Estilo')?.value ?? 'No especificado';
-  const availability = artist.info?.find((i) => i.label === 'Disponibilidad')?.value ?? 'No especificado';
-  const responseTime = artist.info?.find((i) => i.label === 'Tiempo de resp.')?.value ?? 'No especificado';
-  const isAvailable = availability === 'Disponible';
-
-  const galleryImages = portfolio.map(item => item.imageUrl ?? '');
+  const artStyle        = artist.info?.find((i) => i.label === 'Estilo')?.value ?? 'No especificado';
+  const availability    = artist.info?.find((i) => i.label === 'Disponibilidad')?.value ?? 'No especificado';
+  const responseTime    = artist.info?.find((i) => i.label === 'Tiempo de resp.')?.value ?? 'No especificado';
+  const isAvailable     = availability === 'Disponible';
+  const galleryImages   = portfolio.map(item => item.imageUrl ?? '');
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       {galleryOpen && (
-        <GalleryModal images={galleryImages} initialIndex={galleryIdx} onClose={() => setGalleryOpen(false)} />
+        <GalleryModal
+          images={galleryImages}
+          initialIndex={galleryIdx}
+          onClose={() => setGalleryOpen(false)}
+        />
       )}
 
       {/* 1. ACERCA DE MÍ */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Acerca de mí</Text>
-          {artist.isOwner && <EditButton onPress={onEditBio || (() => {})} />}
-        </View>
-        <Text style={styles.bioText} numberOfLines={bioExpanded ? undefined : 3}>
-          {artist.description || artist.bio}
-        </Text>
-        <Pressable onPress={() => setBioExpanded(p => !p)} style={styles.readMoreBtn}>
-          <Text style={styles.readMoreText}>{bioExpanded ? 'Ver menos' : 'Ver más'}</Text>
-          <Ionicons name={bioExpanded ? 'chevron-up' : 'chevron-down'} size={14} color={Colors.primary} />
-        </Pressable>
-      </View>
+      <GlassCard>
+        <CardHeader title="Acerca de mí" isOwner={artist.isOwner} onEdit={onEditBio} />
+        {artist.description ? (
+          <>
+            <Text style={s.bioText} numberOfLines={bioExpanded ? undefined : 3}>
+              {artist.description}
+            </Text>
+            <Pressable onPress={() => setBioExpanded(p => !p)} style={s.readMoreBtn}>
+              <Text style={s.readMoreText}>{bioExpanded ? 'Ver menos' : 'Ver más'}</Text>
+              <Ionicons name={bioExpanded ? 'chevron-up' : 'chevron-down'} size={13} color="#7c3aed" />
+            </Pressable>
+          </>
+        ) : (
+          <SectionEmpty
+            icon="person-outline"
+            title="Sin descripción todavía"
+            subtitle="Cuéntale a los clientes quién eres, qué haces y qué te hace único."
+            preview={
+              <View style={{ gap: 8 }}>
+                <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(30,27,75,0.12)', width: '100%' }} />
+                <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(30,27,75,0.09)', width: '88%' }} />
+                <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(30,27,75,0.07)', width: '72%' }} />
+                <View style={{ height: 10, borderRadius: 5, backgroundColor: 'rgba(124,58,237,0.08)', width: '55%' }} />
+              </View>
+            }
+          />
+        )}
+      </GlassCard>
 
       {/* 2. CATEGORÍA ARTÍSTICA */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Categoría artística</Text>
-          {artist.isOwner && <EditButton onPress={onEditCategory || (() => {})} />}
-        </View>
-        <View style={styles.infoPairs}>
-          <InfoPair label="Especialidad" value={artist.specialty || 'No especificado'} />
-          <View style={styles.divider} />
-          <InfoPair label="Nicho" value={artist.niche || 'No especificado'} />
-        </View>
-      </View>
+      <GlassCard>
+        <CardHeader title="Categoría artística" isOwner={artist.isOwner} onEdit={onEditCategory} />
+        {artist.category?.categoryId ? (
+          <View style={s.infoPairs}>
+            <InfoPair
+              label="Categoría"
+              value={getLocalizedCategoryName(artist.category.categoryId)}
+            />
+            {artist.category?.disciplineId ? (
+              <>
+                <View style={s.divider} />
+                <InfoPair
+                  label="Disciplina"
+                  value={getLocalizedDisciplineName(artist.category.categoryId, artist.category.disciplineId)}
+                />
+              </>
+            ) : null}
+            {artist.category?.roleId ? (
+              <>
+                <View style={s.divider} />
+                <InfoPair
+                  label="Rol"
+                  value={getLocalizedRoleName(artist.category.categoryId, artist.category.disciplineId, artist.category.roleId)}
+                />
+              </>
+            ) : null}
+            <View style={s.divider} />
+            <InfoPair label="Especialidad" value={artist.specialty || 'No especificado'} />
+            <View style={s.divider} />
+            <InfoPair label="Nicho" value={artist.niche || 'No especificado'} />
+          </View>
+        ) : (
+          <SectionEmpty
+            icon="color-palette-outline"
+            title="Sin categoría definida"
+            subtitle="Selecciona tu disciplina artística para aparecer en las búsquedas correctas."
+            preview={
+              <View style={{ gap: 10 }}>
+                {[['Categoría', '70%'], ['Disciplina', '55%'], ['Especialidad', '45%']].map(([lbl, w]) => (
+                  <View key={lbl} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ height: 9, borderRadius: 4, backgroundColor: 'rgba(124,58,237,0.12)', width: '30%' }} />
+                    <View style={{ height: 9, borderRadius: 4, backgroundColor: 'rgba(30,27,75,0.1)', width: w as any }} />
+                  </View>
+                ))}
+              </View>
+            }
+          />
+        )}
+      </GlassCard>
 
       {/* 3. INFORMACIÓN PROFESIONAL */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Información profesional</Text>
-          {artist.isOwner && <EditButton onPress={onEditProInfo || (() => {})} />}
-        </View>
-        <View style={styles.infoPairs}>
+      <GlassCard>
+        <CardHeader title="Información profesional" isOwner={artist.isOwner} onEdit={onEditProInfo} />
+        <View style={s.infoPairs}>
           <InfoPair label="Experiencia" value={experienceValue} />
-          <View style={styles.divider} />
+          <View style={s.divider} />
           <InfoPair label="Estilo" value={artStyle} />
-          <View style={styles.divider} />
-          <InfoPair label="Disponibilidad" value={availability} valueColor={isAvailable ? Colors.success : '#f59e0b'} />
-          <View style={styles.divider} />
+          <View style={s.divider} />
+          <InfoPair
+            label="Disponibilidad"
+            value={availability}
+            valueColor={isAvailable ? '#16a34a' : '#d97706'}
+          />
+          <View style={s.divider} />
           <InfoPair label="Tiempo de resp." value={responseTime} />
         </View>
-      </View>
+      </GlassCard>
 
       {/* 4. EXPERIENCIA LABORAL */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Experiencia laboral</Text>
-          {artist.isOwner && <EditButton onPress={onEditExperience || (() => {})} />}
-        </View>
+      <GlassCard>
+        <CardHeader title="Experiencia laboral" isOwner={artist.isOwner} onEdit={onEditExperience} />
         {artist.workExperience && artist.workExperience.length > 0 ? (
-          artist.workExperience.map((work, index) => (
-            <View key={index} style={styles.experienceItem}>
-              <View style={styles.experienceHeader}>
-                <Text style={styles.positionText}>{work.position}</Text>
-                <Text style={styles.periodText}>{work.period}</Text>
-              </View>
-              <Text style={styles.companyText}>{work.company}</Text>
-              {work.description && <Text style={styles.descriptionText}>{work.description}</Text>}
-            </View>
+          artist.workExperience.map((work, i) => (
+            <ExperienceItem
+              key={i}
+              position={work.position}
+              company={work.company}
+              period={work.period}
+              description={work.description}
+              last={i === artist.workExperience!.length - 1}
+            />
           ))
         ) : (
-          <EmptyItem 
-            label1="Nombre del puesto o cargo" 
-            label2="Empresa / Cliente" 
-            label3="Periodo (Ej: 2022 - Act.)"
+          <SectionEmpty
             icon="briefcase-outline"
+            title="Sin experiencia laboral"
+            subtitle="Agrega tus trabajos anteriores para mostrar tu trayectoria profesional."
+            preview={
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(124,58,237,0.25)', marginTop: 4 }} />
+                <View style={{ flex: 1, gap: 7 }}>
+                  <View style={{ height: 11, borderRadius: 5, backgroundColor: 'rgba(30,27,75,0.14)', width: '65%' }} />
+                  <View style={{ height: 9, borderRadius: 4, backgroundColor: 'rgba(124,58,237,0.12)', width: '45%' }} />
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(30,27,75,0.08)', width: '80%' }} />
+                </View>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: 'rgba(124,58,237,0.08)', borderRadius: 8 }}>
+                  <View style={{ height: 8, borderRadius: 3, backgroundColor: 'rgba(124,58,237,0.2)', width: 44 }} />
+                </View>
+              </View>
+            }
           />
         )}
-      </View>
+      </GlassCard>
 
       {/* 5. ESTUDIOS Y FORMACIÓN */}
-      <View style={styles.card}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Estudios y formación</Text>
-          {artist.isOwner && <EditButton onPress={onEditStudies || (() => {})} />}
-        </View>
+      <GlassCard>
+        <CardHeader title="Estudios y formación" isOwner={artist.isOwner} onEdit={onEditStudies} />
         {artist.studies && artist.studies.length > 0 ? (
-          artist.studies.map((study, index) => (
-            <View key={index} style={styles.studyItem}>
-              <View style={styles.studyHeader}>
-                <Text style={styles.degreeText}>{study.degree}</Text>
-                <Text style={styles.yearText}>{study.year}</Text>
-              </View>
-              <Text style={styles.institutionText}>{study.institution}</Text>
-              {study.details && <Text style={styles.detailsText}>{study.details}</Text>}
-            </View>
+          artist.studies.map((study, i) => (
+            <StudyItem
+              key={i}
+              degree={study.degree}
+              institution={study.institution}
+              year={study.year}
+              details={study.details}
+              last={i === artist.studies!.length - 1}
+            />
           ))
         ) : (
-          <EmptyItem 
-            label1="Título o Certificación" 
-            label2="Institución académica" 
-            label3="Año de graduación"
+          <SectionEmpty
             icon="school-outline"
+            title="Sin formación registrada"
+            subtitle="Agrega tus títulos y certificaciones para demostrar tu preparación."
+            preview={
+              <View style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(124,58,237,0.25)', marginTop: 4 }} />
+                <View style={{ flex: 1, gap: 7 }}>
+                  <View style={{ height: 11, borderRadius: 5, backgroundColor: 'rgba(30,27,75,0.14)', width: '60%' }} />
+                  <View style={{ height: 9, borderRadius: 4, backgroundColor: 'rgba(124,58,237,0.12)', width: '48%' }} />
+                  <View style={{ height: 8, borderRadius: 4, backgroundColor: 'rgba(30,27,75,0.07)', width: '35%' }} />
+                </View>
+                <View style={{ paddingHorizontal: 8, paddingVertical: 3, backgroundColor: 'rgba(124,58,237,0.08)', borderRadius: 8 }}>
+                  <View style={{ height: 8, borderRadius: 3, backgroundColor: 'rgba(124,58,237,0.2)', width: 32 }} />
+                </View>
+              </View>
+            }
           />
         )}
-      </View>
+      </GlassCard>
 
       {/* 6. REDES SOCIALES */}
       <SocialRow artist={artist} onEditSocialLinks={onEditSocialLinks} />
 
-      {/* 7. TABS */}
-      <View style={styles.tabsCard}>
-        <View style={styles.tabBar}>
+      {/* 7. TABS — Servicios / Portafolio / Reseñas */}
+      <View style={s.tabsCard}>
+        <View style={s.tabBar}>
           {INNER_TABS.map((t) => (
             <Pressable
               key={t.key}
-              style={[styles.tabItem, inner === t.key && styles.tabItemActive]}
+              style={[s.tabItem, inner === t.key && s.tabItemActive]}
               onPress={() => {
                 if (Platform.OS !== 'web') Haptics.selectionAsync();
                 setInner(t.key);
               }}
             >
-              <Ionicons name={t.icon} size={15} color={inner === t.key ? Colors.primary : Colors.textSecondary} />
-              <Text style={[styles.tabLabel, inner === t.key && styles.tabLabelActive]}>{t.label}</Text>
+              <Ionicons
+                name={t.icon}
+                size={14}
+                color={inner === t.key ? '#7c3aed' : 'rgba(109,40,217,0.35)'}
+              />
+              <Text style={[s.tabLabel, inner === t.key && s.tabLabelActive]}>
+                {t.label}
+              </Text>
+              {/* Indicador activo en gradiente */}
+              {inner === t.key && (
+                <LinearGradient
+                  colors={['#7c3aed', '#2563eb']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={s.tabIndicator}
+                />
+              )}
             </Pressable>
           ))}
         </View>
 
-        <View style={styles.tabContent}>
+        <View style={s.tabContent}>
           {inner === 'servicios' && (
-            <ServicesSection services={services} isOwner={!!artist.isOwner} onServicesUpdated={onServicesUpdated} />
+            <ServicesSection
+              services={services}
+              isOwner={!!artist.isOwner}
+              artistCategoryId={artist.category?.categoryId}
+              artistRoleId={artist.category?.roleId}
+              onServicesUpdated={onServicesUpdated}
+            />
           )}
           {inner === 'portafolio' && (
-            <PortfolioSection portfolio={portfolio} videos={videos} isOwner={!!artist.isOwner} onPortfolioUpdated={onPortfolioUpdated} />
+            <PortfolioSection
+              portfolio={portfolio}
+              videos={videos}
+              isOwner={!!artist.isOwner}
+              onPortfolioUpdated={onPortfolioUpdated}
+            />
           )}
           {inner === 'resenas' && (
             reviews.length > 0 ? (
-              <View style={styles.reviewsContainer}>
+              <View style={s.reviewsContainer}>
                 {reviews.map((r) => (
-                  <ReviewCard key={r.id} review={{ id: r.id, authorName: r.reviewerName, rating: r.stars, text: r.text, date: r.date }} />
+                  <ReviewCard
+                    key={r.id}
+                    review={{
+                      id: r.id,
+                      authorName: r.reviewerName,
+                      rating: r.stars,
+                      text: r.text,
+                      date: r.date,
+                    }}
+                  />
                 ))}
               </View>
             ) : (
-              <View style={vs.emptyStateSimple}><Text style={{ color: '#aaa', textAlign: 'center' }}>No hay reseñas todavía.</Text></View>
+              <View style={s.emptyReviews}>
+                <Ionicons name="star-outline" size={32} color="rgba(124,58,237,0.2)" />
+                <Text style={s.emptyReviewsText}>No hay reseñas todavía.</Text>
+              </View>
             )
           )}
         </View>
       </View>
+
     </View>
   );
 };
 
-// ── ESTILOS ───────────────────────────────────────────────────────────────────
+// ── Styles ────────────────────────────────────────────────────────────────────
 
-const vs = StyleSheet.create({
-  emptyItemRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8 },
-  iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F8F9FA', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#F1F2F4' },
-  emptyTextColumn: { flex: 1, gap: 2 },
-  placeholderMain: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#D1D5DB' },
-  rowCenter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  placeholderSub: { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: '#E5E7EB' },
-  placeholderDot: { fontSize: 12, color: '#E5E7EB' },
-  emptyStateSimple: { paddingVertical: 20, alignItems: 'center' }
-});
-
-const sr = StyleSheet.create({
-  card: { backgroundColor: '#fff', borderRadius: 18, padding: 18, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-  title: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.text, marginBottom: 16 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  iconWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 16 },
-  iconInactive: { backgroundColor: '#F4F4F5', borderWidth: 1, borderColor: '#E5E7EB' },
-  label: { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
-  labelInactive: { color: '#aaa' },
-});
-
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { paddingTop: 16, gap: 12, paddingBottom: 40 },
-  card: { backgroundColor: '#fff', borderRadius: 18, padding: 18, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 8 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.text },
-  bioText: { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.textSecondary, lineHeight: 22 },
-  readMoreBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8, alignSelf: 'flex-start' },
-  readMoreText: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.primary },
+
+  // Bio
+  bioText: {
+    fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(30,27,75,0.7)', lineHeight: 22,
+  },
+  readMoreBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginTop: 10, alignSelf: 'flex-start',
+  },
+  readMoreText: {
+    fontSize: 12.5, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed',
+  },
+
+  // Info pairs
   infoPairs: { gap: 2 },
-  divider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 8 },
-  tabsCard: { backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', elevation: 2 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  tabItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 13, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabItemActive: { borderBottomColor: Colors.primary },
-  tabLabel: { fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium', color: Colors.textSecondary },
-  tabLabelActive: { fontFamily: 'PlusJakartaSans_700Bold', color: Colors.primary },
-  tabContent: { padding: 14 },
-  reviewsContainer: { gap: 4 },
-  
-  // Estilos para experiencia laboral
-  experienceItem: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  experienceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  positionText: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.text, flex: 1 },
-  periodText: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.primary },
-  companyText: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.textSecondary, marginBottom: 4 },
-  descriptionText: { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.textSecondary, lineHeight: 18 },
-  
-  // Estilos para estudios
-  studyItem: { marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  studyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 },
-  degreeText: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.text, flex: 1 },
-  yearText: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.primary },
-  institutionText: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.textSecondary, marginBottom: 4 },
-  detailsText: { fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.textSecondary, lineHeight: 18, fontStyle: 'italic' },
+  divider:   { height: 1, backgroundColor: 'rgba(167,139,250,0.12)', marginVertical: 8 },
+
+  // Tabs card
+  tabsCard: {
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(167,139,250,0.2)',
+    shadowColor: '#6d28d9',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 16, elevation: 3,
+    overflow: 'hidden',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(167,139,250,0.12)',
+  },
+  tabItem: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 5,
+    paddingVertical: 14,
+    position: 'relative',
+  },
+  tabItemActive: {},
+  tabLabel: {
+    fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium',
+    color: 'rgba(109,40,217,0.35)',
+  },
+  tabLabelActive: {
+    fontFamily: 'PlusJakartaSans_700Bold', color: '#7c3aed',
+  },
+  // Línea indicadora en gradiente abajo del tab activo
+  tabIndicator: {
+    position: 'absolute', bottom: 0, left: 8, right: 8,
+    height: 2.5, borderRadius: 2,
+  },
+  tabContent: { padding: 16 },
+
+  // Reviews empty
+  emptyReviews: { paddingVertical: 28, alignItems: 'center', gap: 8 },
+  emptyReviewsText: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(124,58,237,0.35)',
+  },
+  reviewsContainer: { gap: 8 },
 });

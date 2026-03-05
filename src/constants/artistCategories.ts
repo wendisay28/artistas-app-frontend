@@ -33,22 +33,22 @@ export const ARTIST_CATEGORIES: Category[] = [
       {
         id: 'pintura',
         roles: [{ id: 'pintor' }],
-        suggestedTags: ['oleo', 'acrilico', 'acuarela', 'retrato', 'paisaje', 'abstracto', 'mural']
+        suggestedTags: ['oleo', 'acrilico', 'acuarela', 'retrato', 'paisaje', 'abstracto', 'mural', 'bodas', 'eventos']
       },
       {
         id: 'escultura',
         roles: [{ id: 'escultor' }],
-        suggestedTags: ['piedra', 'madera', 'metal', 'ceramica', 'resina', 'bronce', 'instalacion']
+        suggestedTags: ['piedra', 'madera', 'metal', 'ceramica', 'resina', 'bronce', 'instalacion', 'bodas', 'productos', 'eventos']
       },
       {
         id: 'fotografia',
         roles: [{ id: 'fotografo' }],
-        suggestedTags: ['retrato', 'paisaje', 'documental', 'fine-art', 'experimental', 'moda', 'producto']
+        suggestedTags: ['retrato', 'paisaje', 'documental', 'fine-art', 'experimental', 'moda', 'producto', 'bodas', 'eventos']
       },
       {
         id: 'ilustracion',
         roles: [{ id: 'ilustrador' }],
-        suggestedTags: ['editorial', 'infantil', 'cientifica', 'digital', 'tradicional', 'conceptual']
+        suggestedTags: ['editorial', 'infantil', 'cientifica', 'digital', 'tradicional', 'conceptual', 'productos', 'eventos']
       },
       {
         id: 'grabado',
@@ -89,7 +89,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'director-teatral' },
           { id: 'dramaturgo' }
         ],
-        suggestedTags: ['dramatico', 'comedia', 'musical', 'clasico', 'contemporaneo', 'improvisacion']
+        suggestedTags: ['dramatico', 'comedia', 'musical', 'clasico', 'contemporaneo', 'improvisacion', 'eventos']
       },
       {
         id: 'danza',
@@ -97,7 +97,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'bailarin' },
           { id: 'coreografo' }
         ],
-        suggestedTags: ['ballet', 'contemporaneo', 'folklorico', 'urbano', 'flamenco', 'tango']
+        suggestedTags: ['ballet', 'contemporaneo', 'folklorico', 'urbano', 'flamenco', 'tango', 'eventos', 'bodas']
       },
       {
         id: 'circo',
@@ -119,7 +119,7 @@ export const ARTIST_CATEGORIES: Category[] = [
       {
         id: 'magia',
         roles: [{ id: 'mago' }],
-        suggestedTags: ['escenario', 'cerca', 'ilusionismo', 'mentalismo', 'infantil']
+        suggestedTags: ['escenario', 'cerca', 'ilusionismo', 'mentalismo', 'infantil', 'eventos', 'bodas']
       },
       {
         id: 'performance',
@@ -145,7 +145,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'instrumentista' },
           { id: 'director-orquesta' }
         ],
-        suggestedTags: ['guitarra', 'violin', 'piano', 'bateria', 'bajo', 'vientos', 'cuerdas']
+        suggestedTags: ['guitarra', 'violin', 'piano', 'bateria', 'bajo', 'vientos', 'cuerdas', 'eventos', 'bodas']
       },
       {
         id: 'canto',
@@ -153,7 +153,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'cantante' },
           { id: 'cantante-lirico' }
         ],
-        suggestedTags: ['pop', 'rock', 'jazz', 'clasico', 'folklore', 'soprano', 'tenor']
+        suggestedTags: ['pop', 'rock', 'jazz', 'clasico', 'folklore', 'soprano', 'tenor', 'eventos', 'bodas']
       },
       {
         id: 'produccion-musical',
@@ -162,7 +162,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'dj' },
           { id: 'compositor' }
         ],
-        suggestedTags: ['beatmaker', 'mezcla', 'masterizacion', 'electronica', 'edm', 'hip-hop']
+        suggestedTags: ['beatmaker', 'mezcla', 'masterizacion', 'electronica', 'edm', 'hip-hop', 'eventos', 'productos']
       },
       {
         id: 'sonido',
@@ -170,7 +170,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'ingeniero-sonido' },
           { id: 'disenador-sonoro' }
         ],
-        suggestedTags: ['sonido-en-vivo', 'grabacion', 'audio-digital', 'sound-design', 'foley']
+        suggestedTags: ['sonido-en-vivo', 'grabacion', 'audio-digital', 'sound-design', 'foley', 'eventos']
       }
     ]
   },
@@ -187,7 +187,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'productor-audiovisual' },
           { id: 'director-fotografia' }
         ],
-        suggestedTags: ['ficcion', 'documental', 'cortometraje', 'largometraje', 'experimental']
+        suggestedTags: ['ficcion', 'documental', 'cortometraje', 'largometraje', 'experimental', 'eventos']
       },
       {
         id: 'animacion',
@@ -214,7 +214,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'productor-tv' },
           { id: 'camarografo' }
         ],
-        suggestedTags: ['noticias', 'entretenimiento', 'deportes', 'reality', 'live']
+        suggestedTags: ['noticias', 'entretenimiento', 'deportes', 'reality', 'live', 'eventos']
       }
     ]
   },
@@ -230,7 +230,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'director-arte' },
           { id: 'branding-designer' }
         ],
-        suggestedTags: ['branding', 'editorial', 'packaging', 'tipografia', 'ilustracion', 'social-media']
+        suggestedTags: ['branding', 'editorial', 'packaging', 'tipografia', 'ilustracion', 'social-media', 'productos']
       },
       {
         id: 'diseno-industrial',
@@ -238,7 +238,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'disenador-industrial' },
           { id: 'disenador-producto' }
         ],
-        suggestedTags: ['producto', 'mobiliario', 'automotriz', 'ergonomia', 'prototipado']
+        suggestedTags: ['producto', 'mobiliario', 'automotriz', 'ergonomia', 'prototipado', 'productos']
       },
       {
         id: 'diseno-interiores',
@@ -246,7 +246,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'disenador-interiores' },
           { id: 'decorador' }
         ],
-        suggestedTags: ['residencial', 'comercial', 'corporativo', 'iluminacion', 'ambientacion']
+        suggestedTags: ['residencial', 'comercial', 'corporativo', 'iluminacion', 'ambientacion', 'eventos']
       },
       {
         id: 'diseno-moda',
@@ -255,12 +255,12 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'patronista' },
           { id: 'modisto' }
         ],
-        suggestedTags: ['alta-costura', 'pret-a-porter', 'streetwear', 'sostenible', 'patronaje']
+        suggestedTags: ['alta-costura', 'pret-a-porter', 'streetwear', 'sostenible', 'patronaje', 'productos', 'bodas', 'eventos']
       },
       {
         id: 'diseno-textil',
         roles: [{ id: 'disenador-textil' }],
-        suggestedTags: ['estampados', 'tejido', 'bordado', 'tintes', 'texturas']
+        suggestedTags: ['estampados', 'tejido', 'bordado', 'tintes', 'texturas', 'productos']
       },
       {
         id: 'arquitectura',
@@ -268,7 +268,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'arquitecto' },
           { id: 'arquitecto-paisajista' }
         ],
-        suggestedTags: ['residencial', 'comercial', 'paisajismo', 'urbanismo', 'sostenible']
+        suggestedTags: ['residencial', 'comercial', 'paisajismo', 'urbanismo', 'sostenible', 'eventos']
       }
     ]
   },
@@ -288,7 +288,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'seo-manager' },
           { id: 'personal-brand-creator' }
         ],
-        suggestedTags: ['redes-sociales', 'estrategia', 'analitica', 'ads', 'email-marketing', 'inbound', 'posicionamiento']
+        suggestedTags: ['redes-sociales', 'estrategia', 'analitica', 'ads', 'email-marketing', 'inbound', 'posicionamiento', 'productos', 'eventos']
       },
       {
         id: 'contenido',
@@ -298,7 +298,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'youtuber' },
           { id: 'tiktoker' }
         ],
-        suggestedTags: ['youtube', 'instagram', 'tiktok', 'twitch', 'linkedin', 'twitter']
+        suggestedTags: ['youtube', 'instagram', 'tiktok', 'twitch', 'linkedin', 'twitter', 'productos', 'eventos']
       },
       {
         id: 'periodismo',
@@ -307,7 +307,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'redactor' },
           { id: 'corresponsal' }
         ],
-        suggestedTags: ['noticias', 'entrevistas', 'reportajes', 'investigacion', 'opinion']
+        suggestedTags: ['noticias', 'entrevistas', 'reportajes', 'investigacion', 'opinion', 'eventos']
       },
       {
         id: 'podcast',
@@ -315,7 +315,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'podcaster' },
           { id: 'locutor' }
         ],
-        suggestedTags: ['entrevistas', 'narrativo', 'educativo', 'noticias', 'comedia']
+        suggestedTags: ['entrevistas', 'narrativo', 'educativo', 'noticias', 'comedia', 'eventos']
       },
       {
         id: 'publicidad',
@@ -324,7 +324,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'copywriter' },
           { id: 'estratega-marcas' }
         ],
-        suggestedTags: ['campañas', 'concepto', 'redaccion', 'marca', 'medios']
+        suggestedTags: ['campañas', 'concepto', 'redaccion', 'marca', 'medios', 'productos', 'eventos']
       }
     ]
   },
@@ -340,7 +340,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'productor-cultural' },
           { id: 'promotor-cultural' }
         ],
-        suggestedTags: ['proyectos', 'convocatorias', 'financiamiento', 'comunidad', 'redes']
+        suggestedTags: ['proyectos', 'convocatorias', 'financiamiento', 'comunidad', 'redes', 'eventos']
       },
       {
         id: 'patrimonio',
@@ -357,7 +357,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'guia-turistico' },
           { id: 'planificador-rutas' }
         ],
-        suggestedTags: ['rutas', 'patrimonio', 'museos', 'caminatas', 'turismo-local']
+        suggestedTags: ['rutas', 'patrimonio', 'museos', 'caminatas', 'turismo-local', 'eventos']
       },
       {
         id: 'gastronomia-local',
@@ -365,7 +365,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'chef-tradicional' },
           { id: 'investigador-gastronomico' }
         ],
-        suggestedTags: ['cocina-tradicional', 'recetas', 'productos-locales', 'cultura-culinaria']
+        suggestedTags: ['cocina-tradicional', 'recetas', 'productos-locales', 'cultura-culinaria', 'eventos', 'bodas']
       },
       {
         id: 'museos',
@@ -373,7 +373,7 @@ export const ARTIST_CATEGORIES: Category[] = [
           { id: 'museografo' },
           { id: 'educador-museos' }
         ],
-        suggestedTags: ['curaduria', 'educacion', 'didactica', 'exposiciones', 'publicos']
+        suggestedTags: ['curaduria', 'educacion', 'didactica', 'exposiciones', 'publicos', 'eventos']
       }
     ]
   }

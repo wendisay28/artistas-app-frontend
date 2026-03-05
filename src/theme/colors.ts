@@ -3,19 +3,29 @@
 
 export const Colors = {
   // ── Brand principal (violeta → azul) ─────────────────────────────────────────
-  primary: '#9333ea',          // violet-600 — botones e iconos
-  primaryDark: '#7e22ce',      // violet-800 — checks y texto secundario
-  primaryDeep: '#4c1d95',      // violet-950 — títulos
+  primary: '#7c3aed',          // purple-600 — botones e iconos (actualizado desde onboarding)
+  primaryDark: '#5b21b6',      // purple-800 — checks y texto secundario (actualizado)
+  primaryDeep: '#1e1b4b',      // deep purple — títulos (desde onboarding)
   primarySelected: '#581c87',  // entre 900-950 — texto en estado seleccionado
   blue: '#2563eb',             // blue-600 — combinado en gradiente
 
-  // ── Gradiente principal ───────────────────────────────────────────────────────
-  // Usar con LinearGradient: ['#9333ea', '#2563eb'] → horizontal (x:0→1)
-  gradientStart: '#9333ea',
+  // ── Gradiente principal (desde onboarding) ─────────────────────────────────────
+  // Usar con LinearGradient: ['#7c3aed', '#2563eb'] → horizontal (x:0→1)
+  gradientStart: '#7c3aed',
   gradientEnd: '#2563eb',
 
+  // ── Gradientes de blobs (formas orgánicas) ─────────────────────────────────────
+  blob1: ['#a78bfa', '#7c3aed'],    // Blob principal grande
+  blob2: ['#60a5fa', '#2563eb'],    // Blob azul mediano
+  blob3: ['#c4b5fd', '#818cf8'],    // Blob lila claro
+  blob4: ['#93c5fd', '#6d28d9'],    // Blob azul-púrpura pequeño
+
+  // ── Gradientes de tarjetas (desde onboarding) ─────────────────────────────────
+  cardDarkGradient: ['#5b21b6', '#1d4ed8'],  // Tarjeta artista
+  cardLightBg: 'rgba(255,255,255,0.88)',      // Fondo tarjeta cliente
+
   // ── Fondos claros (light mode) ────────────────────────────────────────────────
-  bgPurple: '#f3e8ff',         // purple-100 — fondos de secciones suaves
+  bgPurple: '#f0ebff',         // purple-50 — fondo principal (desde onboarding)
   bgPurpleMid: '#e9d5ff',      // purple-200 — bordes, fondos de inputs
   bgPurpleStrong: '#d8b4fe',   // purple-300 — acentos visuales
 

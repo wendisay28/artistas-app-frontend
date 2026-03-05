@@ -145,33 +145,39 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
   };
 
   const initials    = artist.name
-    ? artist.name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
+    ? artist.name.split(' ').filter((w: string) => w).map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
     : undefined;
-  const isAvatarUrl = typeof artist.avatar === 'string' && artist.avatar.startsWith('http');
+  const isAvatarUrl = typeof artist.avatar === 'string'
+    && (artist.avatar.startsWith('http') || artist.avatar.startsWith('file://'));
   const isOwner     = artist.isOwner ?? false;
 
   const availKey = (artist.availability as AvailabilityKey) ?? 'available';
   const avail    = AVAILABILITY[availKey] ?? AVAILABILITY.available;
 
   // Bio corta para el header (máx ~90 chars)
-  const shortBio = artist.bio ? truncateBio(artist.bio, 105) : null;
+  const shortBio = artist.bio ? truncateBio(artist.bio.trim(), 105) : null;
   const tags     = artist.tags?.slice(0, 3) ?? [];
 
   // Horario de hoy: busca la entrada del día actual en el formato "Lun 9am-6pm, Dom 7am-5pm"
   const SCHEDULE_DAY_SHORTS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
   const todayShort   = SCHEDULE_DAY_SHORTS[new Date().getDay()];
   const scheduleRaw  = ((artist as any).schedule as string | undefined)?.trim() || null;
-  const todaySchedule = scheduleRaw
+  const dayEntry = scheduleRaw
     ?.split(',')
     .map(s => s.trim())
-    .find(s => s.startsWith(todayShort + ' '))
-    ?.slice(todayShort.length).trim()
-    ?? null;
+    .find(s => s.startsWith(todayShort + ' '));
+  // Si hay horario para hoy, muéstralo; si no hay días pero hay texto (ej: "No disponible"), muéstralo directo
+  const hasDayEntries = scheduleRaw?.split(',').some(s => SCHEDULE_DAY_SHORTS.some(d => s.trim().startsWith(d + ' ')));
+  const todaySchedule = dayEntry
+    ? `${todayShort} · ${dayEntry.slice(todayShort.length).trim()}`
+    : (!hasDayEntries && scheduleRaw)
+    ? scheduleRaw
+    : null;
 
   // Stats
-  const followers = artist.stats?.[2]?.value ?? '0'; // Seguidores
-  const views     = artist.stats?.[3]?.value ?? '0'; // Visitas
-  const rating    = artist.stats?.[1]?.value ?? '5.0'; // Rating
+  const followers = Array.isArray(artist.stats) && artist.stats[2] ? artist.stats[2].value ?? '0' : '0'; // Seguidores
+  const views     = Array.isArray(artist.stats) && artist.stats[3] ? artist.stats[3].value ?? '0' : '0'; // Visitas
+  const rating    = Array.isArray(artist.stats) && artist.stats[1] ? artist.stats[1].value ?? '5.0' : '5.0'; // Rating
 
   return (
     <View style={styles.root}>
@@ -270,7 +276,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
         {todaySchedule ? (
           <View style={styles.scheduleRow}>
             <Ionicons name="time-outline" size={13} color="#7c3aed" />
-            <Text style={styles.scheduleText}>{todayShort} · {todaySchedule}</Text>
+            <Text style={styles.scheduleText}>{todaySchedule}</Text>
           </View>
         ) : null}
 
@@ -283,7 +289,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
         ) : null}
 
         {/* La insignia de Empresa la mantuve como caja por jerarquía, pero puedes cambiarla si deseas */}
-        {artist.userType === 'company' && (
+        {artist?.userType === 'company' && (
           <View style={styles.companyBadge}>
             <Ionicons name="business-outline" size={10} color="#1E40AF" />
             <Text style={styles.companyText}>Empresa</Text>
@@ -542,11 +548,11 @@ const styles = StyleSheet.create({
     color: 'rgba(30,27,75,0.65)',
     lineHeight: 19,
     paddingHorizontal: Spacing.lg,
-    marginBottom: 8,
+    marginBottom: 4, // Reducido de 8 a 4
   },
   bioPlaceholder: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginHorizontal: Spacing.lg, marginBottom: 12,
+    marginHorizontal: Spacing.lg, marginBottom: 6, // Reducido de 12 a 6
     paddingVertical: 8, paddingHorizontal: 12,
     borderRadius: 10,
     backgroundColor: 'rgba(124,58,237,0.04)',
@@ -562,7 +568,7 @@ const styles = StyleSheet.create({
   tagsRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 6,
     paddingHorizontal: Spacing.lg,
-    marginBottom: 10,
+    marginBottom: 5,
   },
   tag: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

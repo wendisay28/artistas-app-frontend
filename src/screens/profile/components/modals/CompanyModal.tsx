@@ -40,12 +40,12 @@ export const CompanyModal: React.FC<Props> = ({ visible, artist, onClose, onSave
   const [taxId,              setTaxId]              = useState('');
   const [confirmed,          setConfirmed]          = useState(false);
 
-  const isConverting = artist.userType !== 'company';
+  const isConverting = artist?.userType !== 'company';
 
   useEffect(() => {
     if (!visible) return;
-    setCompanyName(artist.companyName ?? '');
-    setCompanyDescription(artist.companyDescription ?? '');
+    setCompanyName(artist?.companyName ?? '');
+    setCompanyDescription(artist?.companyDescription ?? '');
     setTaxId('');
     setConfirmed(false);
   }, [visible, artist]);

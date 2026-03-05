@@ -153,8 +153,10 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
   isOwner,
   onEditCover,
 }) => {
-  // Solo mostrar imagen de cover si es una URL externa real (no el placeholder genérico)
-  const hasCover = !!coverImage && coverImage.startsWith('http') && !coverImage.includes('picsum.photos');
+  // Mostrar cover si es URL pública o URI local (file://) para previsualización inmediata
+  const hasCover = !!coverImage
+    && (coverImage.startsWith('http') || coverImage.startsWith('file://'))
+    && !coverImage.includes('picsum.photos');
 
   return (
     <View style={styles.hero}>

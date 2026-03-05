@@ -274,7 +274,6 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
         await saveHeader({
           name: current.name,
           handle: (current.handle ?? '').replace('@', ''),
-          role: current.role ?? '',
           location: current.location ?? '',
           schedule: '',
           bio: current.bio ?? '',
@@ -397,20 +396,79 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
 
   // Sugerencias de etiquetas según la categoría/disciplina del artista
   const getTagSuggestions = (): string[] => {
-    const role  = (artistData?.role ?? '').toLowerCase().replace(/\s+/g, '-');
+    // Try to match by category or specialty instead of role since role was removed
+    const categoryId = (artistData?.category?.categoryId ?? '').toLowerCase();
+    const disciplineId = (artistData?.category?.disciplineId ?? '').toLowerCase();
+    const specialty = (artistData?.specialty ?? '').toLowerCase();
     const genre = (artistData?.tags?.[0]?.label ?? '').toLowerCase();
-    for (const cat of ARTIST_CATEGORIES) {
+    
+    let allFoundTags: string[] = [];
+    let bestMatchTags: string[] = [];
+    
+    // Prioridad de categorías (más relevantes primero)
+    const priorityOrder = ['artes-visuales', 'artes-escenicas', 'musica', 'audiovisual', 'diseno', 'comunicacion', 'cultura-turismo'];
+    
+    const sortedCategories = [...ARTIST_CATEGORIES].sort((a, b) => {
+      const aIndex = priorityOrder.indexOf(a.id);
+      const bIndex = priorityOrder.indexOf(b.id);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+    
+    for (const cat of sortedCategories) {
+      // First try to match by category ID (prioridad alta)
+      if (categoryId && cat.id.includes(categoryId) || categoryId.includes(cat.id)) {
+        for (const disc of cat.disciplines) {
+          if (disc.suggestedTags?.length) {
+            const tags = disc.suggestedTags.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+            bestMatchTags = tags; // Guardar como mejor coincidencia
+            break;
+          }
+        }
+      }
+      
+      // Then try to match by discipline/genre
       for (const disc of cat.disciplines) {
         const matches =
-          disc.roles.some(r => r.id === role || role.includes(r.id) || genre.includes(r.id)) ||
-          disc.id.includes(genre) || genre.includes(disc.id);
+          disc.id.includes(genre) || genre.includes(disc.id) ||
+          disc.id.includes(specialty) || specialty.includes(disc.id) ||
+          disc.id.includes(disciplineId) || disciplineId.includes(disc.id);
         if (matches && disc.suggestedTags?.length) {
-          return disc.suggestedTags.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+          const tags = disc.suggestedTags.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+          allFoundTags.push(...tags);
+          
+          // Si no hay mejor coincidencia, usar esta
+          if (bestMatchTags.length === 0) {
+            bestMatchTags = tags;
+          }
         }
       }
     }
-    // Fallback genérico
-    return ['Retrato', 'Digital', 'Abstracto', 'Mural', 'Contemporáneo', 'Experimental', 'Acuarela'];
+    
+    // Usar la mejor coincidencia si existe, si no usar todas las encontradas
+    let specificTags = bestMatchTags.length > 0 ? bestMatchTags : [...new Set(allFoundTags)];
+    
+    // Siempre incluir las nuevas etiquetas importantes al principio
+    const importantTags = ['Bodas', 'Productos', 'Eventos'];
+    let finalTags = [...importantTags]; // Empezar con las importantes
+    
+    // Agregar etiquetas específicas si no están duplicadas
+    specificTags.forEach(tag => {
+      if (!finalTags.includes(tag)) {
+        finalTags.push(tag);
+      }
+    });
+    
+    // Limitar a máximo 7 etiquetas (las importantes siempre primeras)
+    finalTags = finalTags.slice(0, 7);
+    
+    // Si no hay etiquetas específicas, usar el fallback genérico
+    if (specificTags.length === 0) {
+      return ['Bodas', 'Productos', 'Eventos', 'Retrato', 'Digital', 'Abstracto', 'Mural'];
+    }
+    
+    return finalTags;
   };
 
   const getColors = (): [string, string] => {

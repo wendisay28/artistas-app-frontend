@@ -6,7 +6,7 @@ const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 30000, // Aumentado a 30 segundos
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -16,29 +16,26 @@ apiClient.interceptors.request.use(
     const token = await refreshToken(); // siempre fresco
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('[API] Enviando request con token a:', config.url);
-    } else {
-      console.warn('[API] No hay token disponible para:', config.url);
     }
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ─── Response Interceptor — propagate errors ─────────────────────────────────
+// ─── Response Interceptor — mejor manejo de errores ────────────────────────
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    const status = error.response?.status;
-    // 404 es esperado para usuarios nuevos sin perfil en el backend — no loguear como error
-    if (status !== 404) {
-      console.error('[API] Error en respuesta:', {
-        url: error.config?.url,
-        status,
-        statusText: error.response?.statusText,
-        data: error.response?.data
-      });
-    }
+    // Log detallado para debugging
+    console.error('[API Error]', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      code: error.code,
+    });
+    
+    // No silenciar errores completamente, pero propagar con contexto
     return Promise.reject(error);
   }
 );

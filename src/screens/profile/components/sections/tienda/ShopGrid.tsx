@@ -1,10 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────
-// ShopGrid.tsx — Grid de productos para la tienda
-// ─────────────────────────────────────────────────────────────────────
-
 import React from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { ProductCard } from './ProductCard';
+
+// El gap entre columnas debe coincidir con lo declarado en favoritos
+const COLUMN_GAP = 12;
+const H_PADDING = 16;
 
 interface Product {
   id: string;
@@ -18,6 +18,11 @@ interface Product {
   gradientStart: string;
   gradientEnd: string;
   previewColor: string;
+  image?: string;
+  availability?: 'Disponible' | 'Ocupado';
+  verified?: boolean;
+  distance?: string;
+  tags?: string[];
 }
 
 interface ShopGridProps {
@@ -31,33 +36,31 @@ export const ShopGrid: React.FC<ShopGridProps> = ({
   onProductPress,
   onEndReached,
 }) => {
-  const renderProduct = ({ item }: { item: Product }) => (
-    <ProductCard
-      product={item}
-      onPress={() => onProductPress(item)}
-    />
-  );
-
   return (
-    <FlatList
-      data={products}
-      renderItem={renderProduct}
-      keyExtractor={(item) => item.id}
-      numColumns={2}
-      contentContainerStyle={styles.container}
-      columnWrapperStyle={styles.row}
-      onEndReached={onEndReached}
-      onEndReachedThreshold={0.5}
-    />
+    <View style={styles.container}>
+      {products.map((item, index) => (
+        <View key={item.id} style={styles.productWrapper}>
+          <ProductCard
+            product={item}
+            onPress={() => onProductPress(item)}
+          />
+        </View>
+      ))}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  row: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: H_PADDING - 8, // Reducir padding para mover tarjetas hacia bordes
+    paddingTop: 4,
+    paddingBottom: 16,
     justifyContent: 'space-between',
+  },
+  productWrapper: {
+    width: '48%', // Reducir ancho de tarjeta (era 50%)
+    marginBottom: COLUMN_GAP,
   },
 });

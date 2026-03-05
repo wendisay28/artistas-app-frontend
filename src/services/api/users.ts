@@ -9,7 +9,7 @@ export const registerOrSyncUser = async (
 ): Promise<UserProfile> => {
   // El backend sincroniza automáticamente usando el token de Firebase (authMiddleware)
   console.log('[users.ts] Intentando sincronizar usuario...');
-  const { data } = await apiClient.get<{ success: boolean; user: UserProfile }>('/auth/sync');
+  const { data } = await apiClient.get<{ success: boolean; user: UserProfile }>('/v1/auth/sync');
   console.log('[users.ts] Sincronización exitosa:', data.success);
   return data.user;
 };
@@ -18,19 +18,19 @@ export const registerOrSyncUser = async (
 export const createUserProfile = async (
   payload: SetupProfilePayload
 ): Promise<UserProfile> => {
-  const { data } = await apiClient.put<UserProfile>('/users/profile/setup', payload);
+  const { data } = await apiClient.put<UserProfile>('profile', payload);
   return data;
 };
 
 // Obtiene el perfil propio
 export const getMyProfile = async (): Promise<UserProfile> => {
-  const { data } = await apiClient.get<UserProfile>('/users/me');
+  const { data } = await apiClient.get<UserProfile>('/profile');
   return data;
 };
 
 // Verifica si el usuario ya completó el setup
 export const checkProfileComplete = async (): Promise<boolean> => {
-  const { data } = await apiClient.get<{ isComplete: boolean }>('/users/me/setup-status');
+  const { data } = await apiClient.get<{ isComplete: boolean }>('users/me/setup-status');
   return data.isComplete;
 };
 

@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../constants/colors';
 import { auth } from '../../services/firebase/config';
+import { useProfileStore } from '../../store/profileStore';
 
 import SwipeCard, { CARD_WIDTH, CARD_HEIGHT } from '../../components/explore/cards/SwipeCard';
 import ArtistCardContent  from '../../components/explore/cards/ArtistCardContent';
@@ -29,6 +30,8 @@ import UnifiedFiltersPanel from './components/shared/UnifiedFiltersPanel';
 
 // Importar servicios y tipos reales
 import { artistsService } from '../../services/api/artists';
+import { servicesService } from '../../services/api/services';
+import { portfolioService } from '../../services/api/portfolio';
 import type {
   Artist, Event, Venue, GalleryItem,
   ExploreCard, CategoryId, SwipeDirection, SwipeResult,
@@ -112,6 +115,17 @@ export default function ExploreScreen() {
     conditions: [] as string[],
   });
 
+  // Datos completos del artista activo (servicios, portfolio, experiencia, formación, redes)
+  const [artistFullData, setArtistFullData] = useState<{
+    services: any[];
+    portfolio: any[];
+    videos: any[];
+    workExperience: any[];
+    education: any[];
+    socialMedia: any;
+    description: string | null;
+  } | null>(null);
+
   // Animación para el swipe hint
   const swipeHintAnim = useRef(new Animated.Value(0)).current;
 
@@ -127,84 +141,39 @@ export default function ExploreScreen() {
       
       switch (category) {
         case 'artists':
+          console.log('[Explore] Cargando artistas...');
           const response = await artistsService.getExploreArtists({ limit: 20 });
           data = response.artists ?? [];
-          if (data.length === 0) {
-            data = [
-              {
-                id: 'mock-a1',
-                type: 'artist',
-                name: 'Valentina Rojas',
-                category: 'Fotografía',
-                bio: 'Fotógrafa de retrato y moda con 8 años de experiencia en Medellín. Especializada en editorial y portafolios artísticos.',
-                image: 'https://picsum.photos/seed/valentina/400/500',
-                gallery: [
-                  'https://picsum.photos/seed/val1/400/300',
-                  'https://picsum.photos/seed/val2/400/300',
-                  'https://picsum.photos/seed/val3/400/300',
-                ],
-                tags: ['Retrato', 'Moda', 'Editorial'],
-                rating: 4.9,
-                reviews: 47,
-                price: 180000,
-                location: 'Medellín',
-                responseTime: '~2h',
-                availability: 'Disponible',
-                verified: true,
-                experience: '8 años',
-                style: 'Editorial / Fine Art',
-                services: ['Sesión de fotos', 'Portafolio artístico', 'Fotografía de eventos'],
-              },
-              {
-                id: 'mock-a2',
-                type: 'artist',
-                name: 'Sebastián Mora',
-                category: 'Música',
-                bio: 'Guitarrista y compositor bogotano. Fusiona jazz, bossa nova y música andina colombiana en cada presentación en vivo.',
-                image: 'https://picsum.photos/seed/sebastian/400/500',
-                gallery: [
-                  'https://picsum.photos/seed/seb1/400/300',
-                  'https://picsum.photos/seed/seb2/400/300',
-                ],
-                tags: ['Jazz', 'Guitarra', 'Compositor'],
-                rating: 4.7,
-                reviews: 32,
-                price: 250000,
-                location: 'Bogotá',
-                responseTime: '~4h',
-                availability: 'Disponible',
-                verified: true,
-                experience: '12 años',
-                style: 'Jazz / Fusión',
-                services: ['Presentación en vivo', 'Clases de guitarra', 'Composición'],
-              },
-              {
-                id: 'mock-a3',
-                type: 'artist',
-                name: 'Camila Herrera',
-                category: 'Ilustración',
-                bio: 'Ilustradora digital y muralista de Cali. Crea piezas llenas de color con temáticas latinoamericanas y culturales.',
-                image: 'https://picsum.photos/seed/camila/400/500',
-                gallery: [
-                  'https://picsum.photos/seed/cam1/400/300',
-                  'https://picsum.photos/seed/cam2/400/300',
-                  'https://picsum.photos/seed/cam3/400/300',
-                  'https://picsum.photos/seed/cam4/400/300',
-                ],
-                tags: ['Digital', 'Mural', 'Cultural'],
-                rating: 4.8,
-                reviews: 61,
-                price: 120000,
-                location: 'Cali',
-                responseTime: '~1h',
-                availability: 'Disponible',
-                verified: false,
-                experience: '5 años',
-                style: 'Ilustración digital / Muralismo',
-                services: ['Ilustración digital', 'Murales', 'Identidad visual'],
-              },
-            ];
+          
+          // Priorizar tu perfil si está autenticado
+          const currentUser = auth.currentUser;
+          console.log('[Explore] Usuario actual:', currentUser?.uid);
+          console.log('[Explore] Artistas disponibles:', data.map(a => ({ id: a.id, name: a.name })));
+          
+          if (currentUser) {
+            const myProfile = data.find(artist => artist.id === currentUser.uid);
+            console.log('[Explore] ¿Tu perfil encontrado?', myProfile ? 'SÍ' : 'NO');
+            if (myProfile) {
+              // Mover tu perfil al principio
+              data = [myProfile, ...data.filter(artist => artist.id !== currentUser.uid)];
+              console.log('[Explore] Tu perfil movido al principio:', myProfile.name);
+            } else {
+              console.log('[Explore] Tu perfil no está en la lista de artistas');
+            }
           }
+          
+          console.log('[Explore] Respuesta de artistas:', {
+            total: response.total,
+            artistsCount: data.length,
+            firstArtist: data[0] && data[0].type === 'artist' ? {
+              id: data[0].id,
+              name: data[0].name,
+              bio: data[0].bio,
+              description: data[0].description,
+              hasDescription: !!data[0].description,
+              hasBio: !!data[0].bio
+            } : null
+          });
           break;
         case 'events':
           // Datos mock para eventos mientras se implementa el servicio
@@ -367,6 +336,113 @@ export default function ExploreScreen() {
     loadCategoryData(selectedCategory);
   }, [selectedCategory, loadCategoryData]);
 
+  // Cargar datos completos del artista activo: servicios, portfolio, experiencia, formación
+  useEffect(() => {
+    const topCard = stack[stack.length - 1] ?? null;
+    console.log('🔍 [Explore] useEffect - topCard:', topCard);
+    if (!topCard || topCard.type !== 'artist') {
+      console.log('🔍 [Explore] No es artista o no hay topCard, saliendo');
+      setArtistFullData(null);
+      return;
+    }
+    const artist = topCard as Artist;
+    // artist.id es el userId (string, puede ser un Firebase UID o un mock como "mock-a1")
+    const userId = artist.id;
+    console.log('🔍 [Explore] userId extraído:', userId);
+    const isMock = userId.startsWith('mock-');
+    if (!userId || isMock) {
+      setArtistFullData(null);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchDetails = async () => {
+      try {
+        console.log('🔍 [Explore] Cargando detalles para userId:', userId);
+        const [servicesRes, portfolioRes, profileRes] = await Promise.allSettled([
+          servicesService.getUserServices(userId),
+          portfolioService.getUserPortfolio(userId),
+          artistsService.getArtistById(userId),
+        ]);
+        if (cancelled) return;
+
+        console.log('🔍 [Explore] Respuesta servicios:', servicesRes);
+        console.log('🔍 [Explore] Servicios recibidos:', servicesRes.status === 'fulfilled' ? servicesRes.value : 'error');
+
+        // getById retorna { ...userData, details: artistRecord, socialMedia }
+        const profileData = profileRes?.status === 'fulfilled' ? profileRes.value : null;
+
+        // Usar primer array NO vacío de la cadena de fallback
+        // ?? no sirve para arrays vacíos ([] es truthy pero sin datos)
+        const findNonEmpty = (...sources: any[][]): any[] =>
+          sources.find(arr => Array.isArray(arr) && arr.length > 0) ?? [];
+
+        // Si es el perfil propio, profileStore tiene los datos más frescos (guardados localmente)
+        const ownArtistData = auth.currentUser?.uid === userId
+          ? useProfileStore.getState().artistData
+          : null;
+
+        // Fallback de categoría: usar profileStore local si backend no devuelve categoryId/disciplineId/roleId
+        const categoryFallback = ownArtistData?.category && 
+          (!profileData?.categoryId && !profileData?.disciplineId && !profileData?.roleId)
+          ? ownArtistData.category
+          : undefined;
+
+        console.log('🔍 [Explore] Fallback categoría:', { 
+          isOwn: auth.currentUser?.uid === userId,
+          backendHasCategory: !!(profileData?.categoryId || profileData?.disciplineId || profileData?.roleId),
+          localCategory: ownArtistData?.category,
+          willUseFallback: !!categoryFallback,
+        });
+
+        const workExp: any[] = findNonEmpty(
+          profileData?.details?.workExperience,
+          profileData?.workExperience,
+          ownArtistData?.workExperience as any[],
+          artist.workExperience as any[],
+        );
+        const edu: any[] = findNonEmpty(
+          profileData?.details?.education,
+          profileData?.education,
+          ownArtistData?.studies as any[],
+          artist.education as any[],
+        );
+        const socialMedia = profileData?.socialMedia ?? (artist as any).socialMedia ?? null;
+
+        // Extraer description: nivel raíz primero (después del fix backend), luego details, luego profileStore propio
+        const description: string | null =
+          profileData?.description ||
+          profileData?.details?.description ||
+          (auth.currentUser?.uid === userId ? useProfileStore.getState().artistData?.description ?? null : null) ||
+          null;
+
+        const services = servicesRes.status === 'fulfilled' ? servicesRes.value : [];
+        console.log('🔍 [Explore] Servicios finales:', services);
+        console.log('🔍 [Explore] Número de servicios:', services.length);
+
+        setArtistFullData({
+          services:       services,
+          portfolio:      portfolioRes.status === 'fulfilled' ? portfolioRes.value.photos : [],
+          videos:         portfolioRes.status === 'fulfilled' ? portfolioRes.value.videos : [],
+          workExperience: workExp.filter((x: any) => x?.company || x?.position),
+          education:      edu.filter((x: any) => x?.institution || x?.degree),
+          socialMedia,
+          description,
+        });
+      } catch {
+        if (!cancelled) setArtistFullData(null);
+      }
+    };
+    fetchDetails();
+    return () => { cancelled = true; };
+  }, [stack]);
+
+// Log para debugging del stack
+useEffect(() => {
+  console.log('🔍 [Explore] Stack cambió:', stack.length, 'items');
+  console.log('🔍 [Explore] Top item:', stack[stack.length - 1]);
+}, [stack]);
+
   useEffect(() => {
     // Animación sutil del swipe hint
     const animateSwipeHint = () => {
@@ -475,7 +551,22 @@ export default function ExploreScreen() {
     switch (card.type) {
       case 'artist': {
         const c = card as Artist;
-        return <ArtistDetails artist={c} onHire={() => {}} onMessage={() => {}} onShare={() => {}} />;
+        return (
+          <ArtistDetails
+            artist={{
+              ...c,
+              description: artistFullData?.description ?? c.description ?? '',
+              services: artistFullData?.services?.map(s => s.name) ?? [],
+              servicesData: artistFullData?.services ?? [],
+              workExperience: artistFullData?.workExperience ?? [],
+              education: artistFullData?.education ?? [],
+            }}
+            onHire={() => {}}
+            onMessage={() => {}}
+            onShare={() => {}}
+            socialLinks={artistFullData?.socialMedia ?? c.socialLinks}
+          />
+        );
       }
       case 'event': {
         const c = card as Event;

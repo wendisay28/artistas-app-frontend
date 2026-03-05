@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../constants/colors';
-import type { Artist } from '../../../types/explore';
+import type { Artist, ArtistCategorySelection } from '../../../types/explore';
 
 
 interface ArtistCardContentProps {
@@ -29,22 +29,44 @@ interface ArtistCardContentProps {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const getArtistSpecialty = (artist: Artist): string => {
-  // Usar la categoría y estilo del artista para determinar la especialidad
-  if (artist.category && artist.style) {
-    return `${artist.category} - ${artist.style}`;
+  // Prioridad 1: Usar specialty si está definido (viene del onboarding/perfil)
+  if (artist.specialty && artist.specialty.trim() !== '') {
+    return artist.specialty;
   }
-  return artist.category || artist.style || 'Artista Visual';
+  
+  // Prioridad 2: Usar la categoría y estilo del artista
+  if (artist.category && artist.style) {
+    const categoryStr = typeof artist.category === 'object' ? artist.category.categoryId : artist.category;
+    return `${categoryStr} - ${artist.style}`;
+  }
+  
+  // Prioridad 3: Usar solo la categoría
+  if (artist.category) {
+    return typeof artist.category === 'object' ? artist.category.categoryId : artist.category;
+  }
+  
+  // Prioridad 4: Usar solo el estilo
+  if (artist.style) {
+    return artist.style;
+  }
+  
+  // Valor por defecto
+  return 'Artista Visual';
 };
 
-const getCategoryMeta = (category?: string): { icon: any; label: string } => {
+const getCategoryMeta = (category?: string | ArtistCategorySelection): { icon: any; label: string } => {
   if (!category) return { icon: 'person-outline', label: 'Artista' };
-  const cat = category.toLowerCase();
+  
+  // Extraer el string de categoría si es un objeto
+  const categoryStr = typeof category === 'object' ? category.categoryId : category;
+  const cat = categoryStr.toLowerCase();
+  
   if (cat.includes('fotógrafo') || cat.includes('fotografía')) return { icon: 'camera-outline', label: 'Fotografía' };
   if (cat.includes('músico') || cat.includes('música')) return { icon: 'musical-notes-outline', label: 'Música' };
   if (cat.includes('artista') || cat.includes('arte')) return { icon: 'color-palette-outline', label: 'Arte' };
   if (cat.includes('diseñador')) return { icon: 'brush-outline', label: 'Diseño' };
   if (cat.includes('video') || cat.includes('audiovisual')) return { icon: 'videocam-outline', label: 'Video' };
-  return { icon: 'person-outline', label: category };
+  return { icon: 'person-outline', label: categoryStr };
 };
 
 const getTagIcon = (tag: string): any => {
@@ -65,6 +87,14 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
   const [liked, setLiked] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const heartScale = useRef(new Animated.Value(1)).current;
+
+  // Debug: mostrar qué datos están llegando
+  console.log('[ArtistCardContent] Datos del artista:', {
+    name: artist.name,
+    bio: artist.bio,
+    description: artist.description,
+    category: artist.category,
+  });
 
   const images = [artist.image, ...(artist.gallery || [])].slice(0, 3);
   const cat = getCategoryMeta(artist.category);
@@ -168,7 +198,7 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
         {/* Bloque de texto — sin flex:1, ocupa solo su contenido */}
         <View style={styles.topBlock}>
 
-          {/* Título — grande */}
+          {/* Título — nombre del artista */}
           <Text style={styles.name} numberOfLines={1}>{artist.name}</Text>
 
           {/* Meta — UNA sola línea horizontal, fuente pequeña */}
@@ -191,9 +221,9 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           </View>
 
           {/* Descripción — tamaño visible */}
-          {artist.bio && (
+          {(artist.bio || artist.description) && (
             <Text style={styles.description} numberOfLines={3}>
-              {artist.bio}
+              {artist.description || artist.bio}
             </Text>
           )}
 

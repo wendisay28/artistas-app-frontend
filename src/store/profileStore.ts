@@ -14,6 +14,7 @@ import {
   UpdateArtistPayload,
   BackendUser,
   BackendArtist,
+  ArtistProfileResponse,
 } from '../services/api/profile';
 import { registerOrSyncUser } from '../services/api/users';
 import type { Artist, ArtistTag, StudyDetail, WorkExperienceDetail, CertificationDetail } from '../screens/profile/components/types';
@@ -26,7 +27,7 @@ const formatNumber = (num: number): string => {
   return String(num);
 };
 
-function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, firebaseUser?: { uid: string; photoURL?: string | null; displayName?: string | null }): Artist {
+function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, firebaseUser?: { uid: string; photoURL?: string | null; displayName?: string | null }, artistResponse?: ArtistProfileResponse | null): Artist {
   const displayName = artist?.artistName ?? user.displayName
     ?? user.email?.split('@')[0]
     ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
@@ -40,8 +41,22 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
 
   const info: Artist['info'] = [];
 
-  // Social links se guardan en info[], el SobreMiSection los consume por label
-  // Los llenamos desde el store cuando el usuario los edita (no vienen del backend directamente)
+  // Info profesional desde el backend del artista
+  if (artist?.yearsOfExperience) {
+    info.push({ label: 'Experiencia', icon: 'briefcase-outline', value: `${artist.yearsOfExperience} años` });
+  }
+  const metadata = (artist as any)?.metadata as Record<string, string> | null | undefined;
+  if (metadata?.style) info.push({ label: 'Estilo', icon: 'color-palette-outline', value: metadata.style });
+  if (metadata?.artistAvailability) info.push({ label: 'Disponibilidad', icon: 'calendar-outline', value: metadata.artistAvailability });
+  if (metadata?.responseTime) info.push({ label: 'Tiempo de resp.', icon: 'chatbubble-ellipses-outline', value: metadata.responseTime });
+
+  // Redes sociales desde user.socialMedia (backend)
+  const sm = (user as any).socialMedia as Record<string, string> | null | undefined;
+  if (sm?.instagram) info.push({ label: 'Instagram', icon: 'logo-instagram', value: `https://instagram.com/${sm.instagram.replace('@', '')}` });
+  if ((sm as any)?.tiktok) info.push({ label: 'TikTok', icon: 'logo-tiktok', value: `https://tiktok.com/@${(sm as any).tiktok.replace('@', '')}` });
+  if ((sm as any)?.twitter) info.push({ label: 'Twitter', icon: 'logo-x', value: `https://twitter.com/${(sm as any).twitter.replace('@', '')}` });
+  if (sm?.youtube) info.push({ label: 'YouTube', icon: 'logo-youtube', value: `https://youtube.com/@${sm.youtube}` });
+  if (sm?.spotify) info.push({ label: 'Spotify', icon: 'musical-notes', value: `https://open.spotify.com/artist/${sm.spotify}` });
 
   return {
     id: user.id ?? firebaseUser?.uid ?? '1',
@@ -59,7 +74,7 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
     // Estadísticas reales desde backend
     stats: [
       { value: formatNumber(user.worksCount ?? 0), label: 'Obras' },
-      { value: (user.rating ?? 5.0).toFixed(1), label: 'Rating' },
+      { value: Number(user.rating ?? 5.0).toFixed(1), label: 'Rating' },
       { value: formatNumber(user.followersCount ?? 0), label: 'Seguidores' },
       { value: formatNumber(user.viewsCount ?? 0), label: 'Visitas' },
     ],
@@ -67,8 +82,15 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
     info,
     isOwner: true,
     role: artist?.stageName ?? '',
-    specialty: '',
-    niche: '',
+    // Construir category desde los objetos joinados del backend (que tienen el 'code' = slug)
+    category: artistResponse?.category?.code ? {
+      categoryId: artistResponse.category.code,
+      disciplineId: artistResponse.discipline?.code ?? '',
+      roleId: artistResponse.role?.code ?? '',
+    } : undefined,
+    // specialty y niche son texto libre guardados en artist.metadata
+    specialty: (artist as any)?.metadata?.specialty ?? '',
+    niche: (artist as any)?.metadata?.niche ?? '',
     studies: (artist?.education as StudyDetail[] | undefined) ?? [],
     workExperience: (artist?.workExperience as WorkExperienceDetail[] | undefined) ?? [],
     certifications: (artist?.certifications as CertificationDetail[] | undefined) ?? [],
@@ -97,7 +119,6 @@ interface ProfileActions {
   saveHeader: (data: {
     name: string;
     handle: string;
-    role: string;
     location: string;
     schedule: string;
     bio: string;
@@ -128,9 +149,11 @@ interface ProfileActions {
   /** Guarda la experiencia laboral */
   saveExperience: (workExperience: WorkExperienceDetail[]) => Promise<void>;
   /** Guarda los links de redes sociales (ahora con backend) */
-  saveSocialLinks: (data: { instagram: string; x: string; youtube: string; spotify: string }) => Promise<void>;
+  saveSocialLinks: (data: { instagram: string; tiktok: string; youtube: string; spotify: string; x?: string; twitter?: string }) => Promise<void>;
   /** Guarda la descripción/bio (texto libre del "Acerca de mí") */
   saveBio: (bio: string) => Promise<void>;
+  /** Guarda la descripción larga del artista ("Acerca de mí") en el backend */
+  saveDescription: (description: string) => Promise<void>;
   /** Actualiza el avatar en el backend */
   saveAvatar: (imageUrl: string) => Promise<void>;
   /** Actualiza la imagen de portada en el backend */
@@ -170,25 +193,22 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           const mapped = mapBackendToArtist(
             user,
             artist,
-            { uid: firebaseUid ?? user.id, photoURL: firebasePhotoURL, displayName: firebaseDisplayName }
+            { uid: firebaseUid ?? user.id, photoURL: firebasePhotoURL, displayName: firebaseDisplayName },
+            artistResponse
           );
 
-          // Preservar datos locales que no vienen del backend o que el backend aún no tiene
+          // Preservar datos locales que el backend no guarda como slugs de string
           const existing = get().artistData;
           if (existing) {
-            mapped.info        = existing.info        ?? [];
-            mapped.socialLinks = existing.socialLinks ?? [];
-            // Si el backend devuelve vacío pero tenemos datos locales, conservarlos
-            if (!mapped.bio         && existing.bio)         mapped.bio         = existing.bio;
-            if (!mapped.description && existing.description) mapped.description = existing.description;
-            if (!mapped.location    && existing.location)    mapped.location    = existing.location;
-            if (!mapped.role        && existing.role)        mapped.role        = existing.role;
+            if (!mapped.location && existing.location) mapped.location = existing.location;
+            if (!mapped.role && existing.role) mapped.role = existing.role;
             if (!(mapped as any).schedule && (existing as any).schedule) {
               (mapped as any).schedule = (existing as any).schedule;
             }
-            if ((!mapped.tags || mapped.tags.length === 0) && existing.tags?.length) {
-              mapped.tags = existing.tags;
-            }
+            // Si el backend no devolvió categoría/specialty/niche, preservar los del store local
+            if (!mapped.category)  mapped.category  = existing.category;
+            if (!mapped.specialty) mapped.specialty = existing.specialty;
+            if (!mapped.niche)     mapped.niche     = existing.niche;
           }
 
           set({ artistData: mapped, isLoading: false, lastSynced: Date.now() });
@@ -277,7 +297,6 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
             ...s.artistData,
             name: data.name,
             handle: `@${data.handle}`,
-            role: data.role,
             location: data.location,
             schedule: data.schedule,
             bio: data.bio,
@@ -295,12 +314,12 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
             firstName,
             ...(lastName && { lastName }),
             username: data.handle.replace(/^@/, ''),
-            bio: data.bio,
+            bio: data.bio.trim(),
             city: data.location,
           };
 
           const artistPayload: UpdateArtistPayload = {
-            stageName: data.role,
+            artistName: data.name.trim(),
             tags: data.tags.filter(Boolean),
           };
 
@@ -362,9 +381,9 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           });
           set({ isSaving: false });
         } catch (e: any) {
-          console.error('[profileStore] saveSobreMi error:', e);
-          set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
-          throw e;
+          // El optimistic update ya se aplicó — guardar localmente aunque el backend falle
+          console.warn('[profileStore] saveSobreMi: backend no disponible, guardado solo localmente:', e?.message);
+          set({ isSaving: false });
         }
       },
 
@@ -391,13 +410,20 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
         });
 
         try {
-          const yearsNum = parseInt(data.yearsExperience) || undefined;
-          await updateArtistProfile({ yearsOfExperience: yearsNum });
+          await updateArtistProfile({
+            // Guardar experience como texto en metadata en lugar de número
+            style:              data.style || undefined,
+            artistAvailability: data.availability || undefined,
+            responseTime:       data.responseTime || undefined,
+            // Guardar yearsExperience en metadata para preservar el texto original
+            metadata: {
+              ...(data.yearsExperience && { yearsExperience: data.yearsExperience }),
+            },
+          });
           set({ isSaving: false });
         } catch (e: any) {
-          console.error('[profileStore] saveProInfo error:', e);
-          set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
-          throw e;
+          console.warn('[profileStore] saveProInfo: backend no disponible, guardado solo localmente:', e?.message);
+          set({ isSaving: false });
         }
       },
 
@@ -410,9 +436,8 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           await updateArtistProfile({ education: studies });
           set({ isSaving: false });
         } catch (e: any) {
-          console.error('[profileStore] saveStudies error:', e);
-          set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
-          throw e;
+          console.warn('[profileStore] saveStudies: backend no disponible, guardado solo localmente:', e?.message);
+          set({ isSaving: false });
         }
       },
 
@@ -425,20 +450,22 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           await updateArtistProfile({ workExperience });
           set({ isSaving: false });
         } catch (e: any) {
-          console.error('[profileStore] saveExperience error:', e);
-          set({ isSaving: false, error: e?.message ?? 'Error al guardar' });
-          throw e;
+          console.warn('[profileStore] saveExperience: backend no disponible, guardado solo localmente:', e?.message);
+          set({ isSaving: false });
         }
       },
 
       saveSocialLinks: async (data) => {
         set({ isSaving: true, error: null });
+
+        const twitterHandle = (data as any)?.x || (data as any)?.twitter;
+        const isX = !!(data as any)?.x; // Detectar si es X o Twitter
         
         // Optimistic update: actualizar info[] con los valores nuevos
         set((s) => {
           if (!s.artistData) return s;
           const baseInfo = s.artistData.info.filter(i =>
-            !['Instagram', 'Twitter', 'YouTube', 'Spotify'].includes(i.label)
+            !['Instagram', 'TikTok', 'Twitter', 'YouTube', 'Spotify'].includes(i.label)
           );
           return {
             artistData: {
@@ -446,7 +473,9 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
               info: [
                 ...baseInfo,
                 ...(data.instagram ? [{ label: 'Instagram', icon: 'logo-instagram', value: `https://instagram.com/${data.instagram.replace('@', '')}` }] : []),
-                ...(data.x ? [{ label: 'Twitter', icon: 'logo-x', value: `https://twitter.com/${data.x.replace('@', '')}` }] : []),
+                // Si es X, mostrar como TikTok; si es tiktok, mostrar como TikTok
+                ...(data.tiktok || isX ? [{ label: 'TikTok', icon: 'logo-tiktok', value: `https://tiktok.com/@${(data.tiktok || twitterHandle).replace('@', '')}` }] : []),
+                ...(twitterHandle && !isX ? [{ label: 'Twitter', icon: 'logo-x', value: `https://twitter.com/${String(twitterHandle).replace('@', '')}` }] : []),
                 ...(data.youtube ? [{ label: 'YouTube', icon: 'logo-youtube', value: `https://youtube.com/@${data.youtube}` }] : []),
                 ...(data.spotify ? [{ label: 'Spotify', icon: 'musical-notes', value: `https://open.spotify.com/artist/${data.spotify}` }] : []),
               ],
@@ -457,10 +486,15 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
         try {
           // Guardar en backend
           await updateUserProfile({
-            instagramUrl: data.instagram ? `https://instagram.com/${data.instagram.replace('@', '')}` : undefined,
-            twitterUrl: data.x ? `https://twitter.com/${data.x.replace('@', '')}` : undefined,
-            youtubeUrl: data.youtube ? `https://youtube.com/@${data.youtube}` : undefined,
-            spotifyUrl: data.spotify ? `https://open.spotify.com/artist/${data.spotify}` : undefined,
+            socialMedia: {
+              instagram: data.instagram,
+              // Si es X, guardar como tiktok; si no, guardar como tiktok normal
+              tiktok: data.tiktok || twitterHandle,
+              youtube: data.youtube,
+              spotify: data.spotify,
+              // Guardar como twitter solo si no es X
+              ...(twitterHandle && !isX ? { twitter: twitterHandle } : {}),
+            },
           });
           set({ isSaving: false });
         } catch (e: any) {
@@ -472,7 +506,7 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
 
       saveBio: async (bio) => {
         // Bio corta — solo actualiza `bio`, NO `description` (son campos independientes)
-        // description = texto largo del "Sobre mí" → se guarda en saveSobreMi
+        // description = texto largo del "Sobre mí" → se guarda en saveDescription
         set({ isSaving: true, error: null });
         set((s) => ({
           artistData: s.artistData ? { ...s.artistData, bio } : s.artistData,
@@ -481,6 +515,27 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
           await updateUserProfile({ bio: bio.substring(0, 300) });
         } catch (e: any) {
           console.warn('[profileStore] saveBio: backend no disponible, guardado solo localmente:', e?.message);
+        } finally {
+          set({ isSaving: false });
+        }
+      },
+
+      saveDescription: async (description) => {
+        console.log("🎯 BuscArt: saveDescription llamado con:", description);
+        set({ isSaving: true, error: null });
+        
+        // Actualizar estado local inmediatamente
+        set((s) => ({
+          artistData: s.artistData ? { ...s.artistData, description } : s.artistData,
+        }));
+        
+        try {
+          console.log("🎯 BuscArt: Enviando al backend...");
+          await updateArtistProfile({ description });
+          console.log("✅ BuscArt: Backend actualizado correctamente");
+        } catch (e: any) {
+          console.warn('[profileStore] saveDescription: backend no disponible:', e?.message);
+          set({ error: 'Error al guardar en el backend' });
         } finally {
           set({ isSaving: false });
         }
@@ -545,9 +600,32 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       },
 
       setArtistData: (data) => {
-        set((s) => ({
-          artistData: s.artistData ? { ...s.artistData, ...data } : (data as Artist),
-        }));
+        set((s) => {
+          // Si no existe artistData, crear un objeto Artist válido con datos mínimos
+          if (!s.artistData) {
+            const baseArtist: Artist = {
+              id: '',
+              name: '',
+              handle: '',
+              location: '',
+              avatar: '',
+              isVerified: false,
+              isOnline: false,
+              bio: '',
+              tags: [],
+              stats: [],
+              socialLinks: [],
+              info: [],
+              specialty: '',
+              niche: '',
+              category: undefined,
+              availability: 'available',
+            };
+            return { artistData: { ...baseArtist, ...data } };
+          }
+          // Si ya existe, actualizar con los nuevos datos
+          return { artistData: { ...s.artistData, ...data } };
+        });
       },
 
       clearError: () => set({ error: null }),

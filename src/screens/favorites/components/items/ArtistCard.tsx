@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ArtistCard.tsx — Card horizontal para lista de Favoritos
-// Estilo Airbnb Saved: imagen compacta izquierda + info densa derecha
+// ArtistCard.tsx — Card de cuadrícula para Favoritos (2 columnas)
+// Mejoras: tipo en imagen inferior-izquierda, rating inferior-derecha,
+//          nombre + verificado + reseñas en cabecera, descripción breve
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState } from 'react';
@@ -13,9 +14,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../../constants/colors';
-import type { FavoriteArtist } from '../../../data/favorites-mock';
+import type { FavoriteArtist } from '../../../../data/favorites-mock';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -30,6 +32,7 @@ interface ArtistCardProps {
 
 const formatCOP = (price: number) =>
   `$${(price * 1000).toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
+
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -61,82 +64,105 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
         pressed && styles.cardPressed,
       ]}
     >
-      {/* ── IMAGEN IZQUIERDA ── */}
+      {/* ── IMAGEN ── */}
       <View style={styles.imageWrapper}>
         <Image
-          source={{ uri: artist.image || 'https://via.placeholder.com/150' }}
+          source={{ uri: artist.image || 'https://via.placeholder.com/300' }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           transition={200}
         />
-        {/* dot de disponibilidad */}
-        <View style={styles.dotOuter}>
+
+        {/* Gradiente inferior sobre imagen */}
+        <LinearGradient
+          colors={['transparent', 'rgba(30,27,75,0.72)']}
+          style={styles.imageGradient}
+        />
+
+        {/* Disponibilidad — arriba izquierda */}
+        <View style={[
+          styles.availBadge,
+          { backgroundColor: isAvail ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)' },
+        ]}>
           <View style={[
-            styles.dotInner,
+            styles.availDot,
             { backgroundColor: isAvail ? '#10b981' : '#f59e0b' },
           ]} />
+          <Text style={[
+            styles.availText,
+            { color: isAvail ? '#065f46' : '#92400e' },
+          ]}>
+            {isAvail ? 'Disponible' : 'Ocupado'}
+          </Text>
+        </View>
+
+        {/* Corazón — arriba derecha */}
+        <Pressable
+          onPress={handleToggleFavorite}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.heartBtn,
+            pressed && { opacity: 0.6 },
+          ]}
+        >
+          <Ionicons
+            name={saved ? 'heart' : 'heart-outline'}
+            size={17}
+            color={saved ? '#ef4444' : '#9ca3af'}
+          />
+        </Pressable>
+
+        {/* Categoría — abajo izquierda */}
+        <LinearGradient
+          colors={['rgba(124,58,237,0.82)', 'rgba(37,99,235,0.82)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.typePill}
+        >
+          <Text style={styles.typeText} numberOfLines={1}>{artist.category}</Text>
+        </LinearGradient>
+
+        {/* Rating — abajo derecha */}
+        <View style={styles.ratingBadge}>
+          <Ionicons name="star" size={10} color="#fbbf24" />
+          <Text style={styles.ratingValue}>{artist.rating}</Text>
         </View>
       </View>
 
-      {/* ── CONTENIDO DERECHA ── */}
+      {/* ── CONTENIDO ── */}
       <View style={styles.content}>
 
-        {/* nombre + verificado + corazón */}
-        <View style={styles.topRow}>
-          <View style={styles.nameBlock}>
-            <Text style={styles.name} numberOfLines={1}>{artist.name}</Text>
-            {artist.verified && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark" size={9} color="#fff" />
-              </View>
-            )}
-          </View>
-          <Pressable
-            onPress={handleToggleFavorite}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.heartBtn,
-              pressed && { opacity: 0.6 },
-            ]}
-          >
-            <Ionicons
-              name={saved ? 'heart' : 'heart-outline'}
-              size={18}
-              color={saved ? '#ef4444' : colors.textSecondary}
-            />
-          </Pressable>
+        {/* Nombre + verificado + reseñas */}
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>{artist.name}</Text>
+          {artist.verified && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark" size={9} color="#fff" />
+            </View>
+          )}
         </View>
 
-        {/* categoría */}
-        <Text style={styles.category} numberOfLines={1}>{artist.type}</Text>
-
-        {/* rating + reseñas + disponibilidad */}
+        {/* Proximidad */}
         <View style={styles.metaRow}>
-          <Ionicons name="star" size={11} color="#fbbf24" />
-          <Text style={styles.ratingText}>{artist.rating}</Text>
-          <Text style={styles.reviewsText}>({artist.reviews})</Text>
-          <View style={styles.metaSep} />
-          <View style={[
-            styles.availPill,
-            { backgroundColor: isAvail ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)' },
-          ]}>
-            <View style={[
-              styles.availDot,
-              { backgroundColor: isAvail ? '#10b981' : '#f59e0b' },
-            ]} />
-            <Text style={[
-              styles.availText,
-              { color: isAvail ? '#10b981' : '#f59e0b' },
-            ]}>
-              {isAvail ? 'Disponible' : 'Ocupado'}
-            </Text>
-          </View>
+          <Ionicons name="location-outline" size={10} color="rgba(109,40,217,0.45)" />
+          <Text style={styles.distanceText}>Medellín · {artist.distance}</Text>
         </View>
 
-        {/* separador */}
+        {/* Tags */}
+        {artist.tags && artist.tags.length > 0 && (
+          <View style={styles.tagsRow}>
+            {artist.tags.slice(0, 2).map((tag, i) => (
+              <View key={i} style={styles.tag}>
+                <Text style={styles.tagText}>{tag}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Divisor */}
         <View style={styles.divider} />
 
-        {/* precio + botón */}
+        {/* Precio + botón contratar */}
         <View style={styles.footer}>
           <View>
             <Text style={styles.priceLabel}>Desde</Text>
@@ -153,8 +179,14 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
               pressed && styles.contactBtnPressed,
             ]}
           >
-            <Ionicons name="briefcase-outline" size={13} color="#fff" />
-            <Text style={styles.contactText}>Contratar</Text>
+            <LinearGradient
+              colors={['#7c3aed', '#2563eb']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.contactGradient}
+            >
+              <Ionicons name="chevron-forward" size={12} color="#fff" />
+            </LinearGradient>
           </Pressable>
         </View>
 
@@ -167,146 +199,200 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: 'row',
+    borderRadius: 24,
     backgroundColor: '#fff',
-    borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.07)',
+    borderColor: 'rgba(167,139,250,0.18)',
     overflow: 'hidden',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowColor: '#5b21b6',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 4,
   },
   cardPressed: {
     opacity: 0.93,
-    elevation: 1,
+    transform: [{ scale: 0.975 }],
   },
 
-  // imagen
+  // ── imagen ──
   imageWrapper: {
-    width: 108,
-    alignSelf: 'stretch',
-    backgroundColor: colors.background,
+    height: 160,
+    backgroundColor: '#e5e7eb',
   },
-  dotOuter: {
+  imageGradient: {
     position: 'absolute',
-    top: 10, left: 10,
-    width: 14, height: 14,
-    borderRadius: 7,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  dotInner: {
-    width: 8, height: 8,
-    borderRadius: 4,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
   },
 
-  // contenido
-  content: {
-    flex: 1,
-    paddingHorizontal: 13,
-    paddingTop: 12,
-    paddingBottom: 11,
-  },
-
-  // top
-  topRow: {
+  // disponibilidad
+  availBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
+    gap: 4,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.55)',
   },
-  nameBlock: {
+  availDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  availText: {
+    fontSize: 9.5,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    letterSpacing: 0.2,
+  },
+
+  // corazón
+  heartBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.90)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#5b21b6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+
+  // categoría — inferior izquierda
+  typePill: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    maxWidth: '65%',
+  },
+  typeText: {
+    fontSize: 9.5,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+
+  // rating — inferior derecha
+  ratingBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 4,
+  },
+  ratingValue: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#fff',
+  },
+
+  // ── contenido ──
+  content: {
+    paddingHorizontal: 12,
+    paddingTop: 11,
+    paddingBottom: 12,
+  },
+
+  // nombre + verificado + reseñas
+  nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    flex: 1,
-    marginRight: 6,
+    marginBottom: 3,
   },
   name: {
-    fontSize: 15,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#111827',
-    flexShrink: 1,
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    color: '#1e1b4b',
+    lineHeight: 18,
   },
   verifiedBadge: {
-    width: 16, height: 16,
+    width: 16,
+    height: 16,
     borderRadius: 8,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    // gradiente simulado con color sólido; para gradiente usar LinearGradient
   },
-  heartBtn: {
-    width: 30, height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-  },
-
-  // categoría
-  category: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.primary,
-    marginBottom: 6,
+  reviews: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: 'rgba(109,40,217,0.52)',
+    flexShrink: 0,
   },
 
-  // meta
+  // fila disponibilidad + proximidad
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginBottom: 9,
+    flexWrap: 'nowrap',
   },
-  ratingText: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#111827',
-  },
-  reviewsText: {
-    fontSize: 11,
+  distanceText: {
+    fontSize: 10,
     fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
+    color: 'rgba(109,40,217,0.5)',
+    flexShrink: 1,
   },
   metaSep: {
-    width: 3, height: 3,
+    width: 3,
+    height: 3,
     borderRadius: 1.5,
-    backgroundColor: '#d1d5db',
-    marginHorizontal: 2,
+    backgroundColor: 'rgba(124,58,237,0.22)',
+    marginHorizontal: 1,
   },
-  availPill: {
+
+  // tags
+  tagsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    gap: 5,
+    marginBottom: 2,
+  },
+  tag: {
+    backgroundColor: 'rgba(124,58,237,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,58,237,0.15)',
     borderRadius: 20,
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 2,
   },
-  availDot: {
-    width: 6, height: 6,
-    borderRadius: 3,
-  },
-  availText: {
-    fontSize: 11,
+  tagText: {
+    fontSize: 9.5,
     fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#7c3aed',
+    letterSpacing: 0.1,
   },
 
   // divisor
   divider: {
     height: 1,
-    backgroundColor: '#f3f4f6',
-    marginTop: 8,
-    marginBottom: 8,
+    backgroundColor: 'rgba(167,139,250,0.15)',
+    marginBottom: 9,
   },
 
   // footer
@@ -316,52 +402,54 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   priceLabel: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
+    fontSize: 9.5,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(109,40,217,0.45)',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+    marginBottom: 1,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 2,
+    gap: 1,
   },
   priceValue: {
-    fontSize: 16,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: colors.primary,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   priceUnit: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'PlusJakartaSans_400Regular',
-    color: colors.textSecondary,
+    color: 'rgba(109,40,217,0.45)',
   },
 
-  // botón — morado suavizado con opacity
+  // botón contratar
   contactBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    opacity: 0.80,
-    shadowColor: colors.primary,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 3,
   },
   contactBtnPressed: {
-    opacity: 0.60,
-    elevation: 1,
+    opacity: 0.72,
+  },
+  contactGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   contactText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#fff',
+    letterSpacing: 0.1,
   },
 });

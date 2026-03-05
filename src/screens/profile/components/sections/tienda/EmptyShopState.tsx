@@ -1,10 +1,11 @@
 // ─────────────────────────────────────────────────────────────────────
-// EmptyShopState.tsx — Estado vacío de la tienda
+// EmptyShopState.tsx — Estado vacío de la tienda (alineado al diseño BuscArt)
 // ─────────────────────────────────────────────────────────────────────
 
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface EmptyShopStateProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -14,81 +15,75 @@ interface EmptyShopStateProps {
 }
 
 export const EmptyShopState: React.FC<EmptyShopStateProps> = ({
-  icon,
-  title,
-  subtitle,
-  onAddProduct,
-}) => {
-  return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <Ionicons
-          name={icon}
-          size={48}
-          color="#CCCCCC"
-        />
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-      {onAddProduct && (
-        <TouchableOpacity style={styles.addButton} onPress={onAddProduct}>
-          <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.addButtonText}>Agregar producto</Text>
-        </TouchableOpacity>
-      )}
+  icon, title, subtitle, onAddProduct,
+}) => (
+  <View style={styles.wrap}>
+    <View style={styles.iconWrap}>
+      <Ionicons name={icon} size={32} color="rgba(124,58,237,0.3)" />
     </View>
-  );
-};
+    <Text style={styles.title}>{title}</Text>
+    <Text style={styles.subtitle}>{subtitle}</Text>
+    {onAddProduct && (
+      <TouchableOpacity onPress={onAddProduct} style={styles.btn}>
+        <LinearGradient
+          colors={['#7c3aed', '#2563eb']}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={styles.btnGrad}
+        >
+          <Ionicons name="add" size={15} color="#fff" />
+          <Text style={styles.btnText}>Agregar producto</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+    )}
+  </View>
+);
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  wrap: {
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 64,
+    paddingVertical: 40,
+    borderWidth: 1.5,
+    borderColor: 'rgba(167,139,250,0.18)',
+    borderRadius: 20,
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(245,243,255,0.4)',
+    marginTop: 4,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F8F9FA',
+  iconWrap: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: 'rgba(124,58,237,0.07)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   title: {
-    fontSize: 18,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#111118',
-    textAlign: 'center',
-    marginBottom: 4,
+    color: '#1e1b4b',
+    marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_400Regular',
-    color: '#666666',
+    color: 'rgba(124,58,237,0.45)',
     textAlign: 'center',
-    lineHeight: 20,
+    paddingHorizontal: 30,
+    lineHeight: 18,
   },
-  addButton: {
+  btn: { marginTop: 20 },
+  btnGrad: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#0066CC',
-    paddingHorizontal: 16,
+    gap: 6,
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 8,
-    marginTop: 24,
-    shadowColor: '#0066CC',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 24,
   },
-  addButtonText: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#FFFFFF',
-    marginLeft: 8,
+  btnText: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
   },
 });

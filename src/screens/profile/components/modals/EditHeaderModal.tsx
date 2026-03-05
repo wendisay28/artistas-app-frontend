@@ -1,8 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// EditHeaderModal.tsx — Editar info del encabezado del perfil
-// nombre · handle · rol · ubicación · horario · bio corta · tags de arte
-// ─────────────────────────────────────────────────────────────────────────────
-
 import React, { useState, useEffect } from 'react';
 import {
   Modal,
@@ -14,18 +9,36 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing } from '../../../../theme';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Artist } from '../types';
+import { ARTIST_CATEGORIES } from '../../../../constants/artistCategories';
+
+// ── Paleta de identidad visual (CONSERVADA) ──────────────────────────────────
+const Brand = {
+  purple:       '#7c3aed',
+  purpleLight:  'rgba(124,58,237,0.08)',
+  purpleMid:    'rgba(124,58,237,0.25)',
+  purpleFade:   'rgba(124,58,237,0.45)',
+  purpleText:   'rgba(124,58,237,0.55)',
+  blue:         '#2563eb',
+  bg:           '#faf9ff',
+  surface:      'rgba(255,255,255,0.85)',
+  border:       'rgba(167,139,250,0.2)',
+  borderFocus:  '#7c3aed',
+  text:         '#1e1b4b',
+  textSub:      'rgba(109,40,217,0.5)',
+  textMuted:    'rgba(109,40,217,0.35)',
+  textLight:    'rgba(124,58,237,0.25)',
+  white:        '#fff',
+};
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
-
 export type EditHeaderData = {
   name: string;
   handle: string;
-  role: string;
   location: string;
   schedule: string;
   bio: string;
@@ -39,188 +52,140 @@ type Props = {
   onSave: (data: EditHeaderData) => void;
 };
 
-// ── Sub-componente: campo de formulario ───────────────────────────────────────
-
-type FieldProps = {
-  label: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  value: string;
-  onChangeText: (t: string) => void;
-  placeholder?: string;
-  multiline?: boolean;
-  maxLength?: number;
-  hint?: string;
-  prefix?: string;
-  keyboardType?: 'default' | 'email-address' | 'url';
+// ── Field (CORREGIDO PARA EVITAR EL BLUR/PARPADEO) ─────────────────────────────
+const Field: React.FC<any> = ({
+  label, icon, value, onChangeText, placeholder,
+  multiline, maxLength, hint, prefix, autoFocus, keyboardType = 'default',
+}) => {
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={f.wrap}>
+      <View style={f.labelRow}>
+        <Ionicons name={icon} size={13} color={Brand.purple} />
+        <Text style={f.label}>{label}</Text>
+        {maxLength && <Text style={f.counter}>{value.length}/{maxLength}</Text>}
+      </View>
+      <View style={[f.inputWrap, multiline && f.inputMulti, focused && f.inputFocused]}>
+        {prefix ? <Text style={f.prefix}>{prefix}</Text> : null}
+        <TextInput
+          style={[
+            f.input, 
+            multiline && { height: 80, textAlignVertical: 'top', paddingTop: Platform.OS === 'ios' ? 0 : 4 }
+          ]}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={Brand.textLight}
+          multiline={multiline}
+          maxLength={maxLength}
+          keyboardType={keyboardType}
+          autoCapitalize="none"
+          autoFocus={autoFocus}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+        {value.length > 0 && !multiline && (
+          <TouchableOpacity onPress={() => onChangeText('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Ionicons name="close-circle" size={16} color={Brand.purpleMid} />
+          </TouchableOpacity>
+        )}
+      </View>
+      {hint ? <Text style={f.hint}>{hint}</Text> : null}
+    </View>
+  );
 };
 
-const Field: React.FC<FieldProps> = ({
-  label, icon, value, onChangeText, placeholder,
-  multiline, maxLength, hint, prefix, keyboardType = 'default',
-}) => (
-  <View style={f.wrap}>
-    <View style={f.labelRow}>
-      <Ionicons name={icon} size={14} color={Colors.primary} />
-      <Text style={f.label}>{label}</Text>
-      {maxLength && (
-        <Text style={f.counter}>{value.length}/{maxLength}</Text>
-      )}
-    </View>
-    <View style={[f.inputWrap, multiline && f.inputMulti]}>
-      {prefix ? <Text style={f.prefix}>{prefix}</Text> : null}
-      <TextInput
-        style={[f.input, multiline && { height: 80, textAlignVertical: 'top' }]}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={Colors.text3}
-        multiline={multiline}
-        maxLength={maxLength}
-        keyboardType={keyboardType}
-        autoCapitalize="none"
-      />
-    </View>
-    {hint ? <Text style={f.hint}>{hint}</Text> : null}
-  </View>
+const f = StyleSheet.create({
+  wrap:       { gap: 6, marginBottom: 4 },
+  labelRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  label:      { flex: 1, fontSize: 9.5, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.purpleFade, letterSpacing: 0.8, textTransform: 'uppercase' },
+  counter:    { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: Brand.textMuted },
+  inputWrap:  { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: Brand.border, borderRadius: 14, backgroundColor: Brand.surface, paddingHorizontal: 14, minHeight: 48 },
+  inputFocused: { borderColor: Brand.purple, backgroundColor: '#fff', elevation: 2 },
+  inputMulti: { alignItems: 'flex-start', paddingVertical: 12 },
+  prefix:     { fontSize: 14, color: Brand.textMuted, fontFamily: 'PlusJakartaSans_400Regular', marginRight: 2 },
+  input:      { flex: 1, fontSize: 14.5, fontFamily: 'PlusJakartaSans_400Regular', color: Brand.text },
+  hint:       { fontSize: 11, color: Brand.textMuted, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2, paddingLeft: 2 },
+});
+
+// ── SectionLabel ──────────────────────────────────────────────────────────────
+const SectionLabel: React.FC<{ label: string; style?: object }> = ({ label, style }) => (
+  <Text style={[sl.text, style]}>{label}</Text>
 );
+const sl = StyleSheet.create({
+  text: { fontSize: 9.5, fontFamily: 'PlusJakartaSans_700Bold', color: Brand.purpleFade, letterSpacing: 1.2, textTransform: 'uppercase', marginBottom: 14, marginTop: 8 },
+});
 
-// ── Componente de selector de horario ───────────────────────────────────────
-const ScheduleSelector: React.FC<{
-  scheduleDays: any;
-  setScheduleDays: (days: any) => void;
-}> = ({ scheduleDays, setScheduleDays }) => {
-  
-  const [showTimePicker, setShowTimePicker] = useState<{
-    day: string;
-    field: 'start' | 'end';
-  } | null>(null);
-  
-  const days = [
-    { key: 'lunes', label: 'Lunes', short: 'Lun' },
-    { key: 'martes', label: 'Martes', short: 'Mar' },
-    { key: 'miercoles', label: 'Miércoles', short: 'Mié' },
-    { key: 'jueves', label: 'Jueves', short: 'Jue' },
-    { key: 'viernes', label: 'Viernes', short: 'Vie' },
-    { key: 'sabado', label: 'Sábado', short: 'Sáb' },
-    { key: 'domingo', label: 'Domingo', short: 'Dom' },
-  ];
+// ── ScheduleSelector (CONSERVADO COMPLETO) ───────────────────────────────────
+const DAYS = [
+  { key: 'lunes',     short: 'L',  label: 'Lunes'      },
+  { key: 'martes',    short: 'M',  label: 'Martes'     },
+  { key: 'miercoles', short: 'X',  label: 'Miércoles' },
+  { key: 'jueves',    short: 'J',  label: 'Jueves'     },
+  { key: 'viernes',   short: 'V',  label: 'Viernes'    },
+  { key: 'sabado',    short: 'S',  label: 'Sábado'     },
+  { key: 'domingo',   short: 'D',  label: 'Domingo'    },
+];
 
-  const timeOptions = [
-    '6:00am', '7:00am', '8:00am', '9:00am', '10:00am', '11:00am', '12:00pm',
-    '1:00pm', '2:00pm', '3:00pm', '4:00pm', '5:00pm', '6:00pm', '7:00pm', '8:00pm', '9:00pm', '10:00pm'
-  ];
+const TIME_OPTIONS = [
+  '6:00am','7:00am','8:00am','9:00am','10:00am','11:00am','12:00pm',
+  '1:00pm','2:00pm','3:00pm','4:00pm','5:00pm','6:00pm','7:00pm',
+  '8:00pm','9:00pm','10:00pm',
+];
 
+const ScheduleSelector: React.FC<{ scheduleDays: any; setScheduleDays: (days: any) => void; }> = ({ scheduleDays, setScheduleDays }) => {
+  const [showTimePicker, setShowTimePicker] = useState<{ day: string; field: 'start' | 'end'; } | null>(null);
   const toggleDay = (dayKey: string) => {
-    setScheduleDays(prev => ({
-      ...prev,
-      [dayKey]: {
-        ...prev[dayKey],
-        enabled: !prev[dayKey].enabled
-      }
-    }));
+    setScheduleDays((prev: any) => ({ ...prev, [dayKey]: { ...prev[dayKey], enabled: !prev[dayKey].enabled } }));
   };
-
   const updateTime = (dayKey: string, field: 'start' | 'end', value: string) => {
-    setScheduleDays(prev => ({
-      ...prev,
-      [dayKey]: {
-        ...prev[dayKey],
-        [field]: value
-      }
-    }));
+    setScheduleDays((prev: any) => ({ ...prev, [dayKey]: { ...prev[dayKey], [field]: value } }));
   };
+  const enabledDays = DAYS.filter(d => scheduleDays[d.key]?.enabled);
 
   return (
-    <View style={s.scheduleContainer}>
-      <View style={s.scheduleHeader}>
-        <Text style={f.label}>Horario disponible</Text>
-        <Text style={s.scheduleHint}>Activa los días y configura tus horas</Text>
+    <View style={sc.wrapper}>
+      <View style={sc.bubblesRow}>
+        {DAYS.map((day) => {
+          const active = scheduleDays[day.key]?.enabled;
+          return (
+            <TouchableOpacity key={day.key} activeOpacity={0.75} onPress={() => toggleDay(day.key)} style={[sc.bubble, active && sc.bubbleActive]}>
+              <Text style={[sc.bubbleLetter, active && sc.bubbleLetterActive]}>{day.short}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
-      
-      {days.map((day) => (
-        <View key={day.key} style={s.dayContainer}>
-          <TouchableOpacity
-            style={[s.dayToggle, scheduleDays[day.key].enabled && s.dayToggleActive]}
-            onPress={() => toggleDay(day.key)}
-          >
-            <View style={s.dayToggleContent}>
-              <Text style={[s.dayLabel, scheduleDays[day.key].enabled && s.dayLabelActive]}>
-                {day.short}
-              </Text>
-              <Text style={[s.dayLabelFull, scheduleDays[day.key].enabled && s.dayLabelFullActive]}>
-                {day.label}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          
-          {scheduleDays[day.key].enabled && (
-            <View style={s.timeContainer}>
-              <View style={s.timeField}>
-                <Text style={s.timeFieldLabel}>Desde</Text>
-                <TouchableOpacity 
-                  style={[s.timeSelector, s.timeSelectorStart]}
-                  onPress={() => setShowTimePicker({ day: day.key, field: 'start' })}
-                >
-                  <Ionicons name="time-outline" size={14} color={Colors.primary} />
-                  <Text style={s.timeText}>{scheduleDays[day.key].start}</Text>
-                  <Ionicons name="chevron-down" size={12} color={Colors.text3} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={s.timeField}>
-                <Text style={s.timeFieldLabel}>Hasta</Text>
-                <TouchableOpacity 
-                  style={[s.timeSelector, s.timeSelectorEnd]}
-                  onPress={() => setShowTimePicker({ day: day.key, field: 'end' })}
-                >
-                  <Ionicons name="time-outline" size={14} color={Colors.primary} />
-                  <Text style={s.timeText}>{scheduleDays[day.key].end}</Text>
-                  <Ionicons name="chevron-down" size={12} color={Colors.text3} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          
-          {!scheduleDays[day.key].enabled && (
-            <View style={s.disabledTimeContainer}>
-              <Text style={s.disabledText}>No disponible</Text>
-            </View>
-          )}
-        </View>
-      ))}
-      
-      {/* Modal de selección de hora */}
-      {showTimePicker && (
-        <View style={s.timePickerModal}>
-          <View style={s.timePickerContent}>
-            <View style={s.timePickerHeader}>
-              <Text style={s.timePickerTitle}>
-                {showTimePicker.field === 'start' ? 'Hora de inicio' : 'Hora de fin'}
-              </Text>
-              <TouchableOpacity onPress={() => setShowTimePicker(null)}>
-                <Ionicons name="close" size={24} color={Colors.text2} />
+      {enabledDays.length > 0 && (
+        <View style={sc.timesBlock}>
+          {enabledDays.map((day, idx) => (
+            <View key={day.key} style={[sc.dayRow, idx < enabledDays.length - 1 && sc.dayRowBorder]}>
+              <View style={sc.dayNameWrap}><View style={sc.dayDot} /><Text style={sc.dayName}>{day.label}</Text></View>
+              <TouchableOpacity style={sc.timeBtn} onPress={() => setShowTimePicker({ day: day.key, field: 'start' })}>
+                <Text style={sc.timeBtnLabel}>Desde</Text>
+                <View style={sc.timeBtnValue}>
+                  <Ionicons name="sunny-outline" size={11} color={Brand.purple} />
+                  <Text style={sc.timeBtnText}>{scheduleDays[day.key].start}</Text>
+                </View>
+              </TouchableOpacity>
+              <View style={sc.timeDash} />
+              <TouchableOpacity style={sc.timeBtn} onPress={() => setShowTimePicker({ day: day.key, field: 'end' })}>
+                <Text style={sc.timeBtnLabel}>Hasta</Text>
+                <View style={[sc.timeBtnValue, sc.timeBtnValueEnd]}>
+                  <Ionicons name="moon-outline" size={11} color={Brand.blue} />
+                  <Text style={sc.timeBtnText}>{scheduleDays[day.key].end}</Text>
+                </View>
               </TouchableOpacity>
             </View>
-            
-            <ScrollView style={s.timeOptionsList} showsVerticalScrollIndicator={false}>
-              {timeOptions.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[
-                    s.timeOption,
-                    scheduleDays[showTimePicker.day][showTimePicker.field] === time && s.timeOptionSelected
-                  ]}
-                  onPress={() => {
-                    updateTime(showTimePicker.day, showTimePicker.field, time);
-                    setShowTimePicker(null);
-                  }}
-                >
-                  <Text style={[
-                    s.timeOptionText,
-                    scheduleDays[showTimePicker.day][showTimePicker.field] === time && s.timeOptionTextSelected
-                  ]}>
-                    {time}
-                  </Text>
+          ))}
+        </View>
+      )}
+      {showTimePicker && (
+        <View style={sc.pickerOverlay}>
+          <View style={sc.pickerCard}>
+            <ScrollView style={sc.pickerList}>
+              {TIME_OPTIONS.map((time) => (
+                <TouchableOpacity key={time} style={sc.pickerItem} onPress={() => { updateTime(showTimePicker.day, showTimePicker.field, time); setShowTimePicker(null); }}>
+                  <Text style={sc.pickerItemText}>{time}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -231,500 +196,343 @@ const ScheduleSelector: React.FC<{
   );
 };
 
-const s = StyleSheet.create({
-  scheduleContainer: {
-    gap: 12,
-  },
-  scheduleHeader: {
-    marginBottom: 8,
-  },
-  scheduleHint: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: Colors.text3,
-    marginTop: 4,
-  },
-  dayContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dayToggle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayToggleActive: {
-    backgroundColor: Colors.accent,
-    borderColor: Colors.accent,
-  },
-  dayToggleContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayLabel: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: Colors.text3,
-  },
-  dayLabelActive: {
-    color: Colors.white,
-  },
-  dayLabelFull: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    color: Colors.text3,
-    marginTop: 2,
-  },
-  dayLabelFullActive: {
-    color: Colors.white,
-  },
-  timeContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 12,
-  },
-  timeField: {
-    flex: 1,
-    gap: 4,
-  },
-  timeFieldLabel: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: Colors.text2,
-    marginBottom: 2,
-  },
-  timeSelector: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 8,
-  },
-  timeSelectorStart: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
-  },
-  timeSelectorEnd: {
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.accent,
-  },
-  timeText: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    color: Colors.text,
-    flex: 1,
-  },
-  disabledTimeContainer: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  disabledText: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: Colors.text3,
-    fontStyle: 'italic',
-  },
-  timeSeparator: {
-    fontSize: 14,
-    color: Colors.text3,
-    fontFamily: 'PlusJakartaSans_400Regular',
-  },
-  // Modal de selección de hora
-  timePickerModal: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  timePickerContent: {
-    backgroundColor: Colors.bg,
-    borderRadius: 16,
-    padding: 20,
-    width: '85%',
-    maxHeight: '70%',
-  },
-  timePickerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  timePickerTitle: {
-    fontSize: 16,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: Colors.text,
-    flex: 1,
-  },
-  timeOptionsList: {
-    maxHeight: 250,
-  },
-  timeOption: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeOptionSelected: {
-    backgroundColor: Colors.accentLight,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.accent,
-  },
-  timeOptionText: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_500Medium',
-    color: Colors.text,
-    flex: 1,
-  },
-  timeOptionTextSelected: {
-    color: Colors.accent,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-  },
-  timePickerCancel: {
-    marginTop: 16,
-    paddingVertical: 12,
-    backgroundColor: Colors.surface,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  timePickerCancelText: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: Colors.text2,
-  },
+const sc = StyleSheet.create({
+  wrapper: { gap: 12 },
+  bubblesRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 6 },
+  bubble: { flex: 1, aspectRatio: 1, borderRadius: 100, backgroundColor: Brand.surface, borderWidth: 1.5, borderColor: Brand.border, alignItems: 'center', justifyContent: 'center', maxWidth: 44 },
+  bubbleActive: { backgroundColor: Brand.purple, borderColor: Brand.purple },
+  bubbleLetter: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: Brand.textMuted },
+  bubbleLetterActive: { color: Brand.white },
+  timesBlock: { backgroundColor: Brand.surface, borderRadius: 16, borderWidth: 1.5, borderColor: Brand.border, overflow: 'hidden', marginTop: 4 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
+  dayRowBorder: { borderBottomWidth: 1, borderBottomColor: 'rgba(167,139,250,0.1)' },
+  dayNameWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  dayDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: Brand.purple },
+  dayName: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.text },
+  timeBtn: { alignItems: 'center', gap: 3 },
+  timeBtnLabel: { fontSize: 9, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.textMuted, textTransform: 'uppercase' },
+  timeBtnValue: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: Brand.purpleLight, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 5 },
+  timeBtnValueEnd: { backgroundColor: 'rgba(37,99,235,0.06)' },
+  timeBtnText: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.text },
+  timeDash: { width: 8, height: 1.5, backgroundColor: Brand.border },
+  pickerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center', zIndex: 999 },
+  pickerCard: { backgroundColor: '#fff', borderRadius: 20, width: '80%', maxHeight: '60%' },
+  pickerList: { padding: 10 },
+  pickerItem: { padding: 15, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  pickerItemText: { textAlign: 'center', fontFamily: 'PlusJakartaSans_500Medium' }
 });
 
-const f = StyleSheet.create({
-  wrap:       { gap: 6, marginBottom: 4 },
-  labelRow:   { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  label:      { flex: 1, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: Colors.text },
-  counter:    { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.text3 },
-  inputWrap:  {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
-    paddingHorizontal: 12,
-    minHeight: 44,
-  },
-  inputMulti: { alignItems: 'flex-start', paddingVertical: 10 },
-  prefix:     { fontSize: 14, color: Colors.text3, fontFamily: 'PlusJakartaSans_400Regular', marginRight: 2 },
-  input:      { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.text },
-  hint:       { fontSize: 11, color: Colors.text3, fontFamily: 'PlusJakartaSans_400Regular', marginTop: 2, paddingLeft: 2 },
-});
-
-// ── Helpers de horario ────────────────────────────────────────────────────────
-
-const DAY_KEY_MAP: Record<string, string> = {
-  'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miercoles',
-  'Jue': 'jueves', 'Vie': 'viernes', 'Sáb': 'sabado', 'Dom': 'domingo',
-};
-const DAY_SHORT_MAP: Record<string, string> = {
-  lunes: 'Lun', martes: 'Mar', miercoles: 'Mié',
-  jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom',
-};
-// Orden de los días en la semana (para rangos "Lun-Vie")
-const DAY_ORDER = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
+// ── Helpers (CONSERVADOS) ───────────────────────────────────────────────────
+const DAY_KEY_MAP: Record<string, string> = { 'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miercoles', 'Jue': 'jueves', 'Vie': 'viernes', 'Sáb': 'sabado', 'Dom': 'domingo' };
+const DAY_SHORT_MAP: Record<string, string> = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom' };
 const DEFAULT_SCHEDULE_DAYS = {
-  lunes:     { enabled: false, start: '9:00am', end: '6:00pm' },
-  martes:    { enabled: false, start: '9:00am', end: '6:00pm' },
-  miercoles: { enabled: false, start: '9:00am', end: '6:00pm' },
-  jueves:    { enabled: false, start: '9:00am', end: '6:00pm' },
-  viernes:   { enabled: false, start: '9:00am', end: '6:00pm' },
-  sabado:    { enabled: false, start: '9:00am', end: '6:00pm' },
-  domingo:   { enabled: false, start: '9:00am', end: '6:00pm' },
+  lunes: { enabled: false, start: '9:00am', end: '6:00pm' }, martes: { enabled: false, start: '9:00am', end: '6:00pm' },
+  miercoles: { enabled: false, start: '9:00am', end: '6:00pm' }, jueves: { enabled: false, start: '9:00am', end: '6:00pm' },
+  viernes: { enabled: false, start: '9:00am', end: '6:00pm' }, sabado: { enabled: false, start: '9:00am', end: '6:00pm' },
+  domingo: { enabled: false, start: '9:00am', end: '6:00pm' }
 };
 
-/** Convierte "9am" → "9:00am", "10pm" → "10:00pm" */
-const restoreTime = (t: string) =>
-  t.trim().replace(/^(\d{1,2})(am|pm)$/i, '$1:00$2').toLowerCase();
+// ── Componente Principal ──────────────────────────────────────────────────────
+export const EditHeaderModal: React.FC<Props> = ({ visible, artist, onClose, onSave }) => {
+  const insets = useSafeAreaInsets();
+  const [name, setName] = useState('');
+  const [handle, setHandle] = useState('');
+  const [location, setLocation] = useState('');
+  const [bio, setBio] = useState('');
+  const [tag1, setTag1] = useState('');
+  const [tag2, setTag2] = useState('');
+  const [tag3, setTag3] = useState('');
+  const [scheduleDays, setScheduleDays] = useState<any>(DEFAULT_SCHEDULE_DAYS);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customTagInput, setCustomTagInput] = useState('');
 
-/** Parsea el string guardado de vuelta a scheduleDays */
-const parseScheduleStr = (str?: string): typeof DEFAULT_SCHEDULE_DAYS => {
-  const result: typeof DEFAULT_SCHEDULE_DAYS = JSON.parse(JSON.stringify(DEFAULT_SCHEDULE_DAYS));
-  if (!str?.trim() || str === 'No disponible') return result;
-
-  // Formato 1: lista de días individuales "Lun 9am-6pm, Dom 7am-5pm"
-  if (str.includes(',') || /^(Dom|Lun|Mar|Mié|Jue|Vie|Sáb)\s+\d/.test(str)) {
-    for (const part of str.split(',').map(s => s.trim())) {
-      const m = part.match(/^(Dom|Lun|Mar|Mié|Jue|Vie|Sáb)\s+(.+?)-(.+)$/);
-      if (m) {
-        const key = DAY_KEY_MAP[m[1]];
-        if (key) result[key as keyof typeof result] = { enabled: true, start: restoreTime(m[2]), end: restoreTime(m[3]) };
+  // Función para obtener etiquetas sugeridas (misma que en PortalAutorScreen)
+  const getTagSuggestions = (): string[] => {
+    const categoryId = (artist?.category?.categoryId ?? '').toLowerCase();
+    const disciplineId = (artist?.category?.disciplineId ?? '').toLowerCase();
+    const specialty = (artist?.specialty ?? '').toLowerCase();
+    const genre = (artist?.tags?.[0]?.label ?? '').toLowerCase();
+    
+    let allFoundTags: string[] = [];
+    let bestMatchTags: string[] = [];
+    
+    // Prioridad de categorías (más relevantes primero)
+    const priorityOrder = ['artes-visuales', 'artes-escenicas', 'musica', 'audiovisual', 'diseno', 'comunicacion', 'cultura-turismo'];
+    
+    const sortedCategories = [...ARTIST_CATEGORIES].sort((a, b) => {
+      const aIndex = priorityOrder.indexOf(a.id);
+      const bIndex = priorityOrder.indexOf(b.id);
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+    
+    for (const cat of sortedCategories) {
+      // First try to match by category ID (prioridad alta)
+      if (categoryId && cat.id.includes(categoryId) || categoryId.includes(cat.id)) {
+        for (const disc of cat.disciplines) {
+          if (disc.suggestedTags?.length) {
+            const tags = disc.suggestedTags.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+            bestMatchTags = tags;
+            break;
+          }
+        }
+      }
+      
+      // Then try to match by discipline/genre
+      for (const disc of cat.disciplines) {
+        const matches =
+          disc.id.includes(genre) || genre.includes(disc.id) ||
+          disc.id.includes(specialty) || specialty.includes(disc.id) ||
+          disc.id.includes(disciplineId) || disciplineId.includes(disc.id);
+        if (matches && disc.suggestedTags?.length) {
+          const tags = disc.suggestedTags.map(t => t.charAt(0).toUpperCase() + t.slice(1));
+          allFoundTags.push(...tags);
+          
+          if (bestMatchTags.length === 0) {
+            bestMatchTags = tags;
+          }
+        }
       }
     }
-    return result;
-  }
-
-  // Formato 2: rango "Lun-Vie 6pm-10pm"
-  const rangeM = str.match(/^(Dom|Lun|Mar|Mié|Jue|Vie|Sáb)-(Dom|Lun|Mar|Mié|Jue|Vie|Sáb)\s+(.+?)-(.+)$/);
-  if (rangeM) {
-    const si = DAY_ORDER.indexOf(rangeM[1]);
-    const ei = DAY_ORDER.indexOf(rangeM[2]);
-    const start = restoreTime(rangeM[3]);
-    const end   = restoreTime(rangeM[4]);
-    const indices = si <= ei
-      ? Array.from({ length: ei - si + 1 }, (_, i) => si + i)
-      : [...Array.from({ length: 7 - si }, (_, i) => si + i), ...Array.from({ length: ei + 1 }, (_, i) => i)];
-    for (const idx of indices) {
-      const key = DAY_KEY_MAP[DAY_ORDER[idx]];
-      if (key) result[key as keyof typeof result] = { enabled: true, start, end };
+    
+    let specificTags = bestMatchTags.length > 0 ? bestMatchTags : [...new Set(allFoundTags)];
+    
+    // Siempre incluir las nuevas etiquetas importantes al principio
+    const importantTags = ['Bodas', 'Productos', 'Eventos'];
+    let finalTags = [...importantTags];
+    
+    // Agregar etiquetas específicas si no están duplicadas
+    specificTags.forEach(tag => {
+      if (!finalTags.includes(tag)) {
+        finalTags.push(tag);
+      }
+    });
+    
+    // Limitar a máximo 7 etiquetas
+    finalTags = finalTags.slice(0, 7);
+    
+    if (specificTags.length === 0) {
+      return ['Bodas', 'Productos', 'Eventos', 'Retrato', 'Digital', 'Abstracto', 'Mural'];
     }
-    return result;
-  }
+    
+    return finalTags;
+  };
 
-  return result;
-};
+  // Sincronizar tags seleccionados con los estados existentes
+  useEffect(() => {
+    if (visible) {
+      const tags = [tag1, tag2, tag3].filter(Boolean);
+      setSelectedTags(tags);
+    }
+  }, [visible, tag1, tag2, tag3]);
 
-// ── Componente principal ───────────────────────────────────────────────────────
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => {
+      if (prev.includes(tag)) {
+        const newTags = prev.filter(t => t !== tag);
+        // Actualizar los estados de tag1, tag2, tag3
+        setTag1(newTags[0] ?? '');
+        setTag2(newTags[1] ?? '');
+        setTag3(newTags[2] ?? '');
+        return newTags;
+      }
+      if (prev.length >= 3) return prev;
+      const newTags = [...prev, tag];
+      setTag1(newTags[0] ?? '');
+      setTag2(newTags[1] ?? '');
+      setTag3(newTags[2] ?? '');
+      return newTags;
+    });
+  };
 
-export const EditHeaderModal: React.FC<Props> = ({ visible, artist, onClose, onSave }) => {
-  const [name,     setName]     = useState('');
-  const [handle,   setHandle]   = useState('');
-  const [role,     setRole]     = useState('');
-  const [location, setLocation] = useState('');
-  const [bio,      setBio]      = useState('');
-  const [tag1,     setTag1]     = useState('');
-  const [tag2,     setTag2]     = useState('');
-  const [tag3,     setTag3]     = useState('');
+  const handleAddCustomTag = () => {
+    const tag = customTagInput.trim();
+    if (!tag) return;
+    const formatted = tag.charAt(0).toUpperCase() + tag.slice(1);
+    toggleTag(formatted);
+    setCustomTagInput('');
+  };
 
-  const [scheduleDays, setScheduleDays] = useState<typeof DEFAULT_SCHEDULE_DAYS>(DEFAULT_SCHEDULE_DAYS);
-
-  // Pre-poblar al abrir — incluyendo el horario guardado
   useEffect(() => {
     if (visible) {
       setName(artist.name ?? '');
       setHandle((artist.handle ?? '').replace(/^@/, ''));
-      setRole(artist.role ?? '');
       setLocation(artist.location ?? '');
       setBio(artist.bio ?? '');
-      const [t1 = '', t2 = '', t3 = ''] = (artist.tags ?? []).map(t => t.label);
-      setTag1(t1); setTag2(t2); setTag3(t3);
-      // Parsear el horario guardado → scheduleDays
-      setScheduleDays(parseScheduleStr((artist as any).schedule));
+      setTag1(artist.tags?.[0]?.label ?? '');
+      setTag2(artist.tags?.[1]?.label ?? '');
+      setTag3(artist.tags?.[2]?.label ?? '');
     }
   }, [visible, artist]);
 
   const handleSave = () => {
-    // Siempre guardar en formato individual por día — fácil de parsear y mostrar
-    const enabled = (Object.entries(scheduleDays) as [string, { enabled: boolean; start: string; end: string }][])
-      .filter(([, d]) => d.enabled);
-
-    const DAY_IDX: Record<string, number> = {
-      lunes: 1, martes: 2, miercoles: 3, jueves: 4, viernes: 5, sabado: 6, domingo: 0,
-    };
-    // Ordenar por día de la semana (Lun → Dom)
-    enabled.sort(([a], [b]) => DAY_IDX[a] - DAY_IDX[b]);
-
-    const scheduleText = enabled.length > 0
-      ? enabled
-          .map(([key, d]) => `${DAY_SHORT_MAP[key]} ${d.start.replace(':00', '')}-${d.end.replace(':00', '')}`)
-          .join(', ')
-      : 'No disponible';
-
-    onSave({
-      name:     name.trim(),
-      handle:   handle.trim().replace(/^@/, ''),
-      role:     role.trim(),
-      location: location.trim(),
-      schedule: scheduleText,
-      bio:      bio.trim(),
-      tags:     [tag1.trim(), tag2.trim(), tag3.trim()],
-    });
+    const enabled = Object.entries(scheduleDays).filter(([, d]: any) => d.enabled);
+    const scheduleText = enabled.length > 0 ? enabled.map(([k, d]: any) => `${DAY_SHORT_MAP[k]} ${d.start}-${d.end}`).join(', ') : 'No disponible';
+    onSave({ name: name.trim(), handle: handle.trim(), location: location.trim(), bio: bio.trim(), tags: [tag1.trim(), tag2.trim(), tag3.trim()], schedule: scheduleText });
     onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.kav}
-      >
-        <Pressable style={styles.overlay} onPress={onClose} />
-
-        <View style={styles.sheet}>
-          {/* Handle */}
-          <View style={styles.handle} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
-              <Text style={styles.cancelText}>Cancelar</Text>
-            </TouchableOpacity>
-            <Text style={styles.title}>Editar perfil</Text>
-            <TouchableOpacity onPress={handleSave} style={styles.headerBtn}>
-              <Text style={styles.saveText}>Guardar</Text>
+    <Modal visible={visible} animationType="slide" presentationStyle="fullScreen">
+      <View style={[m.mainContainer, { paddingTop: insets.top }]}>
+        <KeyboardAvoidingView 
+          style={m.flex} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} // CORRECCIÓN CLAVE
+        >
+          <View style={m.header}>
+            <TouchableOpacity onPress={onClose} style={m.headerSide}><Text style={m.cancelText}>Cancelar</Text></TouchableOpacity>
+            <View style={m.headerCenter}><Text style={m.title}>Editar perfil</Text></View>
+            <TouchableOpacity onPress={handleSave} style={m.headerSideRight}>
+              <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={m.saveBtn}>
+                <Text style={m.saveBtnText}>Guardar</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            contentContainerStyle={styles.content}
+          <ScrollView 
+            style={m.flex} 
+            contentContainerStyle={m.content}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+            removeClippedSubviews={false} // CORRECCIÓN CLAVE
           >
-            {/* ── Identidad ── */}
-            <Text style={styles.sectionLabel}>IDENTIDAD</Text>
+            <SectionLabel label="Identidad" />
+            <Field label="Nombre" icon="person-outline" value={name} onChangeText={setName} maxLength={60} />
+            <Field label="Username" icon="at-outline" value={handle} onChangeText={setHandle} prefix="@" />
 
-            <Field
-              label="Nombre"
-              icon="person-outline"
-              value={name}
-              onChangeText={setName}
-              placeholder="Tu nombre completo"
-              maxLength={60}
-            />
-            <Field
-              label="Username"
-              icon="at-outline"
-              value={handle}
-              onChangeText={setHandle}
-              placeholder="tu_usuario"
-              prefix="@"
-              hint="Sin espacios ni caracteres especiales"
-            />
-            <Field
-              label="Rol / Especialidad"
-              icon="briefcase-outline"
-              value={role}
-              onChangeText={setRole}
-              placeholder="ej. Artista Visual, Fotógrafo..."
-              maxLength={50}
-            />
+            <SectionLabel label="Ubicación y Horario" style={{ marginTop: 20 }} />
+            <Field label="Ciudad" icon="location-outline" value={location} onChangeText={setLocation} />
+            <ScheduleSelector scheduleDays={scheduleDays} setScheduleDays={setScheduleDays} />
 
-            {/* ── Ubicación y horario ── */}
-            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>UBICACIÓN Y HORARIO</Text>
+            <SectionLabel label="Bio" style={{ marginTop: 20 }} />
+            <Field label="Descripción" icon="create-outline" value={bio} onChangeText={setBio} multiline maxLength={105} />
 
-            <Field
-              label="Ciudad"
-              icon="location-outline"
-              value={location}
-              onChangeText={setLocation}
-              placeholder="Ciudad, País"
-            />
+            <SectionLabel label="Etiquetas" style={{ marginTop: 20 }} />
             
-            <ScheduleSelector 
-              scheduleDays={scheduleDays}
-              setScheduleDays={setScheduleDays}
-            />
+            {/* Etiquetas seleccionadas */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+              {selectedTags.length === 0 ? (
+                <Text style={{ fontSize: 14, color: '#9ca3af', fontStyle: 'italic' }}>
+                  Toca una sugerencia para agregar etiquetas
+                </Text>
+              ) : selectedTags.map(tag => (
+                <TouchableOpacity 
+                  key={tag} 
+                  onPress={() => toggleTag(tag)} 
+                  style={{ 
+                    backgroundColor: '#7c3aed', 
+                    paddingHorizontal: 12, 
+                    paddingVertical: 6, 
+                    borderRadius: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4
+                  }} 
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ color: '#fff', fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium' }}>
+                    {tag}
+                  </Text>
+                  <Ionicons name="close-circle" size={14} color="rgba(255,255,255,0.85)" />
+                </TouchableOpacity>
+              ))}
+            </View>
 
-            {/* ── Bio corta ── */}
-            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>BIO CORTA</Text>
+            {/* Sugeridas según categoría */}
+            {selectedTags.length < 3 && (
+              <View style={{ backgroundColor: '#f3f4f6', padding: 12, borderRadius: 12, marginBottom: 16 }}>
+                <Text style={{ fontSize: 12, color: '#6b7280', marginBottom: 8, fontFamily: 'PlusJakartaSans_500Medium' }}>
+                  Sugeridas para tu categoría:
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {getTagSuggestions()
+                    .filter(t => !selectedTags.includes(t))
+                    .slice(0, 7)
+                    .map(tag => (
+                      <TouchableOpacity 
+                        key={tag} 
+                        onPress={() => toggleTag(tag)} 
+                        style={{ 
+                          backgroundColor: '#e5e7eb', 
+                          paddingHorizontal: 10, 
+                          paddingVertical: 4, 
+                          borderRadius: 12,
+                          borderWidth: 1,
+                          borderColor: '#d1d5db'
+                        }} 
+                        activeOpacity={0.75}
+                      >
+                        <Text style={{ color: '#374151', fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular' }}>
+                          + {tag}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                </View>
+              </View>
+            )}
 
-            <Field
-              label="Descripción breve"
-              icon="create-outline"
-              value={bio}
-              onChangeText={setBio}
-              placeholder="Cuéntale al mundo quién eres..."
-              multiline
-              maxLength={105}
-            />
+            {/* Input etiqueta personalizada */}
+            {selectedTags.length < 3 && (
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                <TextInput
+                  style={{ 
+                    flex: 1, 
+                    borderWidth: 1, 
+                    borderColor: '#d1d5db', 
+                    borderRadius: 8, 
+                    paddingHorizontal: 12, 
+                    paddingVertical: 8, 
+                    fontSize: 14,
+                    color: '#374151'
+                  }}
+                  value={customTagInput}
+                  onChangeText={setCustomTagInput}
+                  placeholder="Escribe una etiqueta personalizada..."
+                  placeholderTextColor="#9ca3af"
+                  onSubmitEditing={handleAddCustomTag}
+                  returnKeyType="done"
+                  maxLength={25}
+                />
+                <TouchableOpacity
+                  onPress={handleAddCustomTag}
+                  disabled={!customTagInput.trim()}
+                  style={{ 
+                    backgroundColor: customTagInput.trim() ? '#7c3aed' : '#d1d5db', 
+                    width: 36, 
+                    height: 36, 
+                    borderRadius: 8, 
+                    alignItems: 'center', 
+                    justifyContent: 'center' 
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name="add" size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
 
-            {/* ── Tags de arte ── */}
-            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ETIQUETAS DE ARTE</Text>
-            <Text style={styles.tagHint}>
-              Agrega hasta 3 etiquetas que describan tu arte
+            <Text style={{ fontSize: 11, color: '#6b7280', marginTop: 8 }}>
+              Máximo 3 etiquetas para que los clientes te encuentren fácilmente
             </Text>
-
-            {[
-              { value: tag1, onChange: setTag1, placeholder: 'ej. Arte Digital' },
-              { value: tag2, onChange: setTag2, placeholder: 'ej. Pintura' },
-              { value: tag3, onChange: setTag3, placeholder: 'ej. Ilustración' },
-            ].map((t, i) => (
-              <Field
-                key={i}
-                label={`Etiqueta ${i + 1}`}
-                icon="pricetag-outline"
-                value={t.value}
-                onChangeText={t.onChange}
-                placeholder={t.placeholder}
-                maxLength={30}
-              />
-            ))}
-
-            <View style={{ height: 32 }} />
+            
+            <View style={{ height: 100 }} />
           </ScrollView>
-        </View>
-      </KeyboardAvoidingView>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  kav: { flex: 1, justifyContent: 'flex-end' },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  sheet: {
-    backgroundColor: Colors.bg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '92%',
-    overflow: 'hidden',
-  },
-  handle: {
-    width: 36, height: 4,
-    backgroundColor: Colors.border2,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  headerBtn: { minWidth: 70 },
-  title: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.text },
-  cancelText: { fontSize: 15, fontFamily: 'PlusJakartaSans_400Regular', color: Colors.text2 },
-  saveText:   { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: Colors.primary, textAlign: 'right' },
-  content: { padding: 20, gap: 12 },
-  sectionLabel: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: Colors.text3,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-  tagHint: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: Colors.text3,
-    marginBottom: 8,
-    marginTop: -4,
-  },
+const m = StyleSheet.create({
+  mainContainer: { flex: 1, backgroundColor: Brand.bg },
+  flex: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Brand.border, backgroundColor: '#fff' },
+  headerSide: { width: 90 },
+  headerSideRight: { width: 90, alignItems: 'flex-end' },
+  headerCenter: { flex: 1, alignItems: 'center' },
+  title: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: Brand.text },
+  cancelText: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: Brand.purpleText },
+  saveBtn: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7 },
+  saveBtnText: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
+  content: { paddingHorizontal: 20, paddingTop: 24 }
 });

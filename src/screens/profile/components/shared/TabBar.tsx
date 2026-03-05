@@ -69,7 +69,7 @@ export const TabBar: React.FC<Props> = ({ tabs, active, onSelect, variant = 'mai
             <Ionicons
               name={isActive ? (tab.iconActive ?? tab.icon) : tab.icon}
               size={20}
-              color={isActive ? Colors.accent : Colors.text}
+              color={isActive ? Colors.accent : Colors.textMuted} // Inactivos en gris claro
             />
             <Text style={[main.label, isActive && main.labelActive]}>
               {tab.label}
@@ -88,7 +88,7 @@ export const TabBar: React.FC<Props> = ({ tabs, active, onSelect, variant = 'mai
 const main = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: Colors.bg,
+    backgroundColor: Colors.bg, // Revertido al color original
   },
   tab: {
     flex: 1,
@@ -101,7 +101,7 @@ const main = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '500',
-    color: Colors.text,
+    color: Colors.textMuted, // Mantenido gris claro para texto inactivo
     letterSpacing: 0.1,
   },
   labelActive: {

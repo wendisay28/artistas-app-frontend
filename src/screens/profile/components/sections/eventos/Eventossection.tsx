@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { ArtistEvent, EventSubTab } from '../types';
-import { TabBar } from '../shared';
-import { EventCard, ManageEventCard } from '../cards';
-import { Colors, Radius, Spacing } from '../../../../theme';
-import { EditButton } from '../shared/EditButton';
+import { ArtistEvent, EventSubTab } from '../../types';
+import { TabBar } from '../../shared';
+import { ManageEventCard } from '../../cards';
+import { Colors, Radius, Spacing } from '../../../../../theme';
+import { EditButton } from '../../shared/EditButton';
 
 type Props = { 
   events: ArtistEvent[];
@@ -66,14 +66,14 @@ export const EventosSection: React.FC<Props> = ({ events, isOwner, onEditSection
       )}
 
       {sub === 'publicados' && events.map(event => (
-        <EventCard 
-          key={event.id} 
-          title={event.title}
-          date={event.dateLabel}
-          location={event.location}
-          status={event.status}
-          onPress={() => {}}
-        />
+        <View key={event.id} style={styles.eventCard}>
+          <Text style={styles.eventTitle}>{event.title}</Text>
+          <Text style={styles.eventDate}>{event.dateLabel}</Text>
+          <Text style={styles.eventLocation}>{event.location}</Text>
+          <View style={[styles.statusBadge, event.status === 'live' && styles.statusLive]}>
+            <Text style={styles.statusText}>{event.status}</Text>
+          </View>
+        </View>
       ))}
     </View>
   );
@@ -115,5 +115,46 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 10.5, fontWeight: '700', textTransform: 'uppercase',
     color: Colors.text, marginBottom: Spacing.md,
+  },
+  eventCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  eventTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  eventDate: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 2,
+  },
+  eventLocation: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.surface2,
+    alignSelf: 'flex-start',
+  },
+  statusLive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textMuted,
   },
 });
