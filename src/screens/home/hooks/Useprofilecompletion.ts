@@ -1,7 +1,6 @@
 // src/screens/home/hooks/useProfileCompletion.ts
 // ─── Fuente única de verdad del % de completitud ─────────────────────────────
-// 7 pasos que suman exactamente 100. Los pasos de servicios/portafolio se
-// excluyen hasta que estén conectados al backend (siempre serían false).
+// 9 pasos que suman exactamente 100.
 
 import { useMemo } from 'react';
 import { useAuthStore } from '../../../store/authStore';
@@ -23,49 +22,59 @@ export type ProfileCompletion = {
 
 /** Overrides para los pasos que solo el portal puede completar */
 export interface ProfileCompletionOverrides {
-  delivery?: boolean;  // ¿Cómo entrega su arte?
-  legal?:    boolean;  // Términos aceptados
+  delivery?:  boolean;  // ¿Cómo entrega su arte?
+  legal?:     boolean;  // Términos aceptados
+  services?:  boolean;  // Tiene al menos un servicio publicado
+  portfolio?: boolean;  // Tiene fotos en portafolio
 }
 
 export function useProfileCompletion(
   overrides: ProfileCompletionOverrides = {}
 ): ProfileCompletion {
-  const { user }       = useAuthStore();
-  const { artistData } = useProfileStore();
+  const { user }                           = useAuthStore();
+  const { artistData, hasServices, hasPortfolio } = useProfileStore();
 
   return useMemo(() => {
     const hasSocialLinks = artistData?.info?.some((i: any) =>
       ['Instagram', 'Twitter', 'YouTube', 'Spotify'].includes(i.label)
     );
 
-    // 7 pasos, pesos calibrados para sumar exactamente 100
+    // 9 pasos, pesos calibrados para sumar exactamente 100
     const steps: ProfileStep[] = [
       {
-        key: 'avatar', label: 'Foto de perfil', weight: 18,
+        key: 'avatar', label: 'Foto de perfil', weight: 14,
         completed: !!(user?.photoURL || artistData?.avatar),
       },
       {
-        key: 'bio', label: 'Descripción / Bio', weight: 18,
+        key: 'bio', label: 'Descripción / Bio', weight: 14,
         completed: !!(artistData?.bio?.trim() || artistData?.description?.trim()),
       },
       {
-        key: 'category', label: 'Categoría artística', weight: 16,
+        key: 'category', label: 'Categoría artística', weight: 12,
         completed: !!(artistData?.role || (artistData?.tags?.length ?? 0) > 0 || (artistData as any)?.category),
       },
       {
-        key: 'location', label: 'Ciudad', weight: 14,
+        key: 'location', label: 'Ciudad', weight: 10,
         completed: !!(user?.city || artistData?.location),
       },
       {
-        key: 'social', label: 'Redes sociales', weight: 14,
+        key: 'social', label: 'Redes sociales', weight: 10,
         completed: !!hasSocialLinks,
       },
       {
-        key: 'delivery', label: '¿Cómo entregas tu arte?', weight: 12,
+        key: 'services', label: 'Servicios ofrecidos', weight: 16,
+        completed: overrides.services ?? hasServices,
+      },
+      {
+        key: 'portfolio', label: 'Portafolio de fotos', weight: 14,
+        completed: overrides.portfolio ?? hasPortfolio,
+      },
+      {
+        key: 'delivery', label: '¿Cómo entregas tu arte?', weight: 10,
         completed: overrides.delivery ?? false,
       },
       {
-        key: 'legal', label: 'Validación y Legal', weight: 8,
+        key: 'legal', label: 'Validación y Legal', weight: 10,
         completed: overrides.legal ?? false,
       },
     ];
@@ -83,5 +92,5 @@ export function useProfileCompletion(
     const nextStep    = steps.find(s => !s.completed) ?? null;
 
     return { percentage, steps, isComplete, nextStep };
-  }, [user, artistData, overrides.delivery, overrides.legal]);
+  }, [user, artistData, hasServices, hasPortfolio, overrides.delivery, overrides.legal, overrides.services, overrides.portfolio]);
 }

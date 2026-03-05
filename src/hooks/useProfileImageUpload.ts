@@ -1,12 +1,30 @@
 // src/hooks/useProfileImageUpload.ts
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { Alert, Platform } from 'react-native';
 import { refreshToken } from '../services/firebase/auth';
 import { updateMyProfile } from '../services/api/users';
 import { useAuthStore } from '../store/authStore';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
+
+/**
+ * Redimensiona y comprime una imagen antes de subir.
+ * Esto reduce drásticamente el tamaño del archivo (de 8MB → ~200KB).
+ */
+export async function compressImage(
+  uri: string,
+  maxWidth: number,
+  quality = 0.8
+): Promise<string> {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ resize: { width: maxWidth } }],
+    { compress: quality, format: ImageManipulator.SaveFormat.JPEG }
+  );
+  return result.uri;
+}
 
 interface UploadResult {
   downloadURL: string;
@@ -32,7 +50,7 @@ async function pickAndUpload(
     mediaTypes: ['images'],
     allowsEditing: true,
     aspect: folder === 'covers' ? [16, 9] : [1, 1],
-    quality: 0.85,
+    quality: 0.8,
   });
 
   if (result.canceled || !result.assets?.length) return null;
@@ -40,21 +58,32 @@ async function pickAndUpload(
   return uploadToServer(result.assets[0].uri, folder, result.assets[0].mimeType);
 }
 
+const MAX_WIDTH: Record<string, number> = {
+  avatars:   500,
+  covers:    1200,
+  portfolio: 1200,
+  services:  900,
+};
+
 /**
  * Sube una imagen local al backend y devuelve la URL pública.
- * Úsalo cuando ya tienes la URI (de ImagePicker u otra fuente).
+ * Comprime y redimensiona automáticamente antes de subir.
  */
 export async function uploadToServer(
   uri: string,
-  folder: 'avatars' | 'covers',
+  folder: 'avatars' | 'covers' | 'portfolio' | 'services',
   mimeType?: string | null
 ): Promise<string> {
-  const filename = uri.split('/').pop() ?? `${folder}_${Date.now()}.jpg`;
-  const type = mimeType ?? 'image/jpeg';
+  // Comprimir antes de subir (reduce de ~8MB a ~150-300KB)
+  const maxWidth = MAX_WIDTH[folder] ?? 1200;
+  const compressedUri = await compressImage(uri, maxWidth, 0.8);
+
+  const filename = `${folder}_${Date.now()}.jpg`;
+  const type = 'image/jpeg';
 
   const form = new FormData();
-  form.append('file', { uri, name: filename, type } as any);
-  form.append('path', folder); // el backend decide el bucket
+  form.append('file', { uri: compressedUri, name: filename, type } as any);
+  form.append('path', folder);
 
   const token = await refreshToken();
 

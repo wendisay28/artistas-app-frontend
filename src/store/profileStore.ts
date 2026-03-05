@@ -110,6 +110,8 @@ interface ProfileState {
   isSaving: boolean;
   error: string | null;
   lastSynced: number | null; // timestamp
+  hasServices: boolean;
+  hasPortfolio: boolean;
 }
 
 interface ProfileActions {
@@ -166,6 +168,8 @@ interface ProfileActions {
   }) => Promise<void>;
   /** Actualiza el estado local directamente (para optimistic updates) */
   setArtistData: (data: Partial<Artist>) => void;
+  /** Marca si el usuario tiene servicios y/o portafolio publicados */
+  setContentFlags: (flags: { hasServices?: boolean; hasPortfolio?: boolean }) => void;
   clearError: () => void;
 }
 
@@ -179,6 +183,8 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       isSaving: false,
       error: null,
       lastSynced: null,
+      hasServices: false,
+      hasPortfolio: false,
 
       loadProfile: async (firebaseUid, firebasePhotoURL, firebaseDisplayName) => {
         set({ isLoading: true, error: null });
@@ -316,6 +322,7 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
             username: data.handle.replace(/^@/, ''),
             bio: data.bio.trim(),
             city: data.location,
+            schedule: data.schedule,
           };
 
           const artistPayload: UpdateArtistPayload = {
@@ -628,6 +635,11 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
         });
       },
 
+      setContentFlags: (flags) => set((s) => ({
+        hasServices: flags.hasServices ?? s.hasServices,
+        hasPortfolio: flags.hasPortfolio ?? s.hasPortfolio,
+      })),
+
       clearError: () => set({ error: null }),
     }),
     {
@@ -637,6 +649,8 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       partialize: (state) => ({
         artistData: state.artistData,
         lastSynced: state.lastSynced,
+        hasServices: state.hasServices,
+        hasPortfolio: state.hasPortfolio,
       }),
     }
   )

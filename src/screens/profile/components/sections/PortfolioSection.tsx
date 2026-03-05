@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { portfolioService, GalleryItem, FeaturedItem } from '../../../../services/api/portfolio';
 import { storageService } from '../../../../services/api/storage';
 import * as ImagePicker from 'expo-image-picker';
+import { compressImage } from '../../../../hooks/useProfileImageUpload';
 import GalleryModal from '../../../../components/explore/shared/GalleryModal';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
@@ -398,7 +399,8 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       });
       if (!result.canceled && result.assets?.[0]) {
         const asset = result.assets[0];
-        const response = await storageService.uploadImage(asset, 'portfolio');
+        const compressedUri = await compressImage(asset.uri, 1200, 0.8);
+        const response = await storageService.uploadImage({ ...asset, uri: compressedUri }, 'portfolio');
         await portfolioService.addPhoto({
           imageUrl: response.imageUrl, title: 'Nueva foto',
           description: '', tags: [], isPublic: true,

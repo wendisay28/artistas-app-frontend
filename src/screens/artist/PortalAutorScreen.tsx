@@ -1,6 +1,6 @@
 // src/screens/artist/PortalAutorScreen.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   StatusBar, Switch, Alert, TextInput, KeyboardAvoidingView,
@@ -15,6 +15,9 @@ import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useProfileCompletion } from '../home/hooks/Useprofilecompletion';
 import { ARTIST_CATEGORIES } from '../../constants/artistCategories';
+import { servicesService } from '../../services/api/services';
+import { portfolioService } from '../../services/api/portfolio';
+import { compressImage } from '../../hooks/useProfileImageUpload';
 
 type DeliveryMode = 'presencial' | 'digital' | 'hibrido' | null;
 
@@ -187,7 +190,7 @@ interface PortalAutorScreenProps {
 export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose }) => {
   const navigation = useNavigation();
   const { user, isProfileComplete } = useAuthStore();
-  const { artistData, saveAvatar, saveBio } = useProfileStore();
+  const { artistData, saveAvatar, saveBio, hasServices, hasPortfolio, setContentFlags } = useProfileStore();
 
   const [isAvailable, setIsAvailable] = useState(
     artistData?.info?.find(i => i.label === 'Disponibilidad')?.value === 'Disponible'
@@ -197,6 +200,15 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [acceptedAge,     setAcceptedAge]     = useState(false);
   const [profileActivated, setProfileActivated] = useState(false);
+
+  useEffect(() => {
+    servicesService.getMyServices()
+      .then(s => setContentFlags({ hasServices: s.length > 0 }))
+      .catch(() => {});
+    portfolioService.getMyPortfolio()
+      .then(p => setContentFlags({ hasPortfolio: (p.gallery?.length ?? 0) > 0 }))
+      .catch(() => {});
+  }, []);
   const [editingBio, setEditingBio] = useState(false);
   const [bioText, setBioText] = useState(artistData?.bio ?? artistData?.description ?? '');
   const [bioSaving, setBioSaving] = useState(false);
@@ -234,7 +246,8 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
     });
     if (!result.canceled && result.assets[0]) {
       try {
-        await saveAvatar(result.assets[0].uri);
+        const compressed = await compressImage(result.assets[0].uri, 500, 0.8);
+        await saveAvatar(compressed);
         Alert.alert('Listo', 'Foto de perfil actualizada.');
       } catch {
         Alert.alert('Error', 'No se pudo guardar la foto.');
@@ -357,7 +370,7 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
       id: 'services', label: 'Servicios ofrecidos',
       description: 'Publica al menos un servicio con precio en tu perfil',
       icon: 'briefcase-outline', points: 15,
-      done: false,
+      done: hasServices,
       actionLabel: 'Ir a mi Perfil',
       actionIcon: 'arrow-forward-circle',
       onAction: goToProfileTab,
@@ -366,7 +379,7 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
       id: 'portfolio', label: 'Portafolio de fotos',
       description: 'Sube ejemplos de tu trabajo desde tu perfil',
       icon: 'images-outline', points: 10,
-      done: false,
+      done: hasPortfolio,
       actionLabel: 'Ir a mi Perfil',
       actionIcon: 'arrow-forward-circle',
       onAction: goToProfileTab,
@@ -384,8 +397,10 @@ export const PortalAutorScreen: React.FC<PortalAutorScreenProps> = ({ onClose })
 
   // Mismo cálculo que el banner del home — fuente única de verdad
   const { percentage: completionPct } = useProfileCompletion({
-    delivery: deliveryMode !== null,
-    legal:    acceptedTerms && acceptedPrivacy && acceptedAge,
+    delivery:  deliveryMode !== null,
+    legal:     acceptedTerms && acceptedPrivacy && acceptedAge,
+    services:  hasServices,
+    portfolio: hasPortfolio,
   });
 
   const totalPoints     = completionSteps.reduce((a, s) => a + s.points, 0);

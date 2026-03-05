@@ -96,7 +96,9 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
     category: artist.category,
   });
 
-  const images = [artist.image, ...(artist.gallery || [])].slice(0, 3);
+  const images = artist.gallery && artist.gallery.length > 0 
+    ? [artist.image, ...artist.gallery].slice(0, 4)
+    : [artist.image];
   const cat = getCategoryMeta(artist.category);
   const specialty = getArtistSpecialty(artist);
 
@@ -147,7 +149,7 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           <Text style={styles.categoryText}>{cat.label}</Text>
         </View>
 
-        {/* Dots centro abajo */}
+        {/* Dots centro abajo - solo si hay más de 1 imagen */}
         {images.length > 1 && (
           <View style={styles.dotsRow}>
             {images.map((_, i) => (
@@ -180,15 +182,11 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           </Pressable>
         </View>
 
-        {/* Especialidad en parte inferior izquierda con efecto espejo */}
+        {/* Especialidad en parte inferior izquierda con botón cápsula */}
         <View style={styles.specialtyContainer}>
-          <LinearGradient
-            colors={['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'transparent']}
-            style={styles.specialtyGradient}
-            start={{ x: 0, y: 1 }}
-            end={{ x: 0, y: 0 }}
-          />
-          <Text style={styles.specialtyText}>{specialty}</Text>
+          <View style={styles.specialtyButton}>
+            <Text style={styles.specialtyButtonText}>{specialty}</Text>
+          </View>
         </View>
       </View>
 
@@ -203,14 +201,14 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
 
           {/* Meta — UNA sola línea horizontal, fuente pequeña */}
           <View style={styles.metaRow}>
-            <Ionicons name="time-outline" size={11} color={colors.primary} />
+            <Ionicons name="flash-outline" size={11} color={colors.primary} />
             <Text style={styles.metaText} numberOfLines={1}>
-              {artist.responseTime || 'Lun a Vie 9-18'}
+              {artist.responseTime ? `Resp. en ${artist.responseTime.trim()}` : 'Resp. rápida'}
             </Text>
             <View style={styles.metaDot} />
             <Ionicons name="location-outline" size={11} color={colors.primary} />
             <Text style={[styles.metaText, { flexShrink: 1 }]} numberOfLines={1}>
-              {artist.location || 'Monterrey'}
+              {artist.location || 'Colombia'}
             </Text>
             {distLabel && (
               <>
@@ -380,28 +378,24 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(248,113,113,0.45)',
   },
 
-  // especialidad con efecto espejo en parte inferior izquierda
+  // especialidad con botón cápsula en parte inferior izquierda
   specialtyContainer: {
     position: 'absolute',
-    bottom: 0, left: 0,
+    bottom: 12, left: 12,
     alignItems: 'flex-start',
   },
-  specialtyGradient: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    height: 80,
+  specialtyButton: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  specialtyText: {
-    fontSize: 12,
+  specialtyButtonText: {
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#fff',
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    position: 'relative',
-    zIndex: 1,
+    color: '#1f2937',
   },
 
   // ── panel blanco ──────────────────────────────────────────────────────────

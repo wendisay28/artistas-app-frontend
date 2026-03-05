@@ -101,6 +101,7 @@ export interface UpdateUserPayload {
   username?: string;
   bio?: string;
   city?: string;
+  schedule?: string;
   profileImageUrl?: string;
   coverImageUrl?: string;
   userType?: 'general' | 'artist' | 'company';

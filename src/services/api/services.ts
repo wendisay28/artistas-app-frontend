@@ -13,6 +13,7 @@ export interface Service {
   category?: string;
   icon?: string;
   deliveryTag?: string;
+  unit?: string;
   packageType?: 'single' | 'weekly' | 'monthly';
   includedCount?: number;
   deliveryDays?: number;

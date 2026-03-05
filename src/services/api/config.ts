@@ -16,6 +16,12 @@ apiClient.interceptors.request.use(
     const token = await refreshToken(); // siempre fresco
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      console.warn('⚠️ No hay token de autenticación disponible');
+      // No enviar la petición si no hay token para endpoints protegidos
+      if (config.url?.includes('/me') || config.url?.includes('/create') || config.url?.includes('/update') || config.url?.includes('/delete')) {
+        throw new Error('No autenticado');
+      }
     }
     return config;
   },

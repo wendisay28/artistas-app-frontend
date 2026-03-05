@@ -112,6 +112,7 @@ export default function ProfileScreen() {
     saveCoverImage,
     saveDescription,
     setArtistData,
+    setContentFlags,
   } = useProfileStore();
 
   // ModalStore para modales globales
@@ -329,28 +330,49 @@ export default function ProfileScreen() {
       const portfolioData = await portfolioService.getMyPortfolio();
       setPortfolio(portfolioData?.photos ?? []);
       setVideos(portfolioData?.videos ?? []);
+      setContentFlags({ hasPortfolio: (portfolioData?.photos?.length ?? 0) > 0 });
     } catch (e) {
       console.warn('Error reloading portfolio:', e);
     }
   }, []);
 
   const reloadServices = useCallback(async () => {
+    // Verificar si el usuario está autenticado
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.warn('Usuario no autenticado, omitiendo recarga de servicios');
+      setServices([]);
+      return;
+    }
+
     try {
       const servicesData = await servicesService.getMyServices();
       setServices(servicesData || []);
+      setContentFlags({ hasServices: (servicesData?.length ?? 0) > 0 });
     } catch (e) {
-      console.warn('Error reloading services:', e);
+      setServices([]);
     }
   }, []);
 
   // Cargar servicios, portafolio y reseñas al montar
   useEffect(() => {
     const loadProfileData = async () => {
+      // Verificar si el usuario está autenticado antes de cargar datos
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        setServices([]);
+        setPortfolio([]);
+        setVideos([]);
+        setReviews([]);
+        return;
+      }
+
       try {
         // Cargar servicios con manejo de error
         try {
           const servicesData = await servicesService.getMyServices();
           setServices(servicesData || []);
+          setContentFlags({ hasServices: (servicesData?.length ?? 0) > 0 });
         } catch (e) {
           console.warn('Error loading services:', e);
           setServices([]);
@@ -361,6 +383,7 @@ export default function ProfileScreen() {
           const portfolioData = await portfolioService.getMyPortfolio();
           setPortfolio(portfolioData?.photos ?? []);
           setVideos(portfolioData?.videos ?? []);
+          setContentFlags({ hasPortfolio: (portfolioData?.photos?.length ?? 0) > 0 });
         } catch (e) {
           console.warn('Error loading portfolio:', e);
           setPortfolio([]);
@@ -486,8 +509,8 @@ export default function ProfileScreen() {
       }
 
       const result = useCamera
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8 });
 
       if (result.canceled || !result.assets?.[0]) return;
 

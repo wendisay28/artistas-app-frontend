@@ -1,6 +1,7 @@
 // src/screens/auth/onboarding/hooks/useOnboarding.ts
 import { useState, useCallback } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { compressImage } from '../../../../hooks/useProfileImageUpload';
 import { useAuthStore } from '../../../../store/authStore';
 import { useProfileStore } from '../../../../store/profileStore';
 import { createUserProfile } from '../../../../services/api/users';
@@ -42,7 +43,10 @@ export const useOnboarding = () => {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) setPhotoURI(result.assets[0].uri);
+    if (!result.canceled) {
+      const compressed = await compressImage(result.assets[0].uri, 500, 0.8);
+      setPhotoURI(compressed);
+    }
   }, []);
 
   const goNextStep = useCallback(() => {

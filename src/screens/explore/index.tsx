@@ -126,6 +126,9 @@ export default function ExploreScreen() {
     description: string | null;
   } | null>(null);
 
+  // Caché de detalles por userId — evita re-fetches en cada swipe
+  const detailsCache = useRef<Map<string, any>>(new Map());
+
   // Animación para el swipe hint
   const swipeHintAnim = useRef(new Animated.Value(0)).current;
 
@@ -355,6 +358,12 @@ export default function ExploreScreen() {
       return;
     }
 
+    // Usar caché si ya se cargó este artista
+    if (detailsCache.current.has(userId)) {
+      setArtistFullData(detailsCache.current.get(userId));
+      return;
+    }
+
     let cancelled = false;
     const fetchDetails = async () => {
       try {
@@ -420,7 +429,7 @@ export default function ExploreScreen() {
         console.log('🔍 [Explore] Servicios finales:', services);
         console.log('🔍 [Explore] Número de servicios:', services.length);
 
-        setArtistFullData({
+        const fullData = {
           services:       services,
           portfolio:      portfolioRes.status === 'fulfilled' ? portfolioRes.value.photos : [],
           videos:         portfolioRes.status === 'fulfilled' ? portfolioRes.value.videos : [],
@@ -428,7 +437,9 @@ export default function ExploreScreen() {
           education:      edu.filter((x: any) => x?.institution || x?.degree),
           socialMedia,
           description,
-        });
+        };
+        detailsCache.current.set(userId, fullData);
+        if (!cancelled) setArtistFullData(fullData);
       } catch {
         if (!cancelled) setArtistFullData(null);
       }

@@ -26,7 +26,7 @@ import {
 import InfoPair from '../shared/InfoPair';
 import ReviewCard from '../shared/ReviewCard';
 import GalleryModal from '../shared/GalleryModal';
-import ServicesList from './ServicesList';
+import { ServicesSection } from '../../../screens/profile/components/sections/ServicesSection';
 import type { Artist, Review } from '../../../types/explore';
 import { CARD_WIDTH } from '../cards/SwipeCard';
 
@@ -651,7 +651,15 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
 
           {/* Servicios con precio */}
           {activeTab === 'services' && (
-            <ServicesList services={artist.servicesData || artist.services} />
+            <View style={s.tabContent}>
+              <ServicesSection
+                services={artist.servicesData || []}
+                isOwner={false}
+                artistCategoryId={typeof artist.category === 'object' ? artist.category?.categoryId : undefined}
+                artistRoleId={typeof artist.category === 'object' ? artist.category?.roleId : undefined}
+                onHireService={() => onHire?.()}
+              />
+            </View>
           )}
 
           {/* Portafolio — overlay fix */}

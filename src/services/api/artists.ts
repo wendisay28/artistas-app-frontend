@@ -187,7 +187,7 @@ export const artistsService = {
         disciplineId: disciplineId,
         roleId: roleId,
       } : (backendArtist.category || 'Artista'),
-      location: backendArtist.city || backendArtist.user?.city || 'Colombia',
+      location: backendArtist.location || backendArtist.city || backendArtist.user?.city || 'Colombia',
       rating: backendArtist.rating || 5.0,
       reviews: backendArtist.reviewsCount || 0,
       responseTime: backendArtist.responseTime || '~2 horas',
@@ -223,6 +223,7 @@ export const artistsService = {
       } : undefined,
       workExperience: backendArtist.workExperience || [],
       education: backendArtist.education || [],
+      schedule: backendArtist.schedule || undefined,
     };
   },
 
