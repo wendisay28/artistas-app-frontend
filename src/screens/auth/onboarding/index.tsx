@@ -5,6 +5,7 @@ import Step1BasicInfo from './Step1BasicInfo';
 import Step2Categories from './Step2Categories';
 import Step3Discipline from './Step3Discipline';
 import Step4Location from './Step4Location';
+import Step5Manifiesto from './Step5Manifiesto';
 import CreatingProfileScreen from './CreatingProfileScreen';
 import { OnboardingProvider, useOnboardingContext } from './OnboardingContext';
 
@@ -22,6 +23,7 @@ const OnboardingSteps = () => {
     case 2: return <Step2Categories />;
     case 3: return <Step3Discipline />;
     case 4: return <Step4Location />;
+    case 5: return <Step5Manifiesto />;
     default: return <Step1BasicInfo />;
   }
 };

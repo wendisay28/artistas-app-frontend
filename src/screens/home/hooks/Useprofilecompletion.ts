@@ -26,56 +26,61 @@ export interface ProfileCompletionOverrides {
   legal?:     boolean;  // Términos aceptados
   services?:  boolean;  // Tiene al menos un servicio publicado
   portfolio?: boolean;  // Tiene fotos en portafolio
+  payment?:   boolean;  // Método de cobro conectado
 }
 
 export function useProfileCompletion(
   overrides: ProfileCompletionOverrides = {}
 ): ProfileCompletion {
   const { user }                           = useAuthStore();
-  const { artistData, hasServices, hasPortfolio } = useProfileStore();
+  const { artistData, hasServices, hasPortfolio, savedDeliveryMode, hasLegal, hasPayment } = useProfileStore();
 
   return useMemo(() => {
     const hasSocialLinks = artistData?.info?.some((i: any) =>
       ['Instagram', 'Twitter', 'YouTube', 'Spotify'].includes(i.label)
     );
 
-    // 9 pasos, pesos calibrados para sumar exactamente 100
+    // 10 pasos, pesos calibrados para sumar exactamente 100
     const steps: ProfileStep[] = [
       {
-        key: 'avatar', label: 'Foto de perfil', weight: 14,
+        key: 'avatar', label: 'Foto de perfil', weight: 10,
         completed: !!(user?.photoURL || artistData?.avatar),
       },
       {
-        key: 'bio', label: 'Descripción / Bio', weight: 14,
+        key: 'bio', label: 'Descripción / Bio', weight: 10,
         completed: !!(artistData?.bio?.trim() || artistData?.description?.trim()),
       },
       {
-        key: 'category', label: 'Categoría artística', weight: 12,
+        key: 'category', label: 'Categoría artística', weight: 10,
         completed: !!(artistData?.role || (artistData?.tags?.length ?? 0) > 0 || (artistData as any)?.category),
       },
       {
-        key: 'location', label: 'Ciudad', weight: 10,
+        key: 'location', label: 'Ciudad', weight: 8,
         completed: !!(user?.city || artistData?.location),
       },
       {
-        key: 'social', label: 'Redes sociales', weight: 10,
+        key: 'social', label: 'Redes sociales', weight: 8,
         completed: !!hasSocialLinks,
       },
       {
-        key: 'services', label: 'Servicios ofrecidos', weight: 16,
+        key: 'services', label: 'Servicios ofrecidos', weight: 13,
         completed: overrides.services ?? hasServices,
       },
       {
-        key: 'portfolio', label: 'Portafolio de fotos', weight: 14,
+        key: 'portfolio', label: 'Portafolio de fotos', weight: 13,
         completed: overrides.portfolio ?? hasPortfolio,
       },
       {
         key: 'delivery', label: '¿Cómo entregas tu arte?', weight: 10,
-        completed: overrides.delivery ?? false,
+        completed: overrides.delivery ?? (savedDeliveryMode !== null),
       },
       {
         key: 'legal', label: 'Validación y Legal', weight: 10,
-        completed: overrides.legal ?? false,
+        completed: overrides.legal ?? hasLegal,
+      },
+      {
+        key: 'payment', label: 'Método de cobro', weight: 8,
+        completed: overrides.payment ?? hasPayment,
       },
     ];
 
@@ -92,5 +97,5 @@ export function useProfileCompletion(
     const nextStep    = steps.find(s => !s.completed) ?? null;
 
     return { percentage, steps, isComplete, nextStep };
-  }, [user, artistData, hasServices, hasPortfolio, overrides.delivery, overrides.legal, overrides.services, overrides.portfolio]);
+  }, [user, artistData, hasServices, hasPortfolio, savedDeliveryMode, hasLegal, hasPayment, overrides.delivery, overrides.legal, overrides.services, overrides.portfolio, overrides.payment]);
 }

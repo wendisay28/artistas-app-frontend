@@ -73,13 +73,11 @@ export const useLogin = () => {
       });
 
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-      console.log('Abriendo Google OAuth (code flow + PKCE)...');
 
       // 3. Abrir browser del sistema (ASWebAuthenticationSession en iOS)
       const result = await WebBrowser.openAuthSessionAsync(authUrl, REDIRECT_URI);
 
       if (result.type !== 'success') {
-        console.log('Login cancelado por el usuario');
         setGoogleLoading(false);
         return;
       }
@@ -98,8 +96,6 @@ export const useLogin = () => {
         const error = urlParams.get('error');
         throw new Error(error || 'No se recibió código de autorización');
       }
-
-      console.log('Código de autorización recibido');
 
       // 5. Intercambiar code por tokens (iOS client = public client, no necesita secret)
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -122,7 +118,6 @@ export const useLogin = () => {
       }
 
       const { id_token: idToken, access_token: accessToken } = tokenData;
-      console.log('Tokens obtenidos:', { hasIdToken: !!idToken, hasAccessToken: !!accessToken });
 
       if (!idToken) {
         throw new Error('No se recibió id_token de Google');
@@ -131,16 +126,13 @@ export const useLogin = () => {
       // 6. Autenticar en Firebase
       const firebaseUser = await signInWithGoogle(idToken, accessToken);
       const firebaseToken = await firebaseUser.getIdToken();
-      console.log('Firebase OK:', firebaseUser.email);
 
       // 7. Sincronizar con backend INMEDIATAMENTE después del login
       try {
         const { registerOrSyncUser } = await import('../../../../services/api/users');
         await registerOrSyncUser();
-        console.log('[Login] Usuario sincronizado con backend');
       } catch (syncError: any) {
         console.warn('[Login] Error sincronizando con backend:', syncError?.message);
-        // No bloquear el login si falla la sincronización
       }
 
       // 8. Establecer usuario INMEDIATAMENTE para garantizar isAuthenticated=true
@@ -164,7 +156,6 @@ export const useLogin = () => {
           updatedAt: new Date().toISOString(),
         });
       }
-      console.log('Login completado exitosamente (solo Firebase)');
     } catch (err: any) {
       console.error('Error Google Login:', err);
       setError(`Error: ${err.message}`);

@@ -227,7 +227,7 @@ const Step2Categories = () => {
               </LinearGradient>
             </View>
             <Text style={s.stepCounter}>
-              Paso <Text style={s.stepCounterBold}>2</Text> de 4
+              Paso <Text style={s.stepCounterBold}>2</Text> de 5
             </Text>
           </View>
         </FadeIn>
@@ -235,7 +235,7 @@ const Step2Categories = () => {
         {/* Segmented bar */}
         <FadeIn delay={50}>
           <View style={s.barWrap}>
-            <SegmentedBar step={2} total={4} />
+            <SegmentedBar step={2} total={5} />
             <Text style={s.stepLabel}>Categoría</Text>
           </View>
         </FadeIn>

@@ -14,6 +14,7 @@ import TopBar from '../../components/shared/TopBar';
 import { AppFooter } from '../../components/shared/AppFooter';
 import { ModalContainer } from '../../components/ModalContainer';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 // ── Profile components modernos
 import { ProfileHero } from './components/header/Profilehero';
@@ -89,11 +90,13 @@ const MAIN_TABS: TabItem[] = [
   { key: 'sobre', label: 'Sobre mí', icon: 'person-outline' },
   { key: 'tienda', label: 'Tienda', icon: 'storefront-outline' },
   { key: 'eventos', label: 'Eventos', icon: 'calendar-outline' },
+  { key: 'pagos', label: 'Pagos', icon: 'wallet-outline' },
   { key: 'agenda', label: 'Agenda', icon: 'time-outline' },
 ];
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
   const logout = useAuthStore((s) => s.logout);
   const firebaseUser = auth.currentUser;
 
@@ -835,6 +838,68 @@ export default function ProfileScreen() {
           return (
             <View style={{ padding: 20, alignItems: 'center' }}>
               <Text style={{ fontSize: 16, color: '#666' }}>Error cargando tienda</Text>
+            </View>
+          );
+        }
+      case 'pagos':
+        try {
+          return (
+            <View style={{ padding: 20 }}>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#6D28D9',
+                  borderRadius: 16,
+                  padding: 20,
+                  marginBottom: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                onPress={() => navigation.navigate('StripeSetup' as never)}
+              >
+                <Ionicons name="wallet-outline" size={24} color="#fff" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', marginBottom: 4 }}>
+                    Configurar Pagos
+                  </Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: '#e9d5ff' }}>
+                    Conecta tu cuenta Stripe para recibir pagos
+                  </Text>
+                </View>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: 16,
+                  padding: 20,
+                  borderWidth: 1.5,
+                  borderColor: '#e5e7eb',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+                onPress={() => navigation.navigate('Wallet' as never)}
+              >
+                <Ionicons name="card-outline" size={24} color="#6D28D9" />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b', marginBottom: 4 }}>
+                    Mi Billetera
+                  </Text>
+                  <Text style={{ fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: '#6b7280' }}>
+                    Ver balance y transacciones
+                  </Text>
+                </View>
+                <Ionicons name="arrow-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+          );
+        } catch (error) {
+          console.error('Error en sección pagos:', error);
+          return (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, color: '#666' }}>Error cargando pagos</Text>
             </View>
           );
         }

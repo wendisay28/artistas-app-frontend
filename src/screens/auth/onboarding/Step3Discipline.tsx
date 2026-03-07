@@ -172,7 +172,7 @@ const Step3Discipline = () => {
               </LinearGradient>
             </View>
             <Text style={s.stepCounter}>
-              Paso <Text style={s.stepCounterBold}>{step}</Text> de 4
+              Paso <Text style={s.stepCounterBold}>{step}</Text> de 5
             </Text>
           </View>
         </FadeIn>
@@ -180,7 +180,7 @@ const Step3Discipline = () => {
         {/* Segmented bar */}
         <FadeIn delay={50}>
           <View style={s.barWrap}>
-            <SegmentedBar step={step} total={4} />
+            <SegmentedBar step={step} total={5} />
             <Text style={s.stepLabel}>Disciplina</Text>
           </View>
         </FadeIn>

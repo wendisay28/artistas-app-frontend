@@ -24,7 +24,7 @@ export const useOnboarding = () => {
   const googlePhotoURL: string | null =
     user?.photoURL ?? rawUser?.profileImageUrl ?? null;
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [displayName, setDisplayName] = useState(googleDisplayName);
   const [username, setUsername] = useState('');
   const [photoURI, setPhotoURI] = useState<string | null>(googlePhotoURL);
@@ -50,18 +50,11 @@ export const useOnboarding = () => {
   }, []);
 
   const goNextStep = useCallback(() => {
-    console.log('🎯 goNextStep llamado - paso actual:', step);
-    if (step < 4) {
-      const newStep = (step + 1) as 1 | 2 | 3 | 4;
-      console.log('📈 Cambiando al paso:', newStep);
-      setStep(newStep);
-    } else {
-      console.log('⚠️ Ya está en el último paso');
-    }
+    if (step < 5) setStep((step + 1) as 1 | 2 | 3 | 4 | 5);
   }, [step]);
 
   const goPrevStep = useCallback(() => {
-    if (step > 1) setStep((prev) => (prev - 1) as 1 | 2 | 3 | 4);
+    if (step > 1) setStep((prev) => (prev - 1) as 1 | 2 | 3 | 4 | 5);
   }, [step]);
 
   const submitProfile = useCallback(async () => {
@@ -138,5 +131,5 @@ export const useOnboarding = () => {
     city, setCity,
     isLoading,
     goNextStep, goPrevStep, submitProfile,
-  };
+  } as const;
 };

@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { ArtistDashboard } from '../../components/home/ArtistDashboard';
-import { PortalAutorScreen } from './PortalAutorScreen';
+import { PortalAutorScreen } from '../portal/PortalAutorScreen';
 
 export const ArtistHome = () => {
   const { user } = useAuthStore();

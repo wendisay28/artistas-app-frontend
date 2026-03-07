@@ -24,7 +24,7 @@ import { useAuthStore } from '../../store/authStore';
 import TopBar from '../../components/shared/TopBar';
 import { AppFooter } from '../../components/shared/AppFooter';
 import { LocationPickerModal } from './components/Locationpickermodal';
-import { PortalAutorScreen } from '../artist/PortalAutorScreen';
+import { PortalAutorScreen } from '../portal/PortalAutorScreen';
 import { useProximityLogic } from './hooks/useProximityLogic';
 import { useProfileCompletion } from './hooks/Useprofilecompletion';
 

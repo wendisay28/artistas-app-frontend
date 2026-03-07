@@ -44,14 +44,6 @@ export const artistsService = {
    */
   async getExploreArtists(params: ExploreArtistsParams = {}): Promise<ArtistsResponse> {
     try {
-      console.log('🎯 BuscArt: Llamando a endpoint:', API_ENDPOINTS.ARTISTS.LIST);
-      console.log('🎯 BuscArt: Parámetros:', {
-        page: params.page || 1,
-        limit: params.limit || 20,
-        category: params.category !== 'all' ? params.category : undefined,
-        sortBy: params.sortBy || 'rating',
-      });
-      
       const response = await apiClient.get(API_ENDPOINTS.ARTISTS.LIST, {
         params: {
           page: params.page || 1,
@@ -69,8 +61,6 @@ export const artistsService = {
           longitude: params.location?.longitude,
         },
       });
-
-      console.log('🎯 BuscArt: Respuesta del API:', response.data);
 
       // Normalizar respuesta: algunos endpoints devuelven { artists, total, ... } y otros un array plano.
       const raw = response.data as any;
@@ -148,15 +138,6 @@ export const artistsService = {
    * Mapear datos del backend al formato del frontend
    */
   mapBackendArtistToFrontend(backendArtist: any): Artist {
-    console.log('[artistsService] Mapeando artista del backend:', {
-      id: backendArtist.id,
-      name: backendArtist.displayName || backendArtist.artistName,
-      bio: backendArtist.bio,
-      description: backendArtist.description,
-      userBio: backendArtist.user?.bio,
-      userDescription: backendArtist.user?.description,
-    });
-
     const yearsExp = backendArtist.yearsOfExperience ?? backendArtist.experience;
     const experienceStr = typeof yearsExp === 'number'
       ? `${yearsExp} ${yearsExp === 1 ? 'año' : 'años'}`

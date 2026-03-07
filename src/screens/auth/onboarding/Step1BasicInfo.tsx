@@ -177,7 +177,7 @@ const Step1BasicInfo = () => {
               </LinearGradient>
             </View>
             <Text style={s.stepCounter}>
-              Paso <Text style={s.stepCounterBold}>1</Text> de 4
+              Paso <Text style={s.stepCounterBold}>1</Text> de 5
             </Text>
           </View>
         </FadeIn>
@@ -185,7 +185,7 @@ const Step1BasicInfo = () => {
         {/* ── Barra segmentada ── */}
         <FadeIn delay={50}>
           <View style={s.barWrap}>
-            <SegmentedBar step={1} total={4} />
+            <SegmentedBar step={1} total={5} />
             <Text style={s.stepLabel}>Básico</Text>
           </View>
         </FadeIn>

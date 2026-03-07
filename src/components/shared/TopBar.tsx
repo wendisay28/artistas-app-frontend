@@ -3,6 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useState, useCallback, useRef } from 'react';
+import { useNavigation } from '@react-navigation/native';
 import {
   View,
   Text,
@@ -22,7 +23,7 @@ import { colors } from '../../constants/colors';
 import { auth } from '../../services/firebase/config';
 import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
-import { PortalAutorScreen } from '../../screens/artist/PortalAutorScreen';
+import { PortalAutorScreen } from '../../screens/portal/PortalAutorScreen';
 
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.65;
 
@@ -67,10 +68,11 @@ export const TopBar: React.FC<TopBarProps> = ({
   locationLoading = false,
   notificationCount = 0,
   onCreatePress,
-  onUsernamePress,
+  onUsernamePress: _onUsernamePress,
 }) => {
   const user = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
+  const navigation = useNavigation<any>();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [portalVisible, setPortalVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
@@ -137,6 +139,22 @@ export const TopBar: React.FC<TopBarProps> = ({
       onPress: () => {
         closeDrawer();
         setTimeout(() => setPortalVisible(true), 280);
+      },
+    },
+    {
+      icon: 'card-outline',
+      label: 'Pagos',
+      onPress: () => {
+        closeDrawer();
+        setTimeout(() => navigation.navigate('StripeSetup'), 280);
+      },
+    },
+    {
+      icon: 'wallet-outline',
+      label: 'Wallet',
+      onPress: () => {
+        closeDrawer();
+        setTimeout(() => navigation.navigate('Wallet'), 280);
       },
     },
     {
@@ -312,6 +330,7 @@ export const TopBar: React.FC<TopBarProps> = ({
       >
         <PortalAutorScreen onClose={() => setPortalVisible(false)} />
       </Modal>
+
 
       {/* Side Drawer */}
       <Modal

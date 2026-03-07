@@ -71,7 +71,7 @@ const isMedellin = (city: string) =>
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 const StepLocation = () => {
-  const { step, city, setCity, goPrevStep, submitProfile, isLoading } = useOnboardingContext();
+  const { step, city, setCity, goPrevStep, goNextStep } = useOnboardingContext();
 
   const [gpsLoading, setGpsLoading]     = useState(false);
   const [gpsStatus, setGpsStatus]       = useState<'idle' | 'success' | 'denied' | 'error'>('idle');
@@ -164,7 +164,7 @@ const StepLocation = () => {
               </LinearGradient>
             </View>
             <Text style={s.stepCounter}>
-              Paso <Text style={s.stepCounterBold}>{step}</Text> de 4
+              Paso <Text style={s.stepCounterBold}>{step}</Text> de 5
             </Text>
           </View>
         </FadeIn>
@@ -172,7 +172,7 @@ const StepLocation = () => {
         {/* Segmented bar */}
         <FadeIn delay={50}>
           <View style={s.barWrap}>
-            <SegmentedBar step={step} total={4} />
+            <SegmentedBar step={step} total={5} />
             <Text style={s.stepLabel}>Ubicación</Text>
           </View>
         </FadeIn>
@@ -380,23 +380,18 @@ const StepLocation = () => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={submitProfile}
-              disabled={!canContinue || isLoading}
+              onPress={goNextStep}
+              disabled={!canContinue}
               activeOpacity={0.85}
-              style={[s.nextBtn, (!canContinue || isLoading) && s.nextBtnDisabled]}
+              style={[s.nextBtn, !canContinue && s.nextBtnDisabled]}
             >
               <LinearGradient
                 colors={canContinue ? ['#7c3aed','#2563eb'] : ['rgba(124,58,237,0.3)','rgba(37,99,235,0.3)']}
                 start={{x:0,y:0}} end={{x:1,y:0}}
                 style={s.nextBtnInner}
               >
-                {isLoading
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <>
-                      <Text style={s.nextBtnText}>Empezar</Text>
-                      <Ionicons name="arrow-forward" size={18} color="#fff" />
-                    </>
-                }
+                <Text style={s.nextBtnText}>Siguiente</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
               </LinearGradient>
             </TouchableOpacity>
           </View>

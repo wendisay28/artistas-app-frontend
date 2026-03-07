@@ -12,6 +12,8 @@ import ContractsScreen from '../screens/contracts/index';
 import ExploreScreen from '../screens/explore/index';
 import ProfileScreen from '../screens/profile/index';
 import HomeScreen from '../screens/home/index';
+import StripeSetupScreen from '../screens/payments/StripeSetupScreen';
+import { WalletScreen } from '../screens/payments/WalletScreen';
 
 export type MainTabParams = {
   Home: undefined;
@@ -19,9 +21,11 @@ export type MainTabParams = {
   Contract: undefined;
   Explorer: undefined;
   Profile: undefined;
+  StripeSetup: undefined;
+  Wallet: undefined;
 };
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<MainTabParams>();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -33,25 +37,32 @@ interface TabItem {
   component: React.ComponentType<any>;
 }
 
+// Solo las 5 tabs visibles
 const TAB_CONFIG: TabItem[] = [
-  { name: 'Home', label: 'Inicio', iconOutline: 'home-outline', iconFilled: 'home', component: HomeScreen },
-  { name: 'Favorites', label: 'Favoritos', iconOutline: 'heart-outline', iconFilled: 'heart', component: FavoritesScreen },
-  { name: 'Contract', label: 'Contratar', iconOutline: 'add-circle-outline', iconFilled: 'add-circle', component: ContractsScreen },
-  { name: 'Explorer', label: 'Explorar', iconOutline: 'compass-outline', iconFilled: 'compass', component: ExploreScreen },
-  { name: 'Profile', label: 'Perfil', iconOutline: 'person-outline', iconFilled: 'person', component: ProfileScreen },
+  { name: 'Home',      label: 'Inicio',   iconOutline: 'home-outline',        iconFilled: 'home',        component: HomeScreen },
+  { name: 'Favorites', label: 'Favoritos',iconOutline: 'heart-outline',       iconFilled: 'heart',       component: FavoritesScreen },
+  { name: 'Contract',  label: 'Contratar',iconOutline: 'add-circle-outline',  iconFilled: 'add-circle',  component: ContractsScreen },
+  { name: 'Explorer',  label: 'Explorar', iconOutline: 'compass-outline',     iconFilled: 'compass',     component: ExploreScreen },
+  { name: 'Profile',   label: 'Perfil',   iconOutline: 'person-outline',      iconFilled: 'person',      component: ProfileScreen },
 ];
 
-const ACTIVE_COLOR = '#9333ea';
+const ACTIVE_COLOR   = '#9333ea';
 const INACTIVE_COLOR = '#9ca3af';
+
+// Nombres de tabs visibles para filtrar en la barra
+const VISIBLE_TAB_NAMES = new Set(TAB_CONFIG.map(t => t.name));
 
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
+  // Solo renderizar las tabs visibles (ignorar StripeSetup, Wallet, etc.)
+  const visibleRoutes = state.routes.filter(r => VISIBLE_TAB_NAMES.has(r.name as any));
+
   return (
     <View style={[styles.tabBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
-      {state.routes.map((route, index) => {
-        const tabConfig = TAB_CONFIG[index];
-        const focused = state.index === index;
+      {visibleRoutes.map((route) => {
+        const tabConfig = TAB_CONFIG.find(t => t.name === route.name)!;
+        const focused = state.routes[state.index].name === route.name;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -64,15 +75,11 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
           }
         };
 
-        const onLongPress = () => {
-          navigation.emit({ type: 'tabLongPress', target: route.key });
-        };
-
         return (
           <Pressable
             key={route.key}
             onPress={onPress}
-            onLongPress={onLongPress}
+            onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
             style={styles.tabItem}
           >
             {focused ? (
@@ -108,6 +115,7 @@ export const MainTabNavigator = () => (
     tabBar={(props) => <CustomTabBar {...props} />}
     screenOptions={{ headerShown: false }}
   >
+    {/* Tabs visibles */}
     {TAB_CONFIG.map((tab) => (
       <Tab.Screen
         key={tab.name}
@@ -116,6 +124,18 @@ export const MainTabNavigator = () => (
         options={{ tabBarLabel: tab.label }}
       />
     ))}
+
+    {/* Pantallas de pagos — página completa con barra de navegación, sin tab visible */}
+    <Tab.Screen
+      name="StripeSetup"
+      component={StripeSetupScreen}
+      options={{ tabBarButton: () => null }}
+    />
+    <Tab.Screen
+      name="Wallet"
+      component={WalletScreen}
+      options={{ tabBarButton: () => null }}
+    />
   </Tab.Navigator>
 );
 

@@ -112,6 +112,9 @@ interface ProfileState {
   lastSynced: number | null; // timestamp
   hasServices: boolean;
   hasPortfolio: boolean;
+  savedDeliveryMode: 'presencial' | 'digital' | 'hibrido' | null;
+  hasLegal: boolean;
+  hasPayment: boolean;
 }
 
 interface ProfileActions {
@@ -168,8 +171,8 @@ interface ProfileActions {
   }) => Promise<void>;
   /** Actualiza el estado local directamente (para optimistic updates) */
   setArtistData: (data: Partial<Artist>) => void;
-  /** Marca si el usuario tiene servicios y/o portafolio publicados */
-  setContentFlags: (flags: { hasServices?: boolean; hasPortfolio?: boolean }) => void;
+  /** Marca flags de completitud del portal */
+  setContentFlags: (flags: { hasServices?: boolean; hasPortfolio?: boolean; savedDeliveryMode?: 'presencial' | 'digital' | 'hibrido' | null; hasLegal?: boolean; hasPayment?: boolean }) => void;
   clearError: () => void;
 }
 
@@ -185,6 +188,9 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       lastSynced: null,
       hasServices: false,
       hasPortfolio: false,
+      savedDeliveryMode: null,
+      hasLegal: false,
+      hasPayment: false,
 
       loadProfile: async (firebaseUid, firebasePhotoURL, firebaseDisplayName) => {
         set({ isLoading: true, error: null });
@@ -247,7 +253,6 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
 
             // No hay datos locales: crear perfil vacío desde Firebase como base
             if (firebaseUser) {
-              console.log('[profileStore] Sin datos locales, creando perfil base desde Firebase');
               set({
                 artistData: {
                   id: firebaseUser.uid,
@@ -337,11 +342,7 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
 
           set({ isSaving: false });
         } catch (e: any) {
-          console.error('[profileStore] saveHeader error:', e);
-          
-          // Si el backend falla, mantener los cambios localmente y mostrar advertencia
-          // Mantener el optimistic update local aunque el backend falle
-          console.warn('[profileStore] saveHeader: backend no disponible, guardado solo localmente:', e?.message);
+          console.warn('[profileStore] saveHeader:', e?.message);
           set({ isSaving: false });
         }
       },
@@ -528,20 +529,14 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       },
 
       saveDescription: async (description) => {
-        console.log("🎯 BuscArt: saveDescription llamado con:", description);
         set({ isSaving: true, error: null });
-        
-        // Actualizar estado local inmediatamente
         set((s) => ({
           artistData: s.artistData ? { ...s.artistData, description } : s.artistData,
         }));
-        
         try {
-          console.log("🎯 BuscArt: Enviando al backend...");
           await updateArtistProfile({ description });
-          console.log("✅ BuscArt: Backend actualizado correctamente");
         } catch (e: any) {
-          console.warn('[profileStore] saveDescription: backend no disponible:', e?.message);
+          console.warn('[profileStore] saveDescription:', e?.message);
           set({ error: 'Error al guardar en el backend' });
         } finally {
           set({ isSaving: false });
@@ -636,8 +631,11 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       },
 
       setContentFlags: (flags) => set((s) => ({
-        hasServices: flags.hasServices ?? s.hasServices,
-        hasPortfolio: flags.hasPortfolio ?? s.hasPortfolio,
+        hasServices:       flags.hasServices       ?? s.hasServices,
+        hasPortfolio:      flags.hasPortfolio      ?? s.hasPortfolio,
+        savedDeliveryMode: flags.savedDeliveryMode !== undefined ? flags.savedDeliveryMode : s.savedDeliveryMode,
+        hasLegal:          flags.hasLegal          ?? s.hasLegal,
+        hasPayment:        flags.hasPayment        ?? s.hasPayment,
       })),
 
       clearError: () => set({ error: null }),
@@ -647,10 +645,13 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
       storage: createJSONStorage(() => AsyncStorage),
       // Solo persistir el artistData cacheado, no estados de loading/error
       partialize: (state) => ({
-        artistData: state.artistData,
-        lastSynced: state.lastSynced,
-        hasServices: state.hasServices,
-        hasPortfolio: state.hasPortfolio,
+        artistData:        state.artistData,
+        lastSynced:        state.lastSynced,
+        hasServices:       state.hasServices,
+        hasPortfolio:      state.hasPortfolio,
+        savedDeliveryMode: state.savedDeliveryMode,
+        hasLegal:          state.hasLegal,
+        hasPayment:        state.hasPayment,
       }),
     }
   )
