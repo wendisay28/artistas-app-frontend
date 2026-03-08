@@ -369,7 +369,7 @@ export const SobreMiSection: React.FC<Props> = ({
   const experienceValue = artist.info?.find((i) => i.label === 'Experiencia')?.value ?? 'No especificado';
   const artStyle        = artist.info?.find((i) => i.label === 'Estilo')?.value ?? 'No especificado';
   const availability    = artist.info?.find((i) => i.label === 'Disponibilidad')?.value ?? 'No especificado';
-  const responseTime    = artist.info?.find((i) => i.label === 'Tiempo de resp.')?.value ?? 'No especificado';
+  const responseTime    = artist.info?.find((i) => i.label === 'Horario')?.value ?? 'No especificado';
   const isAvailable     = availability === 'Disponible';
   const galleryImages   = portfolio.map(item => item.imageUrl ?? '');
 
@@ -478,7 +478,7 @@ export const SobreMiSection: React.FC<Props> = ({
             valueColor={isAvailable ? '#16a34a' : '#d97706'}
           />
           <View style={s.divider} />
-          <InfoPair label="Tiempo de resp." value={responseTime} />
+          <InfoPair label="Horario" value={responseTime} />
         </View>
       </GlassCard>
 

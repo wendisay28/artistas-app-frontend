@@ -5,13 +5,13 @@
 
 import React, { useRef, useCallback } from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
   Animated as RNAnimated,
   PanResponder,
   Dimensions,
   Platform,
+  Text,
+  View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -116,18 +116,44 @@ export default function SwipeCard({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > 15 && Math.abs(gs.dy) < 50, // Más sensible en X, más tolerante en Y
+      onStartShouldSetPanResponder: (_, gs) => {
+        console.log(`[Swipe] onStart — dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)}`);
+        return false;
+      },
+      onMoveShouldSetPanResponder: (_, gs) => {
+        // Solo captura si el gesto es claramente horizontal (2× más dx que dy)
+        const claim = Math.abs(gs.dx) > 15 && Math.abs(gs.dx) > Math.abs(gs.dy) * 2;
+        console.log(`[Swipe] onMove? dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)} → ${claim ? '✅ CLAIM' : '❌ skip'}`);
+        return claim;
+      },
+      onPanResponderGrant: (_, gs) => {
+        console.log(`[Swipe] GRANT — empezando swipe dx:${gs.dx.toFixed(1)}`);
+      },
       onPanResponderMove: (_, gs) => {
+        console.log(`[Swipe] MOVE dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)} vx:${gs.vx.toFixed(2)}`);
         swipeX.setValue(gs.dx);
       },
       onPanResponderRelease: (_, gs) => {
-        if (gs.dx > SWIPE_THRESHOLD)       flyOffRef.current?.('like');
-        else if (gs.dx < -SWIPE_THRESHOLD) flyOffRef.current?.('nope');
-        else                               snapBackRef.current?.();
+        console.log(`[Swipe] RELEASE dx:${gs.dx.toFixed(1)} vx:${gs.vx.toFixed(2)} threshold:${SWIPE_THRESHOLD}`);
+        if (gs.dx > SWIPE_THRESHOLD) {
+          console.log('[Swipe] → LIKE 💚');
+          flyOffRef.current?.('like');
+        } else if (gs.dx < -SWIPE_THRESHOLD) {
+          console.log('[Swipe] → NOPE ❌');
+          flyOffRef.current?.('nope');
+        } else {
+          console.log('[Swipe] → SNAP BACK (no llegó al umbral)');
+          snapBackRef.current?.();
+        }
       },
-      onPanResponderTerminate: () => snapBackRef.current?.(),
+      onPanResponderTerminate: (_, gs) => {
+        console.log(`[Swipe] TERMINATE (otro gestor tomó el control) dx:${gs.dx.toFixed(1)}`);
+        snapBackRef.current?.();
+      },
+      onPanResponderTerminationRequest: () => {
+        // No ceder el gesto una vez que el swipe horizontal fue reclamado
+        return false;
+      },
     }),
   ).current;
 
@@ -151,16 +177,16 @@ export default function SwipeCard({
       ]}
       {...panResponder.panHandlers}
     >
-      {/* LIKE badge */}
-      <RNAnimated.View style={[styles.badge, styles.likeBadge, { opacity: likeOpacity }]}>
-        <Ionicons name="heart" size={26} color="#10B981" />
-        <Text style={[styles.badgeText, { color: '#10B981' }]}>LIKE</Text>
+      {/* GUARDAR badge — swipe derecha */}
+      <RNAnimated.View style={[styles.badge, styles.saveBadge, { opacity: likeOpacity }]}>
+        <Ionicons name="bookmark" size={20} color="#10B981" />
+        <Text style={styles.saveText}>Guardar</Text>
       </RNAnimated.View>
 
-      {/* NOPE badge */}
-      <RNAnimated.View style={[styles.badge, styles.nopeBadge, { opacity: nopeOpacity }]}>
-        <Ionicons name="close" size={26} color={colors.primary} />
-        <Text style={[styles.badgeText, { color: colors.primary }]}>NOPE</Text>
+      {/* SIGUIENTE badge — swipe izquierda */}
+      <RNAnimated.View style={[styles.badge, styles.nextBadge, { opacity: nopeOpacity }]}>
+        <Text style={styles.nextText}>Siguiente</Text>
+        <Ionicons name="arrow-forward" size={20} color="#7c3aed" />
       </RNAnimated.View>
 
       {/* Card content injected by parent */}
@@ -186,32 +212,36 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
 
-  // swipe feedback badges
   badge: {
     position: 'absolute',
-    top: 40,
+    top: '38%',
     zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 12,
-    borderWidth: 3,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 30,
+    borderWidth: 2,
   },
-  likeBadge: {
-    left: 18,
+  saveBadge: {
+    left: 16,
     borderColor: '#10B981',
-    backgroundColor: 'rgba(16,185,129,0.1)',
+    backgroundColor: 'rgba(16,185,129,0.12)',
   },
-  nopeBadge: {
-    right: 18,
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(230,57,70,0.1)',
-  },
-  badgeText: {
-    fontSize: 18,
+  saveText: {
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
-    letterSpacing: 1,
+    color: '#10B981',
+  },
+  nextBadge: {
+    right: 16,
+    borderColor: '#7c3aed',
+    backgroundColor: 'rgba(124,58,237,0.10)',
+  },
+  nextText: {
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#7c3aed',
   },
 });

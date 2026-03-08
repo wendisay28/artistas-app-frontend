@@ -84,7 +84,9 @@ export function CustomListsManager({
         style={styles.mainBtn} 
         onPress={() => setShowSelector(true)}
       >
-        <Feather name="folder" size={16} color="#9333ea" style={styles.icon} />
+        <View style={styles.icon}>
+          <Feather name="folder" size={16} color="#9333ea" />
+        </View>
         <Text style={styles.mainBtnText}>
           {selectedListId ? selectedList?.name : "Todas mis listas"}
         </Text>

@@ -12,9 +12,11 @@ interface GalleryModalProps {
   images:       string[];
   initialIndex: number;
   onClose:      () => void;
+  isOwner?:     boolean;
+  onEdit?:      (index: number) => void;
 }
 
-export default function GalleryModal({ images, initialIndex, onClose }: GalleryModalProps) {
+export default function GalleryModal({ images, initialIndex, onClose, isOwner, onEdit }: GalleryModalProps) {
   const [index, setIndex] = useState(initialIndex);
   const insets = useSafeAreaInsets();
 
@@ -32,6 +34,16 @@ export default function GalleryModal({ images, initialIndex, onClose }: GalleryM
         >
           <Ionicons name="close" size={22} color="#fff" />
         </Pressable>
+
+        {/* edit button - solo para dueño */}
+        {isOwner && onEdit && (
+          <Pressable
+            onPress={() => onEdit(index)}
+            style={[styles.editBtn, { top: insets.top + 12 }]}
+          >
+            <Ionicons name="ellipsis-horizontal" size={22} color="#fff" />
+          </Pressable>
+        )}
 
         {/* counter */}
         <View style={[styles.counter, { top: insets.top + 16 }]}>
@@ -79,6 +91,7 @@ export default function GalleryModal({ images, initialIndex, onClose }: GalleryM
 const styles = StyleSheet.create({
   bg:          { flex: 1, backgroundColor: '#000', justifyContent: 'center', alignItems: 'center' },
   closeBtn:    { position: 'absolute', right: 16, zIndex: 10, backgroundColor: 'rgba(255,255,255,.15)', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  editBtn:     { position: 'absolute', right: 64, zIndex: 10, backgroundColor: 'rgba(59,130,246,.8)', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   counter:     { position: 'absolute', alignSelf: 'center', backgroundColor: 'rgba(0,0,0,.5)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4, zIndex: 10 },
   counterText: { fontSize: 13, color: '#fff', fontFamily: 'PlusJakartaSans_500Medium' },
   image:       { width: W * 0.92, height: H * 0.62 },

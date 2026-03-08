@@ -37,6 +37,11 @@ export interface BaseCard {
   image: string;
   gallery: string[];
   tags: string[];
+  /**
+   * bio — Texto corto que aparece en el HEADER del perfil (debajo del nombre/avatar).
+   * Viene de la tabla `users.bio` en el backend.
+   * NO confundir con `description` (Acerca de mí).
+   */
   bio: string;
   availability: AvailabilityStatus | string;
   verified?: boolean;
@@ -69,7 +74,12 @@ export interface Artist extends BaseCard {
   verified?: boolean;           // e.g. true
   specialty?: string;         // Especialidad del artista (viene del onboarding/perfil)
   niche?: string;             // Nicho del artista
-  description?: string;        // Descripción larga "Acerca de mí" (como en el perfil)
+  /**
+   * description / acercaDeMi — Texto LARGO que aparece en la sección "Acerca de mí" del perfil.
+   * Viene de la tabla `artists.description` en el backend.
+   * DISTINTO a `bio` (que es el texto corto del header, tabla `users.bio`).
+   */
+  description?: string;
   // Nueva estructura de categorías (sincronizado con profile/types)
   artistCategory?: ArtistCategorySelection;
   // Campos completos del perfil
@@ -84,6 +94,7 @@ export interface Artist extends BaseCard {
   };
   workExperience?: ArtistWorkExperience[];
   education?: ArtistEducation[];
+  schedule?: string;
 }
 
 // ── Event ────────────────────────────────────────────────────────────────────

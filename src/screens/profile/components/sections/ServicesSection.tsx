@@ -69,7 +69,7 @@ const ServiceCard = ({
             <Image
               source={{ uri: service.images[0] }}
               style={sc.imagePlaceholder}
-              resizeMode="cover"
+              contentFit="cover"
               onError={() => setImageError(true)}
             />
           ) : (

@@ -4,8 +4,8 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated,
-  Image, Pressable, Platform, ActivityIndicator,
+  View, Text, StyleSheet, TouchableOpacity,
+  Image, Pressable, Platform, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,7 @@ import VenueDetails   from '../../components/explore/details/VenueDetails';
 
 import CategorySelector from './components/CategorySelector';
 import UnifiedFiltersPanel from './components/shared/UnifiedFiltersPanel';
+import { useFavoritesStore } from '../../store/favoritesStore';
 
 // Importar servicios y tipos reales
 import { artistsService } from '../../services/api/artists';
@@ -60,23 +61,10 @@ const INITIAL_STACK_DATA: Record<CategoryId, ExploreCard[]> = {
   gallery: [],
 };
 
-// Componente para el icono animado del swipe hint
-const AnimatedSwipeHintIcon = ({ animValue }: { animValue: Animated.Value }) => (
-  <Animated.View style={{
-    transform: [{
-      translateY: animValue.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0, 8],
-        extrapolate: 'clamp',
-      })
-    }],
-  }}>
-    <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
-  </Animated.View>
-);
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
+  const { artistData } = useProfileStore();
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryId>('artists');
   const [stack, setStack] = useState<ExploreCard[]>([]);
@@ -129,58 +117,35 @@ export default function ExploreScreen() {
   // Caché de detalles por userId — evita re-fetches en cada swipe
   const detailsCache = useRef<Map<string, any>>(new Map());
 
-  // Animación para el swipe hint
-  const swipeHintAnim = useRef(new Animated.Value(0)).current;
 
   // Cargar datos desde la API cuando cambia la categoría
   const loadCategoryData = useCallback(async (category: CategoryId) => {
     setIsLoading(true);
     setError(null);
     
-    console.log(`[Explore] Cargando categoría: ${category}`);
-    
     try {
       let data: ExploreCard[] = [];
       
       switch (category) {
         case 'artists':
-          console.log('[Explore] Cargando artistas...');
           const response = await artistsService.getExploreArtists({ limit: 20 });
           data = response.artists ?? [];
           
           // Priorizar tu perfil si está autenticado
           const currentUser = auth.currentUser;
-          console.log('[Explore] Usuario actual:', currentUser?.uid);
-          console.log('[Explore] Artistas disponibles:', data.map(a => ({ id: a.id, name: a.name })));
           
           if (currentUser) {
             const myProfile = data.find(artist => artist.id === currentUser.uid);
-            console.log('[Explore] ¿Tu perfil encontrado?', myProfile ? 'SÍ' : 'NO');
             if (myProfile) {
               // Mover tu perfil al principio
               data = [myProfile, ...data.filter(artist => artist.id !== currentUser.uid)];
-              console.log('[Explore] Tu perfil movido al principio:', myProfile.name);
-            } else {
-              console.log('[Explore] Tu perfil no está en la lista de artistas');
             }
           }
           
-          console.log('[Explore] Respuesta de artistas:', {
-            total: response.total,
-            artistsCount: data.length,
-            firstArtist: data[0] && data[0].type === 'artist' ? {
-              id: data[0].id,
-              name: data[0].name,
-              bio: data[0].bio,
-              description: data[0].description,
-              hasDescription: !!data[0].description,
-              hasBio: !!data[0].bio
-            } : null
-          });
+          console.log('[Explore] Artistas cargados:', data.length);
           break;
         case 'events':
           // Datos mock para eventos mientras se implementa el servicio
-          console.log('[Explore] Usando datos mock para eventos...');
           data = [
             {
               id: 'e1',
@@ -228,7 +193,6 @@ export default function ExploreScreen() {
           break;
         case 'venues':
           // Datos mock para salas mientras se implementa el servicio
-          console.log('[Explore] Usando datos mock para salas...');
           data = [
             {
               id: 'v1',
@@ -275,7 +239,6 @@ export default function ExploreScreen() {
           break;
         case 'gallery':
           // Datos mock para galería mientras se implementa el servicio
-          console.log('[Explore] Usando datos mock para galería...');
           data = [
             {
               id: 'g1',
@@ -323,7 +286,6 @@ export default function ExploreScreen() {
           break;
       }
       
-      console.log(`[Explore] Datos cargados para ${category}:`, data.length);
       setStack(data);
     } catch (err) {
       console.error(`[Explore] Error loading ${category}:`, err);
@@ -339,19 +301,35 @@ export default function ExploreScreen() {
     loadCategoryData(selectedCategory);
   }, [selectedCategory, loadCategoryData]);
 
+  // Asegurarse de que el perfil del usuario esté cargado para el avatar
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser && !artistData) {
+        try {
+          await useProfileStore.getState().loadProfile(
+            currentUser.uid,
+            currentUser.photoURL,
+            currentUser.displayName
+          );
+        } catch (error) {
+          console.warn('[Explore] Error cargando perfil:', error);
+        }
+      }
+    };
+    loadUserProfile();
+  }, [artistData]);
+
   // Cargar datos completos del artista activo: servicios, portfolio, experiencia, formación
   useEffect(() => {
     const topCard = stack[stack.length - 1] ?? null;
-    console.log('🔍 [Explore] useEffect - topCard:', topCard);
     if (!topCard || topCard.type !== 'artist') {
-      console.log('🔍 [Explore] No es artista o no hay topCard, saliendo');
       setArtistFullData(null);
       return;
     }
     const artist = topCard as Artist;
     // artist.id es el userId (string, puede ser un Firebase UID o un mock como "mock-a1")
     const userId = artist.id;
-    console.log('🔍 [Explore] userId extraído:', userId);
     const isMock = userId.startsWith('mock-');
     if (!userId || isMock) {
       setArtistFullData(null);
@@ -367,22 +345,23 @@ export default function ExploreScreen() {
     let cancelled = false;
     const fetchDetails = async () => {
       try {
-        console.log('🔍 [Explore] Cargando detalles para userId:', userId);
+        // Agregar timeout y manejo de errores
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
+        
         const [servicesRes, portfolioRes, profileRes] = await Promise.allSettled([
-          servicesService.getUserServices(userId),
-          portfolioService.getUserPortfolio(userId),
-          artistsService.getArtistById(userId),
+          Promise.race([servicesService.getUserServices(userId), timeoutPromise]),
+          Promise.race([portfolioService.getUserPortfolio(userId), timeoutPromise]),
+          Promise.race([artistsService.getArtistById(userId), timeoutPromise]),
         ]);
+        
         if (cancelled) return;
-
-        console.log('🔍 [Explore] Respuesta servicios:', servicesRes);
-        console.log('🔍 [Explore] Servicios recibidos:', servicesRes.status === 'fulfilled' ? servicesRes.value : 'error');
 
         // getById retorna { ...userData, details: artistRecord, socialMedia }
         const profileData = profileRes?.status === 'fulfilled' ? profileRes.value : null;
 
         // Usar primer array NO vacío de la cadena de fallback
-        // ?? no sirve para arrays vacíos ([] es truthy pero sin datos)
         const findNonEmpty = (...sources: any[][]): any[] =>
           sources.find(arr => Array.isArray(arr) && arr.length > 0) ?? [];
 
@@ -396,13 +375,6 @@ export default function ExploreScreen() {
           (!profileData?.categoryId && !profileData?.disciplineId && !profileData?.roleId)
           ? ownArtistData.category
           : undefined;
-
-        console.log('🔍 [Explore] Fallback categoría:', { 
-          isOwn: auth.currentUser?.uid === userId,
-          backendHasCategory: !!(profileData?.categoryId || profileData?.disciplineId || profileData?.roleId),
-          localCategory: ownArtistData?.category,
-          willUseFallback: !!categoryFallback,
-        });
 
         const workExp: any[] = findNonEmpty(
           profileData?.details?.workExperience,
@@ -425,14 +397,13 @@ export default function ExploreScreen() {
           (auth.currentUser?.uid === userId ? useProfileStore.getState().artistData?.description ?? null : null) ||
           null;
 
-        const services = servicesRes.status === 'fulfilled' ? servicesRes.value : [];
-        console.log('🔍 [Explore] Servicios finales:', services);
-        console.log('🔍 [Explore] Número de servicios:', services.length);
+        const services = servicesRes.status === 'fulfilled' && Array.isArray(servicesRes.value) ? servicesRes.value : [];
 
+        const portfolioData = portfolioRes.status === 'fulfilled' ? portfolioRes.value as any : {};
         const fullData = {
           services:       services,
-          portfolio:      portfolioRes.status === 'fulfilled' ? portfolioRes.value.photos : [],
-          videos:         portfolioRes.status === 'fulfilled' ? portfolioRes.value.videos : [],
+          portfolio:      Array.isArray(portfolioData.photos) ? portfolioData.photos : [],
+          videos:         Array.isArray(portfolioData.videos) ? portfolioData.videos : [],
           workExperience: workExp.filter((x: any) => x?.company || x?.position),
           education:      edu.filter((x: any) => x?.institution || x?.degree),
           socialMedia,
@@ -440,8 +411,28 @@ export default function ExploreScreen() {
         };
         detailsCache.current.set(userId, fullData);
         if (!cancelled) setArtistFullData(fullData);
-      } catch {
-        if (!cancelled) setArtistFullData(null);
+      } catch (error) {
+        console.warn('🔍 [Explore] Error cargando detalles:', error);
+        if (!cancelled) {
+          // En caso de error de red, usar datos locales si están disponibles
+          const ownArtistData = auth.currentUser?.uid === userId
+            ? useProfileStore.getState().artistData
+            : null;
+            
+          if (ownArtistData) {
+            setArtistFullData({
+              services: [],
+              portfolio: [],
+              videos: [],
+              workExperience: ownArtistData.workExperience || [],
+              education: ownArtistData.studies || [],
+              socialMedia: null,
+              description: ownArtistData.description || null,
+            });
+          } else {
+            setArtistFullData(null);
+          }
+        }
       }
     };
     fetchDetails();
@@ -454,45 +445,7 @@ useEffect(() => {
   console.log('🔍 [Explore] Top item:', stack[stack.length - 1]);
 }, [stack]);
 
-  useEffect(() => {
-    // Animación sutil del swipe hint
-    const animateSwipeHint = () => {
-      Animated.sequence([
-        Animated.timing(swipeHintAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(swipeHintAnim, {
-          toValue: 0,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    };
 
-    // Iniciar animación después de 1s y repetir cada 4s
-    const timer = setTimeout(() => {
-      animateSwipeHint();
-      const interval = setInterval(animateSwipeHint, 4000);
-      return () => clearInterval(interval);
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  const scrollY = useRef(new Animated.Value(0)).current;
-
-  const headerBg = scrollY.interpolate({
-    inputRange:  [0, 80],
-    outputRange: ['rgba(255,255,255,0)', 'rgba(255,255,255,0.97)'],
-    extrapolate: 'clamp',
-  });
-  const headerShadow = scrollY.interpolate({
-    inputRange:  [0, 80],
-    outputRange: [0, 0.08],
-    extrapolate: 'clamp',
-  });
 
   const handleCategoryChange = useCallback((cat: CategoryId) => {
     if (Platform.OS !== 'web') Haptics.selectionAsync();
@@ -502,9 +455,13 @@ useEffect(() => {
   }, []);
 
   const handleDismiss = useCallback((id: string, direction: SwipeDirection) => {
+    if (direction === 'like') {
+      const card = stack.find(c => c.id === id);
+      if (card) useFavoritesStore.getState().addFavorite(card);
+    }
     setStack(prev => prev.filter(c => c.id !== id));
     setSwipeHistory(prev => [...prev, { cardId: id, direction, timestamp: Date.now() }]);
-  }, []);
+  }, [stack]);
 
   // Resetear filtros a valores por defecto
   const handleResetFilters = useCallback(() => {
@@ -536,24 +493,16 @@ useEffect(() => {
   }, [selectedCategory, loadCategoryData, handleResetFilters]);
 
   const renderCardContent = (card: ExploreCard) => {
-    console.log('[Explore] Renderizando tarjeta:', card.type, card.id);
-    console.log('[Explore] Datos de la tarjeta:', card);
-    
     switch (card.type) {
       case 'artist':  
-        console.log('[Explore] Renderizando ArtistCardContent');
         return <ArtistCardContent  artist={card as Artist} />;
       case 'event':   
-        console.log('[Explore] Renderizando EventCardContent');
         return <EventCardContent   event={card as Event}   />;
       case 'gallery': 
-        console.log('[Explore] Renderizando GalleryCardContent');
         return <GalleryCardContent item={card as GalleryItem} />;
       case 'venue':   
-        console.log('[Explore] Renderizando VenueCardContent');
         return <VenueCardContent   venue={card as Venue}   />;
       default:
-        console.log('[Explore] Tipo de tarjeta no reconocido:', (card as any).type);
         return null;
     }
   };
@@ -602,24 +551,38 @@ useEffect(() => {
     <View style={styles.root}>
 
       {/* ══ HEADER ══ */}
-      <Animated.View
+      <View
         style={[
           styles.header,
-          {
-            paddingTop:      (insets.top || webTopInset) + 8,
-            backgroundColor: headerBg,
-            shadowOpacity:   headerShadow,
-          },
+          { paddingTop: (insets.top || webTopInset) + 8 },
         ]}
       >
-        {/* avatar */}
-        {auth.currentUser?.photoURL ? (
-          <Image source={{ uri: auth.currentUser.photoURL }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Ionicons name="person" size={16} color={colors.textSecondary} />
-          </View>
-        )}
+      {/* avatar */}
+        {(() => {
+          const firebasePhotoURL = auth.currentUser?.photoURL;
+          const profileAvatar = artistData?.avatar;
+          
+          // Prioridad: 1) Profile Store avatar, 2) Firebase photoURL
+          const avatarSource = profileAvatar || firebasePhotoURL;
+          
+          if (avatarSource) {
+            return (
+              <Image 
+                source={{ uri: avatarSource }} 
+                style={styles.avatar} 
+                onError={(e) => {
+                  console.log('[Explore] Error cargando avatar:', e.nativeEvent.error);
+                }}
+              />
+            );
+          } else {
+            return (
+              <View style={[styles.avatar, styles.avatarFallback]}>
+                <Ionicons name="person" size={16} color={colors.textSecondary} />
+              </View>
+            );
+          }
+        })()}
 
         {/* botón categoría (reemplaza "Explorar") */}
         <Pressable
@@ -668,7 +631,7 @@ useEffect(() => {
             color={showFilters ? colors.primary : colors.text}
           />
         </Pressable>
-      </Animated.View>
+      </View>
 
       {/* ══ CATEGORY DROPDOWN ══ */}
       {menuOpen && (
@@ -733,12 +696,10 @@ useEffect(() => {
       )}
 
       {/* ══ SCROLL ══ */}
-      <Animated.ScrollView
+      <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: (insets.bottom || webBottomInset) + 96 }]}
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
-        scrollEventThrottle={16}
       >
         <View style={{ height: (insets.top || webTopInset) + 60 }} />
 
@@ -771,32 +732,25 @@ useEffect(() => {
             </View>
           ) : (
             <View>
-              {(() => {
-                console.log('[Explore] Renderizando stack de tarjetas:', stack.length);
-                return null;
-              })()}
-              {[...stack].reverse().map((card, i) => {
-                console.log(`[Explore] Tarjeta ${i}:`, card.type, card.id);
-                return (
-                  <SwipeCard key={card.id} card={card} zIndex={stack.length - i} onDismiss={handleDismiss}>
-                    {renderCardContent(card)}
-                  </SwipeCard>
-                );
-              })}
+              {[...stack].reverse().map((card, i) => (
+                <SwipeCard key={card.id} card={card} zIndex={stack.length - i} onDismiss={handleDismiss}>
+                  {renderCardContent(card)}
+                </SwipeCard>
+              ))}
             </View>
           )}
         </View>
 
         {stack.length > 0 && (
           <View style={styles.swipeHint}>
-            <AnimatedSwipeHintIcon animValue={swipeHintAnim} />
+            <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
             <Text style={styles.swipeHintText}>Desliza para ver más</Text>
           </View>
         )}
 
         {topCard && <View style={styles.detailsWrapper}>{renderDetails(topCard)}</View>}
 
-      </Animated.ScrollView>
+      </ScrollView>
     </View>
   );
 }
@@ -809,7 +763,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 16, paddingBottom: 10,
     zIndex: 50,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowRadius: 8, elevation: 4,
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 4,
   },
 
   avatar: { width: 32, height: 32, borderRadius: 16 },
@@ -883,6 +839,14 @@ const styles = StyleSheet.create({
     position: 'relative', marginBottom: 8,
   },
 
+  swipeHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    marginTop: -5, marginBottom: 12,
+  },
+  swipeHintText: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.textSecondary,
+  },
+
   emptyState: {
     width: CARD_WIDTH, height: CARD_HEIGHT,
     alignItems: 'center', justifyContent: 'center', gap: 10,
@@ -928,19 +892,6 @@ const styles = StyleSheet.create({
   },
   resetText: {
     fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
-  },
-
-  swipeHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    marginTop: -5, marginBottom: 12,
-  },
-  swipeHintText: {
-    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.textSecondary,
-  },
-  swipeHintIcon: {
-    transform: [{
-      translateY: 8, // Valor fijo, la animación se manejará en el componente
-    }],
   },
 
   detailsWrapper: { width: CARD_WIDTH, paddingBottom: 16 },

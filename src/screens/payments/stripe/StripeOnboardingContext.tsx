@@ -57,6 +57,7 @@ const StripeOnboardingContext = createContext<{
   goPrevStep: () => void;
   setStep: (step: StripeSetupStep) => void;
   updateAccountData: (data: Partial<StripeAccountData>) => void;
+  updateConnectionStatus: (status: StripeConnectionStatus) => void;
   setLoading: (loading: boolean) => void;
   setError: (error?: string) => void;
 } | null>(null);
@@ -92,6 +93,10 @@ export function StripeOnboardingProvider({ children }: { children: ReactNode }) 
     dispatch({ type: 'SET_LOADING', payload: loading });
   };
 
+  const updateConnectionStatus = (status: StripeConnectionStatus) => {
+    dispatch({ type: 'SET_CONNECTION_STATUS', payload: status });
+  };
+
   const setError = (error?: string) => {
     dispatch({ type: 'SET_ERROR', payload: error });
   };
@@ -105,6 +110,7 @@ export function StripeOnboardingProvider({ children }: { children: ReactNode }) 
         goPrevStep,
         setStep,
         updateAccountData,
+        updateConnectionStatus,
         setLoading,
         setError,
       }}

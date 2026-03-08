@@ -144,7 +144,7 @@ export const ServiceStep2: React.FC<Props> = ({
         <TouchableOpacity onPress={onChangeImage} activeOpacity={0.85} style={[s.imageHeader, !localImageUri && s.imageHeaderEmpty]}>
           {localImageUri ? (
             <>
-              <Image source={{ uri: localImageUri }} style={s.imagePreview} resizeMode="cover" />
+              <Image source={{ uri: localImageUri }} style={s.imagePreview} contentFit="cover" />
               <View style={s.imageOverlay}>
                 <View style={s.imageEditBadge}>
                   <Ionicons name="camera-outline" size={13} color="#fff" />

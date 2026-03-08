@@ -1,38 +1,40 @@
 // src/screens/payments/stripe/index.tsx
 import React from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import Step1Welcome from './Step1Welcome';
 import Step2AccountInfo from './Step2AccountInfo';
 import Step3Verification from './Step3Verification';
-import Step4Complete from './Step4Complete';
-import { StripeOnboardingProvider, useStripeOnboarding } from './StripeOnboardingContext';
+import StripeDashboard from './dashboard';
+import { useStripeOnboarding } from './StripeOnboardingContext';
+
+import { Comprobante } from './dashboard/tabs/FacturasTab';
 
 interface StripeSetupFlowProps {
   onClose?: () => void;
+  onSelectComprobante?: (c: Comprobante) => void;
+  onNewComprobante?: () => void;
 }
 
-// Componente interno que lee el step desde el contexto compartido
-const StripeSetupSteps = () => {
+const StripeSetupSteps = ({
+  onSelectComprobante,
+  onNewComprobante,
+}: { onSelectComprobante?: (c: Comprobante) => void; onNewComprobante?: () => void }) => {
   const { state } = useStripeOnboarding();
 
   switch (state.currentStep) {
-    case 'welcome': return <Step1Welcome />;
+    case 'welcome':      return <Step1Welcome />;
     case 'account-info': return <Step2AccountInfo />;
     case 'verification': return <Step3Verification />;
-    case 'complete': return <Step4Complete />;
-    case 'error': return <Step1Welcome /> // Por ahora volvemos al welcome si hay error
-    default: return <Step1Welcome />;
+    case 'complete':     return <StripeDashboard onSelectComprobante={onSelectComprobante} onNewComprobante={onNewComprobante} />;
+    case 'error':        return <Step1Welcome />;
+    default:             return <Step1Welcome />;
   }
 };
 
-const StripeSetupFlow = ({ onClose }: StripeSetupFlowProps) => (
+// El Provider real está en StripeSetupScreen.tsx — no duplicar aquí
+const StripeSetupFlow = ({ onClose, onSelectComprobante, onNewComprobante }: StripeSetupFlowProps) => (
   <View style={{ flex: 1 }}>
-    <ScrollView
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ flexGrow: 1 }}
-    >
-      <StripeSetupSteps />
-    </ScrollView>
+    <StripeSetupSteps onSelectComprobante={onSelectComprobante} onNewComprobante={onNewComprobante} />
   </View>
 );
 

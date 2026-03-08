@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import type { NavigatorScreenParams } from '@react-navigation/native';
 
 import FavoritesScreen from '../screens/favorites/index';
 import ContractsScreen from '../screens/contracts/index';
@@ -14,6 +15,7 @@ import ProfileScreen from '../screens/profile/index';
 import HomeScreen from '../screens/home/index';
 import StripeSetupScreen from '../screens/payments/StripeSetupScreen';
 import { WalletScreen } from '../screens/payments/WalletScreen';
+import { AvailabilityStack } from './AvailabilityStack';
 
 export type MainTabParams = {
   Home: undefined;
@@ -23,9 +25,10 @@ export type MainTabParams = {
   Profile: undefined;
   StripeSetup: undefined;
   Wallet: undefined;
+  AvailabilityStack: undefined;
 };
 
-const Tab = createBottomTabNavigator<MainTabParams>();
+const Tab = createBottomTabNavigator<MainTabParams>() as any;
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -134,6 +137,11 @@ export const MainTabNavigator = () => (
     <Tab.Screen
       name="Wallet"
       component={WalletScreen}
+      options={{ tabBarButton: () => null }}
+    />
+    <Tab.Screen
+      name="AvailabilityStack"
+      component={AvailabilityStack}
       options={{ tabBarButton: () => null }}
     />
   </Tab.Navigator>

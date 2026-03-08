@@ -67,8 +67,9 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
     coverImage: user.coverImageUrl,
     isVerified: user.isVerified ?? false,
     isOnline: true,
+    // bio: texto CORTO del header (avatar + nombre). Fuente: users.bio. NO es "Acerca de mí".
     bio: user.bio ?? '',
-    // Descripción larga del artista (Sobre mí completo)
+    // description/acercaDeMi: texto LARGO de la sección "Acerca de mí". Fuente: artists.description. DISTINTO a bio.
     description: artist?.description ?? '',
     tags,
     // Estadísticas reales desde backend
@@ -99,6 +100,7 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
     userType: user.userType ?? 'artist',
     companyName: user.companyName,
     companyDescription: user.companyDescription,
+    schedule: (user as any).schedule ?? '',
   };
 }
 

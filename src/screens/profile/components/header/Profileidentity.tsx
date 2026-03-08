@@ -52,12 +52,22 @@ const getTagIcon = (tag: string): string => {
 
 // ── Disponibilidad ────────────────────────────────────────────────────────────
 
-const AVAILABILITY = {
-  available: { label: 'Disponible', color: '#16a34a', bg: 'rgba(22,163,74,0.08)', border: 'rgba(22,163,74,0.22)', dot: '#16a34a', pulse: true },
-  busy:      { label: 'Ocupado',    color: '#d97706', bg: 'rgba(217,119,6,0.08)', border: 'rgba(217,119,6,0.22)', dot: '#d97706', pulse: false },
-  unavailable: { label: 'No disponible', color: '#dc2626', bg: 'rgba(220,38,38,0.08)', border: 'rgba(220,38,38,0.22)', dot: '#dc2626', pulse: false },
-} as const;
-type AvailabilityKey = keyof typeof AVAILABILITY;
+const AVAILABILITY_OPTS = [
+  { label: 'Disponible',    color: '#16a34a', bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.22)',   dot: '#16a34a', pulse: true  },
+  { label: 'Ocupado',       color: '#d97706', bg: 'rgba(217,119,6,0.08)',   border: 'rgba(217,119,6,0.22)',   dot: '#d97706', pulse: false },
+  { label: 'Bajo pedido',   color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.22)', dot: '#7c3aed', pulse: false },
+] as const;
+
+type AvailabilityLabel = typeof AVAILABILITY_OPTS[number]['label'];
+
+function getAvailOpt(label?: string) {
+  return AVAILABILITY_OPTS.find(o => o.label === label) ?? AVAILABILITY_OPTS[0];
+}
+
+export function cycleAvailability(current: string): AvailabilityLabel {
+  const idx = AVAILABILITY_OPTS.findIndex(o => o.label === current);
+  return AVAILABILITY_OPTS[(idx + 1) % AVAILABILITY_OPTS.length].label;
+}
 
 // ── Dot con pulso ─────────────────────────────────────────────────────────────
 
@@ -151,8 +161,8 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
     && (artist.avatar.startsWith('http') || artist.avatar.startsWith('file://'));
   const isOwner     = artist.isOwner ?? false;
 
-  const availKey = (artist.availability as AvailabilityKey) ?? 'available';
-  const avail    = AVAILABILITY[availKey] ?? AVAILABILITY.available;
+  const availLabel = artist.info?.find(i => i.label === 'Disponibilidad')?.value;
+  const avail      = getAvailOpt(availLabel);
 
   // Bio corta para el header (máx ~90 chars)
   const shortBio = artist.bio ? truncateBio(artist.bio.trim(), 105) : null;
@@ -194,7 +204,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
           >
             <View style={styles.avatarInner}>
               {isAvatarUrl
-                ? <Image source={{ uri: artist.avatar as string }} style={styles.avatar} resizeMode="cover" />
+                ? <Image source={{ uri: artist.avatar as string }} style={styles.avatar} contentFit="cover" />
                 : <AvatarPlaceholder initials={initials} />
               }
               {/* Overlay estilo hover sobre toda la foto */}
@@ -375,6 +385,26 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             <Text style={styles.stripBtnText}>Ver como cliente</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {/* ══ BANNER: no verificado ════════════════════════════════════════ */}
+      {isOwner && !artist.isVerified && (
+        <TouchableOpacity
+          style={styles.verifyBanner}
+          onPress={onEditProfile}
+          activeOpacity={0.85}
+        >
+          <View style={styles.verifyBannerIcon}>
+            <Ionicons name="alert-circle" size={18} color="#d97706" />
+          </View>
+          <View style={styles.verifyBannerText}>
+            <Text style={styles.verifyBannerTitle}>Perfil no visible públicamente</Text>
+            <Text style={styles.verifyBannerSub}>
+              Completa el 100% del Portal del Autor para ser verificado y aparecer en explorar.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={14} color="#d97706" />
+        </TouchableOpacity>
       )}
 
     </View>
@@ -644,4 +674,38 @@ const styles = StyleSheet.create({
     color: '#7c3aed',
   },
   stripDivider: { width: 1, backgroundColor: 'rgba(167,139,250,0.15)', marginVertical: 8 },
+
+  // ── Banner no verificado ─────────────────────────────────────────
+  verifyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(217,119,6,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(217,119,6,0.25)',
+    borderRadius: 14,
+  },
+  verifyBannerIcon: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(217,119,6,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  verifyBannerText: { flex: 1, gap: 2 },
+  verifyBannerTitle: {
+    fontSize: 12.5,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#92400e',
+  },
+  verifyBannerSub: {
+    fontSize: 11,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: '#b45309',
+    lineHeight: 15,
+  },
 });

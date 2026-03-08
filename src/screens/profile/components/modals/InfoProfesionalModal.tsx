@@ -250,11 +250,11 @@ export const InfoProfesionalModal: React.FC<Props> = ({
               icon="color-palette-outline"
             />
             <Field
-              label="Tiempo de respuesta"
+              label="Horario"
               value={data.responseTime}
               onChangeText={update('responseTime')}
-              placeholder="Ej. En 2 horas"
-              icon="chatbubble-ellipses-outline"
+              placeholder="Ej. Lun-Vie 9am-6pm"
+              icon="time-outline"
             />
             <AvailabilitySelector
               value={data.availability}

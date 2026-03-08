@@ -1,5 +1,5 @@
 // src/components/profile/sections/PortfolioSection.tsx
-// FlatList → .map() para evitar VirtualizedList anidado en ScrollView padre
+// EnhancedGalleryGrid con botón de editar en GalleryModal
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform, Pressable, Modal, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,10 +12,13 @@ import { storageService } from '../../../../services/api/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { compressImage } from '../../../../hooks/useProfileImageUpload';
 import GalleryModal from '../../../../components/explore/shared/GalleryModal';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { EnhancedGalleryGrid } from '../../../../components/shared/profile/GalleryGrid';
 
 const { width: WINDOW_W, height: WINDOW_H } = Dimensions.get('window');
 
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const MAX_FEATURED = 5;
 
 interface PortfolioSectionProps {
   portfolio: GalleryItem[];
@@ -82,247 +85,6 @@ const es = StyleSheet.create({
   },
 });
 
-// ── Gallery Grid ──────────────────────────────────────────────────────────────
-
-const GalleryGrid: React.FC<{
-  items: GalleryItem[];
-  onItemPress: (index: number) => void;
-  showEdit?: boolean;
-  onDelete?: (item: GalleryItem) => void;
-}> = ({ items, onItemPress, showEdit, onDelete }) => {
-  const rows: GalleryItem[][] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
-  }
-
-  return (
-    <View style={g.grid}>
-      {rows.map((row, rowIdx) => (
-        <View key={rowIdx} style={g.row}>
-          {row.map((item, colIdx) => {
-            const index = rowIdx * 2 + colIdx;
-            return (
-              <Pressable
-                key={item.id?.toString() || index.toString()}
-                onPress={() => onItemPress(index)}
-                style={({ pressed }) => [g.thumb, pressed && { opacity: 0.75 }]}
-              >
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  transition={200}
-                />
-                <View style={g.overlay}>
-                  <Ionicons name="expand-outline" size={20} color="#fff" />
-                </View>
-                {showEdit && (
-                  <TouchableOpacity
-                    style={g.deleteBtn}
-                    onPress={(e) => { e.stopPropagation(); onDelete?.(item); }}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="trash-outline" size={14} color="#fff" />
-                  </TouchableOpacity>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      ))}
-    </View>
-  );
-};
-
-const g = StyleSheet.create({
-  grid: { gap: 8 },
-  row: { flexDirection: 'row', gap: 8 },
-  thumb: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(239,68,68,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
-
-// ── Video Grid (estilo reels 2 columnas) ──────────────────────────────────────
-
-const VideoGrid: React.FC<{
-  videos: FeaturedItem[];
-  isOwner: boolean;
-  onPlay: (video: FeaturedItem) => void;
-  onEdit: (video: FeaturedItem) => void;
-}> = ({ videos, isOwner, onPlay, onEdit }) => {
-  const rows: FeaturedItem[][] = [];
-  for (let i = 0; i < videos.length; i += 2) {
-    rows.push(videos.slice(i, i + 2));
-  }
-  return (
-    <View style={vg.grid}>
-      {rows.map((row, rowIdx) => (
-        <View key={rowIdx} style={vg.row}>
-          {row.map((item, colIdx) => (
-            <Pressable
-              key={item.id?.toString() || String(rowIdx * 2 + colIdx)}
-              style={({ pressed }) => [vg.cell, pressed && { opacity: 0.75 }]}
-              onPress={() => onPlay(item)}
-            >
-              {item.thumbnailUrl ? (
-                <Image
-                  source={{ uri: item.thumbnailUrl }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                />
-              ) : (
-                <LinearGradient
-                  colors={['#1e1b4b', '#4c1d95']}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-              )}
-              <View style={vg.playOverlay}>
-                <View style={vg.playBtn}>
-                  <Ionicons name="play" size={18} color="#fff" />
-                </View>
-              </View>
-              <View style={vg.titleBar}>
-                <Text style={vg.titleText} numberOfLines={1}>{item.title}</Text>
-              </View>
-              {isOwner && (
-                <TouchableOpacity
-                  style={vg.editBtn}
-                  onPress={(e) => { e.stopPropagation(); onEdit(item); }}
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="pencil" size={12} color="#fff" />
-                </TouchableOpacity>
-              )}
-            </Pressable>
-          ))}
-          {row.length === 1 && (
-            <View style={[vg.cell, { opacity: 0 }]} pointerEvents="none" />
-          )}
-        </View>
-      ))}
-    </View>
-  );
-};
-
-const vg = StyleSheet.create({
-  grid: { gap: 8 },
-  row: { flexDirection: 'row', gap: 8 },
-  cell: {
-    flex: 1, aspectRatio: 1,
-    borderRadius: 14, overflow: 'hidden',
-    backgroundColor: '#1e1b4b',
-  },
-  playOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.18)',
-  },
-  playBtn: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)',
-    alignItems: 'center', justifyContent: 'center',
-    paddingLeft: 3,
-  },
-  titleBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 10, paddingVertical: 8,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  titleText: { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
-  editBtn: {
-    position: 'absolute', top: 8, right: 8,
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-});
-
-// ── Video Player Modal (reel full screen) ─────────────────────────────────────
-
-// Se monta solo cuando hay video
-const VideoPlayerModal: React.FC<{
-  video: FeaturedItem;
-  onClose: () => void;
-}> = ({ video, onClose }) => {
-  const player = useVideoPlayer(video.url, (player) => {
-    player.loop = false;
-    player.play();
-  });
-
-  return (
-    <Modal
-      visible
-      transparent={false}
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={vpm.backdrop}>
-        <VideoView
-          player={player}
-          style={vpm.video}
-          contentFit="contain"
-          allowsFullscreen
-          allowsPictureInPicture
-        />
-      <TouchableOpacity style={vpm.closeBtn} onPress={onClose} activeOpacity={0.8}>
-        <View style={vpm.closeBtnInner}>
-          <Ionicons name="close" size={22} color="#fff" />
-        </View>
-      </TouchableOpacity>
-      {video.title && (
-        <View style={vpm.titleBar}>
-          <Text style={vpm.titleText} numberOfLines={1}>{video.title}</Text>
-        </View>
-      )}
-    </View>
-  </Modal>
-  );
-};
-
-const vpm = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: '#000' },
-  video: { flex: 1, width: '100%' },
-  closeBtn: { position: 'absolute', top: 52, right: 20, zIndex: 10 },
-  closeBtnInner: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  titleBar: {
-    position: 'absolute', bottom: 48, left: 0, right: 0,
-    paddingHorizontal: 24, paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  titleText: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
-});
-
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
 export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
@@ -336,27 +98,17 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [galleryOpen, setGalleryOpen]       = useState(false);
   const [galleryIndex, setGalleryIndex]     = useState(0);
-  const [playerVideo, setPlayerVideo]       = useState<FeaturedItem | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const progressAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    if (isUploadingVideo) {
-      progressAnim.setValue(0);
-      Animated.loop(
-        Animated.timing(progressAnim, { toValue: 1, duration: 1400, useNativeDriver: true })
-      ).start();
-    } else {
-      progressAnim.stopAnimation();
-      progressAnim.setValue(0);
-    }
-  }, [isUploadingVideo]);
 
   const galleryImages = portfolio.map(p => p.imageUrl).filter(Boolean) as string[];
 
   const openGallery = (index: number) => {
     setGalleryIndex(index);
     setGalleryOpen(true);
+  };
+
+  const handleItemPress = (item: GalleryItem, index: number) => {
+    openGallery(index);
   };
 
   const handleDeletePhoto = (item: GalleryItem) => {
@@ -382,6 +134,40 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
     );
   };
 
+  const handleToggleFeatured = async (item: GalleryItem) => {
+    if (!item.id) return;
+    try {
+      await portfolioService.toggleFeatured(Number(item.id), !item.isFeatured);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onPortfolioUpdated?.();
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar la foto. Inténtalo de nuevo.');
+    }
+  };
+
+  const handleEditImage = (index: number) => {
+    const item = portfolio[index];
+    if (!item) return;
+    
+    // Mostrar opciones de edición para la imagen
+    Alert.alert(
+      'Opciones de imagen',
+      '¿Qué deseas hacer con esta imagen?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: item.isFeatured ? 'Quitar destacado' : 'Marcar como destacado',
+          onPress: () => handleToggleFeatured(item),
+        },
+        {
+          text: 'Eliminar imagen',
+          style: 'destructive',
+          onPress: () => handleDeletePhoto(item),
+        },
+      ]
+    );
+  };
+
   const hasPortfolio = portfolio && portfolio.length > 0;
   const hasVideos    = videos    && videos.length    > 0;
 
@@ -399,8 +185,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       });
       if (!result.canceled && result.assets?.[0]) {
         const asset = result.assets[0];
-        const compressedUri = await compressImage(asset.uri, 1200, 0.8);
-        const response = await storageService.uploadImage({ ...asset, uri: compressedUri }, 'portfolio');
+        const response = await storageService.uploadImage(asset, 'portfolio');
         await portfolioService.addPhoto({
           imageUrl: response.imageUrl, title: 'Nueva foto',
           description: '', tags: [], isPublic: true,
@@ -417,79 +202,15 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
     }
   };
 
-  const handleUploadVideo = async () => {
-    try {
-      setIsUploadingVideo(true);
-      setUploadProgress(0);
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert('Permiso denegado', 'Necesitamos permiso para acceder a tu galería');
-        return;
-      }
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'videos',
-        allowsEditing: false,
-        quality: 1,
-      });
-      if (!result.canceled && result.assets?.[0]) {
-        const asset = result.assets[0];
-        const response = await storageService.uploadVideo(asset, (p) => setUploadProgress(p));
-        await portfolioService.addVideo({
-          url: response.imageUrl,
-          title: asset.fileName?.replace(/\.[^.]+$/, '') || 'Mi video',
-          description: '',
-          type: 'other',
-        });
-        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        Alert.alert('Éxito', 'Video agregado a tu portafolio');
-        onPortfolioUpdated?.();
-      }
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      Alert.alert('Error', 'No se pudo subir el video. Inténtalo de nuevo.');
-    } finally {
-      setIsUploadingVideo(false);
-      setUploadProgress(0);
-    }
-  };
-
-  const handleSaveVideo = async (videoData: Partial<FeaturedItem>) => {
-    setIsSavingVideo(true);
-    try {
-      if (editingVideo?.id) {
-        await portfolioService.updateVideo(Number(editingVideo.id), videoData);
-      } else {
-        await portfolioService.addVideo({
-          url: videoData.url || '', title: videoData.title || '',
-          description: videoData.description, type: videoData.type || 'youtube',
-        });
-      }
-      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      onPortfolioUpdated?.();
-      closeVideoModal();
-    } catch (error) {
-      console.error('Error saving video:', error);
-      Alert.alert('Error', 'No se pudo guardar el video. Inténtalo de nuevo.');
-      throw error;
-    } finally {
-      setIsSavingVideo(false);
-    }
-  };
-
   return (
     <View style={styles.container}>
-      {playerVideo && (
-        <VideoPlayerModal
-          key={playerVideo.url}
-          video={playerVideo}
-          onClose={() => setPlayerVideo(null)}
-        />
-      )}
       {galleryOpen && galleryImages.length > 0 && (
         <GalleryModal
           images={galleryImages}
           initialIndex={galleryIndex}
           onClose={() => setGalleryOpen(false)}
+          isOwner={isOwner}
+          onEdit={handleEditImage}
         />
       )}
 
@@ -507,24 +228,6 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
                   <Text style={styles.buttonText}>{isUploadingImage ? 'Subiendo...' : 'Foto'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
-            )}
-            {activeTab === 'videos' && (
-              <>
-                <TouchableOpacity style={styles.button} onPress={handleUploadVideo} disabled={isUploadingVideo}>
-                  <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGrad}>
-                    <Ionicons name="cloud-upload-outline" size={13} color="#fff" />
-                    <Text style={styles.buttonText}>
-                    {isUploadingVideo ? (uploadProgress > 0 ? `${uploadProgress}%` : 'Preparando...') : 'Subir'}
-                  </Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.button} onPress={() => { setEditingVideo(null); openVideoModal(null); }}>
-                  <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGrad}>
-                    <Ionicons name="link-outline" size={13} color="#fff" />
-                    <Text style={styles.buttonText}>URL</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </>
             )}
           </View>
         )}
@@ -557,26 +260,18 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
         ))}
       </View>
 
-      {activeTab === 'videos' && isUploadingVideo && (
-        <View style={styles.progressWrap}>
-          <Animated.View
-            style={[styles.progressFill, {
-              transform: [{
-                translateX: progressAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [-WINDOW_W * 0.6, WINDOW_W],
-                }),
-              }],
-            }]}
-          />
-        </View>
-      )}
-
       {/* Content — sin flex:1, altura natural */}
       <View style={styles.content}>
         {activeTab === 'photos' && (
           hasPortfolio
-            ? <GalleryGrid items={portfolio} onItemPress={openGallery} showEdit={isOwner} onDelete={handleDeletePhoto} />
+            ? <EnhancedGalleryGrid
+                items={portfolio}
+                onItemPress={handleItemPress}
+                showEdit={false} // No mostrar botón de editar en el grid
+                onDelete={handleDeletePhoto}
+                onToggleFeatured={handleToggleFeatured}
+                compactMode={false} // Modo grande para fácil uso
+              />
             : <EmptyState
                 icon="images-outline"
                 title="Sin fotos todavía"
@@ -595,37 +290,17 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
         )}
         {activeTab === 'videos' && (
           hasVideos
-            ? <VideoGrid
-                videos={videos}
-                isOwner={isOwner}
-                onPlay={setPlayerVideo}
-                onEdit={(v) => { setEditingVideo(v); openVideoModal(v); }}
-              />
+            ? <View style={{ padding: 16 }}>
+                <Text style={{ textAlign: 'center', color: '#999' }}>Videos no disponibles temporalmente</Text>
+              </View>
             : <EmptyState
                 icon="videocam-outline"
                 title="Sin videos todavía"
                 subtitle="Comparte clips de tus presentaciones. Los clientes lo adorarán."
-                preview={
-                  <View style={{ flexDirection: 'row', gap: 8, width: '100%', opacity: 0.45 }}>
-                    {[0, 1].map(i => (
-                      <View key={i} style={{ flex: 1, aspectRatio: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(30,27,75,0.14)' }}>
-                        <View style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }}>
-                          <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
-                            <Ionicons name="play" size={13} color="rgba(255,255,255,0.4)" />
-                          </View>
-                        </View>
-                        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 8, backgroundColor: 'rgba(0,0,0,0.25)' }}>
-                          <View style={{ height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', width: '60%' }} />
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                }
               />
         )}
       </View>
-
-      </View>
+    </View>
   );
 };
 
@@ -669,14 +344,4 @@ const styles = StyleSheet.create({
     height: 2.5, borderRadius: 2,
   },
   content: {}, // Sin flex:1 — crítico para evitar scroll infinito
-  progressWrap: {
-    height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(124,58,237,0.1)',
-    marginBottom: 12, overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%', borderRadius: 2,
-    backgroundColor: '#7c3aed',
-    width: WINDOW_W * 0.6,
-  },
 });

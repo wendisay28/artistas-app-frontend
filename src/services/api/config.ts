@@ -4,6 +4,8 @@ import { refreshToken } from '../firebase/auth';
 
 const BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL!;
 
+export const API_BASE_URL = BASE_URL;
+
 export const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 30000, // Aumentado a 30 segundos

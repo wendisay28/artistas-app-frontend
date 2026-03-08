@@ -4,11 +4,13 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ImageBackground, Image,
+  ImageBackground, Image as RNImage,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import type { Event, Venue, GalleryItem } from '../../../types/explore';
 
 // ── Tipos exportados ──────────────────────────────────────────────────────────
 
@@ -98,6 +100,118 @@ const GlassHighlight = () => (
   }} />
 );
 
+// ── EventGridCard — mismo estilo glass que ArtistCard ────────────────────────
+
+export const EventGridCard: React.FC<{ item: Event; onPress?: () => void }> = ({ item, onPress }) => {
+  const isAvail = item.availability?.toLowerCase() === 'disponible';
+  return (
+    <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
+      <GlassHighlight />
+      <View style={grid.imageWrap}>
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
+        <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
+      </View>
+      <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
+      <Text style={[ar.discipline, { marginBottom: 2 }]} numberOfLines={1}>
+        {item.date ?? 'Próximamente'}
+      </Text>
+      <View style={ar.divider} />
+      <View style={ar.statsRow}>
+        <View style={ar.stat}>
+          <Ionicons name="star" size={10} color="#f59e0b" />
+          <Text style={ar.statVal}>{item.rating ?? '—'}</Text>
+        </View>
+        <View style={ar.statDot} />
+        <Text style={ar.works}>{item.location}</Text>
+      </View>
+      <View style={[ar.availBadge, { backgroundColor: isAvail ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
+        <View style={[ar.availDot, { backgroundColor: isAvail ? '#16a34a' : '#d97706' }]} />
+        <Text style={[ar.availText, { color: isAvail ? '#15803d' : '#b45309' }]}>
+          {isAvail ? 'Disponible' : 'Agotado'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ── VenueGridCard — mismo estilo glass que ArtistCard ────────────────────────
+
+export const VenueGridCard: React.FC<{ item: Venue; onPress?: () => void }> = ({ item, onPress }) => {
+  const isAvail = item.availability?.toLowerCase() === 'disponible';
+  return (
+    <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
+      <GlassHighlight />
+      <View style={grid.imageWrap}>
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
+        <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
+      </View>
+      <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
+      <Text style={[ar.discipline, { marginBottom: 2 }]} numberOfLines={1}>
+        {typeof item.category === 'string' ? item.category : 'Sala'}
+      </Text>
+      <View style={ar.divider} />
+      <View style={ar.statsRow}>
+        <View style={ar.stat}>
+          <Ionicons name="star" size={10} color="#f59e0b" />
+          <Text style={ar.statVal}>{item.rating ?? '—'}</Text>
+        </View>
+        <View style={ar.statDot} />
+        <Text style={ar.works}>{item.location}</Text>
+      </View>
+      <View style={[ar.availBadge, { backgroundColor: isAvail ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
+        <View style={[ar.availDot, { backgroundColor: isAvail ? '#16a34a' : '#d97706' }]} />
+        <Text style={[ar.availText, { color: isAvail ? '#15803d' : '#b45309' }]}>
+          {isAvail ? 'Disponible' : 'Ocupada'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ── GalleryGridCard — mismo estilo glass que ArtistCard ──────────────────────
+
+export const GalleryGridCard: React.FC<{ item: GalleryItem; onPress?: () => void }> = ({ item, onPress }) => {
+  const isAvail = item.forSale !== false;
+  return (
+    <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
+      <GlassHighlight />
+      <View style={grid.imageWrap}>
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
+      </View>
+      <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
+      <Text style={[ar.discipline, { marginBottom: 2 }]} numberOfLines={1}>
+        {(item as any).artistName ?? 'Artista'}
+      </Text>
+      <View style={ar.divider} />
+      <View style={ar.statsRow}>
+        <View style={ar.stat}>
+          <Ionicons name="star" size={10} color="#f59e0b" />
+          <Text style={ar.statVal}>{item.rating ?? '—'}</Text>
+        </View>
+        <View style={ar.statDot} />
+        <Text style={ar.works}>{(item as any).medium ?? 'Obra'}</Text>
+      </View>
+      <View style={[ar.availBadge, { backgroundColor: isAvail ? 'rgba(22,163,74,0.1)' : 'rgba(109,40,217,0.1)' }]}>
+        <View style={[ar.availDot, { backgroundColor: isAvail ? '#16a34a' : '#7c3aed' }]} />
+        <Text style={[ar.availText, { color: isAvail ? '#15803d' : '#6d28d9' }]}>
+          {isAvail ? 'En venta' : 'Vendida'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const grid = StyleSheet.create({
+  imageWrap: {
+    width: 64, height: 64, borderRadius: 32,
+    overflow: 'hidden', marginBottom: 10,
+    backgroundColor: '#e5e7eb',
+  },
+});
+
 // ── EventCard — Glassmorphism con imagen real ─────────────────────────────────
 
 export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({ item, onPress }) => (
@@ -110,7 +224,7 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
         source={{ uri: getEventImage(item) }}
         style={ev.img}
         imageStyle={{ borderTopLeftRadius:18, borderTopRightRadius:18 }}
-        resizeMode="cover"
+        contentFit="cover"
       >
         {/* Overlay gradiente suave */}
         <LinearGradient
@@ -204,10 +318,10 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
       {/* Avatar con foto */}
       <View style={ar.avatarWrap}>
         {photoUri ? (
-          <Image
+          <RNImage
             source={{ uri: photoUri }}
             style={ar.avatar}
-            resizeMode="cover"
+            contentFit="cover"
           />
         ) : (
           <LinearGradient colors={item.gradients} style={ar.avatar}>
@@ -345,7 +459,7 @@ export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({
     <Image
       source={{ uri: getVenueImage(item) }}
       style={ve.thumb}
-      resizeMode="cover"
+      contentFit="cover"
     />
 
     {/* CTA badge — reemplaza el chevron */}

@@ -24,6 +24,7 @@ export interface BackendUser {
   companyDescription?: string;
   companyLogoUrl?: string;
   taxId?: string;
+  schedule?: string;
   // Estadísticas del usuario
   followersCount?: number;
   viewsCount?: number;

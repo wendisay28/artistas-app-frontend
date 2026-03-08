@@ -5,16 +5,21 @@ import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform, Pressable, M
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import { useModalStore } from '../../../../store/modalStore';
+import { useModalStore } from '../../../store/modalStore';
 import * as Haptics from 'expo-haptics';
-import { portfolioService, GalleryItem, FeaturedItem } from '../../../../services/api/portfolio';
-import { storageService } from '../../../../services/api/storage';
+import { portfolioService, GalleryItem, FeaturedItem } from '../../../services/api/portfolio';
+import { storageService } from '../../../services/api/storage';
 import * as ImagePicker from 'expo-image-picker';
-import GalleryModal from '../../../../components/explore/shared/GalleryModal';
-import { VideoView, useVideoPlayer } from 'expo-video';
+import { compressImage } from '../../../hooks/useProfileImageUpload';
+import GalleryModal from '../../explore/shared/GalleryModal';
+import { Linking } from 'react-native';
+import { EnhancedGalleryGrid } from './GalleryGrid';
 
 const { width: WINDOW_W, height: WINDOW_H } = Dimensions.get('window');
 
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const MAX_FEATURED = 5;
 
 interface PortfolioSectionProps {
   portfolio: GalleryItem[];
@@ -82,86 +87,7 @@ const es = StyleSheet.create({
 });
 
 // ── Gallery Grid ──────────────────────────────────────────────────────────────
-
-const GalleryGrid: React.FC<{
-  items: GalleryItem[];
-  onItemPress: (index: number) => void;
-  showEdit?: boolean;
-  onDelete?: (item: GalleryItem) => void;
-}> = ({ items, onItemPress, showEdit, onDelete }) => {
-  const rows: GalleryItem[][] = [];
-  for (let i = 0; i < items.length; i += 2) {
-    rows.push(items.slice(i, i + 2));
-  }
-
-  return (
-    <View style={g.grid}>
-      {rows.map((row, rowIdx) => (
-        <View key={rowIdx} style={g.row}>
-          {row.map((item, colIdx) => {
-            const index = rowIdx * 2 + colIdx;
-            return (
-              <Pressable
-                key={item.id?.toString() || index.toString()}
-                onPress={() => onItemPress(index)}
-                style={({ pressed }) => [g.thumb, pressed && { opacity: 0.75 }]}
-              >
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  transition={200}
-                />
-                <View style={g.overlay}>
-                  <Ionicons name="expand-outline" size={20} color="#fff" />
-                </View>
-                {showEdit && (
-                  <TouchableOpacity
-                    style={g.deleteBtn}
-                    onPress={(e) => { e.stopPropagation(); onDelete?.(item); }}
-                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="trash-outline" size={14} color="#fff" />
-                  </TouchableOpacity>
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      ))}
-    </View>
-  );
-};
-
-const g = StyleSheet.create({
-  grid: { gap: 8 },
-  row: { flexDirection: 'row', gap: 8 },
-  thumb: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-    backgroundColor: '#F3F4F6',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  deleteBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(239,68,68,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
+// Eliminado - ahora usamos EnhancedGalleryGrid importado
 
 // ── Video Grid (estilo reels 2 columnas) ──────────────────────────────────────
 
@@ -264,63 +190,6 @@ const vg = StyleSheet.create({
 // ── Video Player Modal (reel full screen) ─────────────────────────────────────
 
 // Se monta solo cuando hay video
-const VideoPlayerModal: React.FC<{
-  video: FeaturedItem;
-  onClose: () => void;
-}> = ({ video, onClose }) => {
-  const player = useVideoPlayer(video.url, (player) => {
-    player.loop = false;
-    player.play();
-  });
-
-  return (
-    <Modal
-      visible
-      transparent={false}
-      animationType="slide"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={vpm.backdrop}>
-        <VideoView
-          player={player}
-          style={vpm.video}
-          contentFit="contain"
-          allowsFullscreen
-          allowsPictureInPicture
-        />
-      <TouchableOpacity style={vpm.closeBtn} onPress={onClose} activeOpacity={0.8}>
-        <View style={vpm.closeBtnInner}>
-          <Ionicons name="close" size={22} color="#fff" />
-        </View>
-      </TouchableOpacity>
-      {video.title && (
-        <View style={vpm.titleBar}>
-          <Text style={vpm.titleText} numberOfLines={1}>{video.title}</Text>
-        </View>
-      )}
-    </View>
-  </Modal>
-  );
-};
-
-const vpm = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: '#000' },
-  video: { flex: 1, width: '100%' },
-  closeBtn: { position: 'absolute', top: 52, right: 20, zIndex: 10 },
-  closeBtnInner: {
-    width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  titleBar: {
-    position: 'absolute', bottom: 48, left: 0, right: 0,
-    paddingHorizontal: 24, paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  titleText: { fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
-});
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────────
 
@@ -335,8 +204,19 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [galleryOpen, setGalleryOpen]       = useState(false);
   const [galleryIndex, setGalleryIndex]     = useState(0);
-  const [playerVideo, setPlayerVideo]       = useState<FeaturedItem | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  const galleryImages = portfolio.map(p => p.imageUrl).filter(Boolean) as string[];
+
+  const openGallery = (index: number) => {
+    setGalleryIndex(index);
+    setGalleryOpen(true);
+  };
+
+  const handleItemPress = (item: GalleryItem, index: number) => {
+    openGallery(index);
+  };
+
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -350,13 +230,6 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       progressAnim.setValue(0);
     }
   }, [isUploadingVideo]);
-
-  const galleryImages = portfolio.map(p => p.imageUrl).filter(Boolean) as string[];
-
-  const openGallery = (index: number) => {
-    setGalleryIndex(index);
-    setGalleryOpen(true);
-  };
 
   const handleDeletePhoto = (item: GalleryItem) => {
     Alert.alert(
@@ -379,6 +252,17 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
         },
       ]
     );
+  };
+
+  const handleToggleFeatured = async (item: GalleryItem) => {
+    if (!item.id) return;
+    try {
+      await portfolioService.toggleFeatured(Number(item.id), !item.isFeatured);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onPortfolioUpdated?.();
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar la foto. Inténtalo de nuevo.');
+    }
   };
 
   const hasPortfolio = portfolio && portfolio.length > 0;
@@ -476,13 +360,6 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
 
   return (
     <View style={styles.container}>
-      {playerVideo && (
-        <VideoPlayerModal
-          key={playerVideo.url}
-          video={playerVideo}
-          onClose={() => setPlayerVideo(null)}
-        />
-      )}
       {galleryOpen && galleryImages.length > 0 && (
         <GalleryModal
           images={galleryImages}
@@ -574,7 +451,14 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
       <View style={styles.content}>
         {activeTab === 'photos' && (
           hasPortfolio
-            ? <GalleryGrid items={portfolio} onItemPress={openGallery} showEdit={isOwner} onDelete={handleDeletePhoto} />
+            ? <EnhancedGalleryGrid
+                items={portfolio}
+                onItemPress={handleItemPress}
+                showEdit={isOwner}
+                onDelete={handleDeletePhoto}
+                onToggleFeatured={handleToggleFeatured}
+                compactMode={false} // Modo grande para fácil uso
+              />
             : <EmptyState
                 icon="images-outline"
                 title="Sin fotos todavía"
@@ -596,7 +480,7 @@ export const PortfolioSection: React.FC<PortfolioSectionProps> = ({
             ? <VideoGrid
                 videos={videos}
                 isOwner={isOwner}
-                onPlay={setPlayerVideo}
+                onPlay={(v) => { if (v.url) Linking.openURL(v.url); }}
                 onEdit={(v) => { setEditingVideo(v); openVideoModal(v); }}
               />
             : <EmptyState

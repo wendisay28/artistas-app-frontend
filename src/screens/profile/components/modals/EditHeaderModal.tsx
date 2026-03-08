@@ -363,6 +363,22 @@ export const EditHeaderModal: React.FC<Props> = ({ visible, artist, onClose, onS
       setTag1(artist.tags?.[0]?.label ?? '');
       setTag2(artist.tags?.[1]?.label ?? '');
       setTag3(artist.tags?.[2]?.label ?? '');
+
+      // Parsear horario guardado → scheduleDays
+      const parsed = Object.fromEntries(
+        Object.entries(DEFAULT_SCHEDULE_DAYS).map(([k, v]) => [k, { ...v }])
+      );
+      const scheduleStr = (artist as any).schedule as string | undefined;
+      if (scheduleStr) {
+        scheduleStr.split(',').forEach(part => {
+          const m = part.trim().match(/^(\S+)\s+(.+)-(.+)$/);
+          if (m) {
+            const dayKey = DAY_KEY_MAP[m[1]];
+            if (dayKey) parsed[dayKey] = { enabled: true, start: m[2].trim(), end: m[3].trim() };
+          }
+        });
+      }
+      setScheduleDays(parsed);
     }
   }, [visible, artist]);
 

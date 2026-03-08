@@ -18,13 +18,13 @@ import { useNavigation } from '@react-navigation/native';
 
 // ── Profile components modernos
 import { ProfileHero } from './components/header/Profilehero';
-import { ProfileIdentity } from './components/header/Profileidentity';
+import { ProfileIdentity, cycleAvailability } from './components/header/Profileidentity';
 import { ProfileSkeleton } from './components/header/ProfileSkeleton';
 import { TabBar } from './components/shared/TabBar';
 // BioModal ahora está en ModalContainer
 import { SobreMiSection } from './components/sections/SobremiSection';
 import { EventosSection } from './components/sections/eventos/Eventossection';
-import { AgendaSection } from './components/sections/agenda/Agendasection';
+import { AgendaSectionFunctional } from './components/sections/agenda/AgendaSectionFunctional';
 import { TiendaSectionRefactored as TiendaSection } from './components/sections/tienda/TiendaSectionRefactored';
 
 // ── Profile modals
@@ -276,7 +276,7 @@ export default function ProfileScreen() {
     yearsExperience: effectiveArtist.info?.find(i => i.label === 'Experiencia')?.value || '',
     style:           effectiveArtist.info?.find(i => i.label === 'Estilo')?.value || '',
     availability:    effectiveArtist.info?.find(i => i.label === 'Disponibilidad')?.value || '',
-    responseTime:    effectiveArtist.info?.find(i => i.label === 'Tiempo de resp.')?.value || '',
+    responseTime:    effectiveArtist.info?.find(i => i.label === 'Horario')?.value || '',
   }), [effectiveArtist.info]);
 
   const categoryInitialData = React.useMemo(() => ({
@@ -709,6 +709,22 @@ export default function ProfileScreen() {
     }
   }, [saveProInfo, closeInfoProfesionalModal, loadProfile]);
 
+  const handleToggleAvailability = useCallback(async () => {
+    try {
+      const current = effectiveArtist.info?.find(i => i.label === 'Disponibilidad')?.value ?? 'Disponible';
+      const next    = cycleAvailability(current);
+      await saveProInfo({
+        yearsExperience: effectiveArtist.info?.find(i => i.label === 'Experiencia')?.value ?? '',
+        style:           effectiveArtist.info?.find(i => i.label === 'Estilo')?.value ?? '',
+        responseTime:    effectiveArtist.info?.find(i => i.label === 'Horario')?.value ?? '',
+        availability:    next,
+      });
+      await loadProfile(auth.currentUser?.uid ?? '', auth.currentUser?.photoURL ?? '', auth.currentUser?.displayName ?? '');
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo actualizar la disponibilidad.');
+    }
+  }, [effectiveArtist.info, saveProInfo, loadProfile]);
+
   const handleSaveExperience = useCallback(async (experience: any[]) => {
     try {
       await saveExperience(experience);
@@ -795,11 +811,10 @@ export default function ProfileScreen() {
       case 'agenda':
         try {
           return (
-            <AgendaSection
-              liveRequest={undefined} // Sin live requests por ahora
-              calendarDays={calendarDays}
-              schedule={schedule}
+            <AgendaSectionFunctional
               isOwner={true}
+              artistId={effectiveArtist?.id}
+              onEditSection={() => console.log('Edit agenda section')}
             />
           );
         } catch (error) {
@@ -984,6 +999,7 @@ export default function ProfileScreen() {
               artist={viewingAsClient ? { ...effectiveArtist, isOwner: false } : effectiveArtist}
               onEditProfile={viewingAsClient ? undefined : handleEditProfile}
               onEditAvatar={viewingAsClient ? undefined : handleEditAvatar}
+              onToggleAvailability={viewingAsClient ? undefined : handleToggleAvailability}
               onShare={handleShare}
               onViewAsClient={handleViewAsClient}
             />
@@ -1052,7 +1068,7 @@ export default function ProfileScreen() {
                       { translateY: panAnim.y },
                     ],
                   }}
-                  resizeMode="cover"
+                  contentFit="cover"
                 />
               </View>
             );

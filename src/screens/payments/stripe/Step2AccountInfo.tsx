@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, TextInput,
   Animated, Easing, ScrollView,
-  KeyboardAvoidingView, Platform, Pressable,
+  KeyboardAvoidingView, Platform, Pressable, Keyboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -78,40 +78,105 @@ const gc = StyleSheet.create({
   inner: { padding: 18 },
 });
 
+// ── FormInput: aislado — typing solo re-renderiza este componente, nunca el padre ──
+interface FormInputProps {
+  inputRef: React.RefObject<TextInput>;
+  iconName: any;
+  placeholder: string;
+  keyboardType?: any;
+  autoCapitalize?: any;
+  returnKeyType?: 'done' | 'next' | 'go' | 'search' | 'send';
+  onSubmitEditing?: () => void;
+  initialValue: string;
+  onChangeText: (text: string) => void;
+  onBlurText?: (finalText: string) => void;
+}
+
+const FormInput = React.memo(({
+  inputRef, iconName, placeholder, keyboardType = 'default',
+  autoCapitalize = 'none', returnKeyType, onSubmitEditing,
+  initialValue, onChangeText, onBlurText,
+}: FormInputProps) => {
+  const [value, setValue] = useState(initialValue);
+  const [isFocused, setIsFocused] = useState(false);
+  // Ref para leer el valor actual en onBlur sin que esté en deps del useCallback
+  const valueRef = useRef(initialValue);
+
+  const handleChange = useCallback((text: string) => {
+    valueRef.current = text;
+    setValue(text);
+    onChangeText(text); // solo actualiza un ref en el padre — sin re-render del padre
+  }, [onChangeText]);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    onBlurText?.(valueRef.current); // notifica al padre solo al salir del campo
+  }, [onBlurText]);
+
+  return (
+    <Pressable style={[s.inputWrap, isFocused && s.inputFocused]} onPress={() => inputRef.current?.focus()}>
+      <View style={s.inputIcon}>
+        <Ionicons name={iconName} size={16} color={isFocused ? '#7c3aed' : '#c4b5fd'} />
+      </View>
+      <TextInput
+        ref={inputRef}
+        style={s.input}
+        value={value}
+        onChangeText={handleChange}
+        placeholder={placeholder}
+        placeholderTextColor="rgba(124,58,237,0.3)"
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        returnKeyType={returnKeyType}
+        onSubmitEditing={onSubmitEditing}
+        onFocus={() => setIsFocused(true)}
+        onBlur={handleBlur}
+      />
+    </Pressable>
+  );
+});
+
 // ── Screen ────────────────────────────────────────────────────────────────────
 const Step2AccountInfo = () => {
-  const { state, goNextStep, goPrevStep, updateAccountData, setLoading } = useStripeOnboarding();
-  const [focusedInput, setFocusedInput] = useState<string | null>(null);
+  const { state, goNextStep, updateAccountData, setLoading } = useStripeOnboarding();
 
-  // SOLUCIÓN LENTITUD: Estados locales para escritura fluida
-  const [localName, setLocalName] = useState(state.accountData.holderName || '');
-  const [localEmail, setLocalEmail] = useState(state.accountData.email || '');
-  const [localPhone, setLocalPhone] = useState(state.accountData.phone || '');
+  // Refs para texto: onChangeText solo actualiza estos refs — CERO re-renders del padre al escribir
+  const nameVal = useRef(state.accountData.holderName || '');
+  const emailVal = useRef(state.accountData.email || '');
+  const phoneVal = useRef(state.accountData.phone || '');
+
+  // Estado mínimo: solo para habilitar/deshabilitar el botón
+  // Se actualiza al salir de cada campo (blur), no en cada tecla
+  const [nameValid, setNameValid] = useState(!!(state.accountData.holderName?.trim()));
+  const [emailValid, setEmailValid] = useState(!!(state.accountData.email?.trim()));
+
+  const valid = nameValid && emailValid && !!state.accountData.accountType && !!state.accountData.acceptTerms;
 
   const nameRef = useRef<TextInput>(null);
   const emailRef = useRef<TextInput>(null);
   const phoneRef = useRef<TextInput>(null);
 
-  const valid =
-    !!localName.trim() &&
-    !!localEmail.trim() &&
-    !!state.accountData.accountType &&
-    !!state.accountData.acceptTerms;
+  // Solo actualizan refs — sin setState — sin re-render del padre mientras se escribe
+  const handleNameChange = useCallback((text: string) => { nameVal.current = text; }, []);
+  const handleEmailChange = useCallback((text: string) => { emailVal.current = text; }, []);
+  const handlePhoneChange = useCallback((text: string) => { phoneVal.current = text; }, []);
+
+  // Al salir del campo: 1 re-render para actualizar validez del botón
+  const handleNameBlur = useCallback((text: string) => setNameValid(!!text.trim()), []);
+  const handleEmailBlur = useCallback((text: string) => setEmailValid(!!text.trim()), []);
 
   const handleContinue = () => {
-    if (!valid) return;
+    const isValid = !!nameVal.current.trim() && !!emailVal.current.trim()
+      && !!state.accountData.accountType && !!state.accountData.acceptTerms;
+    if (!isValid) return;
+
     setLoading(true);
-    // Aseguramos que el contexto tenga los últimos datos locales antes de avanzar
-    updateAccountData({ 
-      holderName: localName, 
-      email: localEmail, 
-      phone: localPhone 
+    updateAccountData({
+      holderName: nameVal.current,
+      email:      emailVal.current,
+      phone:      phoneVal.current,
     });
-    
-    setTimeout(() => {
-      setLoading(false);
-      goNextStep();
-    }, 2000);
+    setTimeout(() => { setLoading(false); goNextStep(); }, 1500);
   };
 
   return (
@@ -174,60 +239,57 @@ const Step2AccountInfo = () => {
 
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Nombre del titular *</Text>
-                <Pressable style={[s.inputWrap, focusedInput === 'name' && s.inputFocused]} onPress={() => nameRef.current?.focus()}>
-                  <View style={s.inputIcon}><Ionicons name="person-outline" size={16} color={focusedInput === 'name' ? '#7c3aed' : '#c4b5fd'} /></View>
-                  <TextInput 
-                    ref={nameRef} 
-                    style={s.input} 
-                    value={localName} // Usamos local
-                    onChangeText={setLocalName}
-                    placeholder="Nombre completo" 
-                    placeholderTextColor="rgba(124,58,237,0.3)" 
-                    autoCapitalize="words" 
-                    onFocus={() => setFocusedInput('name')} 
-                    onBlur={() => setFocusedInput(null)} 
-                  />
-                </Pressable>
+                <FormInput
+                  inputRef={nameRef}
+                  iconName="person-outline"
+                  placeholder="Nombre completo"
+                  autoCapitalize="words"
+                  returnKeyType="next"
+                  onSubmitEditing={() => emailRef.current?.focus()}
+                  initialValue={state.accountData.holderName || ''}
+                  onChangeText={handleNameChange}
+                  onBlurText={handleNameBlur}
+                />
               </View>
 
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Correo electrónico *</Text>
-                <Pressable style={[s.inputWrap, focusedInput === 'email' && s.inputFocused]} onPress={() => emailRef.current?.focus()}>
-                  <View style={s.inputIcon}><Ionicons name="mail-outline" size={16} color={focusedInput === 'email' ? '#7c3aed' : '#c4b5fd'} /></View>
-                  <TextInput 
-                    ref={emailRef} 
-                    style={s.input} 
-                    value={localEmail} // Usamos local
-                    onChangeText={setLocalEmail}
-                    placeholder="correo@ejemplo.com" 
-                    placeholderTextColor="rgba(124,58,237,0.3)" 
-                    keyboardType="email-address" 
-                    autoCapitalize="none" 
-                    onFocus={() => setFocusedInput('email')} 
-                    onBlur={() => setFocusedInput(null)} 
-                  />
-                </Pressable>
+                <FormInput
+                  inputRef={emailRef}
+                  iconName="mail-outline"
+                  placeholder="correo@ejemplo.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  returnKeyType="next"
+                  onSubmitEditing={() => phoneRef.current?.focus()}
+                  initialValue={state.accountData.email || ''}
+                  onChangeText={handleEmailChange}
+                  onBlurText={handleEmailBlur}
+                />
               </View>
 
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Teléfono <Text style={s.optional}>(opcional)</Text></Text>
-                <Pressable style={[s.inputWrap, focusedInput === 'phone' && s.inputFocused]} onPress={() => phoneRef.current?.focus()}>
-                  <View style={s.inputIcon}><Ionicons name="call-outline" size={16} color={focusedInput === 'phone' ? '#7c3aed' : '#c4b5fd'} /></View>
-                  <TextInput 
-                    ref={phoneRef} 
-                    style={s.input} 
-                    value={localPhone} // Usamos local
-                    onChangeText={setLocalPhone}
-                    placeholder="+57 300..." 
-                    placeholderTextColor="rgba(124,58,237,0.3)" 
-                    keyboardType="phone-pad" 
-                    onFocus={() => setFocusedInput('phone')} 
-                    onBlur={() => setFocusedInput(null)} 
-                  />
-                </Pressable>
+                <FormInput
+                  inputRef={phoneRef}
+                  iconName="call-outline"
+                  placeholder="+57 300..."
+                  keyboardType="phone-pad"
+                  returnKeyType="done"
+                  onSubmitEditing={() => Keyboard.dismiss()}
+                  initialValue={state.accountData.phone || ''}
+                  onChangeText={handlePhoneChange}
+                />
               </View>
 
-              <TouchableOpacity onPress={() => updateAccountData({ acceptTerms: !state.accountData.acceptTerms })} activeOpacity={0.85} style={[s.termsRow, state.accountData.acceptTerms && s.termsRowActive]}>
+              <TouchableOpacity
+                onPress={() => {
+                  Keyboard.dismiss();
+                  updateAccountData({ acceptTerms: !state.accountData.acceptTerms });
+                }}
+                activeOpacity={0.85}
+                style={[s.termsRow, state.accountData.acceptTerms && s.termsRowActive]}
+              >
                 <View style={[s.checkbox, state.accountData.acceptTerms && s.checkboxOn]}>
                   {state.accountData.acceptTerms && <Ionicons name="checkmark" size={12} color="#fff" />}
                 </View>

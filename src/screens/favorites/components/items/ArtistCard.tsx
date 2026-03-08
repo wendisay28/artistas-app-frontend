@@ -119,7 +119,11 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           end={{ x: 1, y: 0 }}
           style={styles.typePill}
         >
-          <Text style={styles.typeText} numberOfLines={1}>{artist.category}</Text>
+          <Text style={styles.typeText} numberOfLines={1}>
+            {typeof artist.category === 'string'
+              ? artist.category
+              : (artist.category as any)?.categoryId ?? 'Artista'}
+          </Text>
         </LinearGradient>
 
         {/* Rating — abajo derecha */}

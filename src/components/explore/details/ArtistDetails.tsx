@@ -378,8 +378,8 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
 
         {/* ══ MINI HEADER ══ */}
         <View style={styles.miniHeader}>
-          {artist.image ? (
-            <Image source={{ uri: artist.image }} style={styles.avatar} contentFit="cover" />
+          {(artist as any).avatar || artist.image ? (
+            <Image source={{ uri: (artist as any).avatar || artist.image }} style={styles.avatar} contentFit="cover" />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Ionicons name="person" size={22} color={colors.primary} />
@@ -499,7 +499,10 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
             <View style={s.divider} />
             <InfoPair label="Disponibilidad" value={artist.availability} valueColor={isAvailable ? '#16a34a' : '#d97706'} />
             <View style={s.divider} />
-            <InfoPair label="Tiempo de resp." value={artist.responseTime || 'No especificado'} />
+            <InfoPair
+              label="Horario"
+              value={artist.schedule?.trim() || 'No especificado'}
+            />
           </View>
         </GlassCard>
 

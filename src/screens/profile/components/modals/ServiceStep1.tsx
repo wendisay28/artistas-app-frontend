@@ -88,7 +88,7 @@ export const ServiceStep1: React.FC<Props> = ({
           {hasImage && !isCoverSelected ? (
             /* Imagen seleccionada */
             <>
-              <Image source={{ uri: localImageUri }} style={s.uploadImage} resizeMode="cover" />
+              <Image source={{ uri: localImageUri }} style={s.uploadImage} contentFit="cover" />
               <View style={s.uploadBadge}>
                 <Ionicons name="camera-outline" size={14} color="#fff" />
                 <Text style={s.uploadBadgeText}>Cambiar foto</Text>
@@ -123,7 +123,7 @@ export const ServiceStep1: React.FC<Props> = ({
               style={[s.coverCard, isCoverSelected && s.coverCardActive]}
               activeOpacity={0.85}
             >
-              <Image source={{ uri: coverImageUrl }} style={s.coverThumb} resizeMode="cover" />
+              <Image source={{ uri: coverImageUrl }} style={s.coverThumb} contentFit="cover" />
               <View style={{ flex: 1 }}>
                 <Text style={[s.coverTitle, isCoverSelected && { color: '#7c3aed' }]}>
                   {isCoverSelected ? 'Portada seleccionada' : 'Usar imagen de portada'}

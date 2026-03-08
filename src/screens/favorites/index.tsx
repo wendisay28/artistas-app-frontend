@@ -13,12 +13,12 @@ import {
   Dimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppFooter } from '../../components/shared/AppFooter';
 import { useAuth } from '../../hooks/useAuth';
 import { useFavoritesData } from './hooks/useFavoritesData';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../constants/colors';
 import TopBar from '../../components/shared/TopBar';
-import { AppFooter } from '../../components/shared/AppFooter';
 
 // Explore card contents
 import ArtistCardContent from '../../components/explore/cards/ArtistCardContent';
@@ -26,8 +26,13 @@ import EventCardContent from '../../components/explore/cards/EventCardContent';
 import VenueCardContent from '../../components/explore/cards/VenueCardContent';
 import GalleryCardContent from '../../components/explore/cards/GalleryCardContent';
 
-// Card cuadrícula (importa también CARD_WIDTH para cálculos consistentes)
-import { ArtistCard } from './components/items/ArtistCard';
+// Cards cuadrícula home-style
+import {
+  ArtistCard as HomeArtistCard,
+  EventGridCard,
+  VenueGridCard,
+  GalleryGridCard,
+} from '../home/components/ContentCards';
 
 // Cards de lista
 import { ArtistCardList } from './components/items/ArtistCardList';
@@ -135,40 +140,65 @@ export default function FavoritesScreen() {
   };
 
   // ── Render: cuadrícula ────────────────────────────────────────────────────
-  // Usamos numColumns=2 directamente en FlatList; el ancho lo fija la card.
   const renderGridItem = ({ item, index }: { item: ExploreCard; index: number }) => {
     const isLeftColumn = index % 2 === 0;
 
     if (item.type === 'artist') {
+      const a = item as Artist;
+      const categoryStr = typeof a.category === 'string'
+        ? a.category
+        : (a.category as any)?.categoryId ?? 'Artista';
+      const artistItem = {
+        id:         a.id,
+        name:       a.name,
+        discipline: a.specialty || categoryStr,
+        rating:     a.rating ?? 0,
+        works:      a.reviews ?? 0,
+        avatarUri:  a.image ?? null,
+        gradients:  ['#7c3aed', '#2563eb'] as [string, string],
+        initials:   a.name?.charAt(0).toUpperCase() ?? 'A',
+        available:  a.availability?.toLowerCase() === 'disponible',
+      };
       return (
         <View style={[
           gridStyles.itemWrapper,
           isLeftColumn ? { marginRight: COLUMN_GAP / 2 } : { marginLeft: COLUMN_GAP / 2 },
         ]}>
-          <ArtistCard
-            artist={item as any}
+          <HomeArtistCard
+            item={artistItem}
             onPress={() => setDetailItem(item)}
-            onContact={(id) => console.log('Contratar', id)}
-            onToggleFavorite={(id) => console.log('Toggle fav', id)}
           />
         </View>
       );
     }
 
-    // Fallback para otros tipos (eventos, salas, galería)
-    return (
-      <View style={[
-        gridStyles.itemWrapper,
-        isLeftColumn ? { marginRight: COLUMN_GAP / 2 } : { marginLeft: COLUMN_GAP / 2 },
-      ]}>
-        <Pressable
-          onPress={() => setDetailItem(item)}
-          style={{ width: GRID_CARD_WIDTH, height: GRID_CARD_WIDTH * 1.3 }}
-        >
-          {renderCardContent(item)}
-        </Pressable>
-      </View>
-    );
+    const wrapperStyle = [
+      gridStyles.itemWrapper,
+      isLeftColumn ? { marginRight: COLUMN_GAP / 2 } : { marginLeft: COLUMN_GAP / 2 },
+    ];
+
+    if (item.type === 'event') {
+      return (
+        <View style={wrapperStyle}>
+          <EventGridCard item={item as Event} onPress={() => setDetailItem(item)} />
+        </View>
+      );
+    }
+    if (item.type === 'venue') {
+      return (
+        <View style={wrapperStyle}>
+          <VenueGridCard item={item as Venue} onPress={() => setDetailItem(item)} />
+        </View>
+      );
+    }
+    if (item.type === 'gallery') {
+      return (
+        <View style={wrapperStyle}>
+          <GalleryGridCard item={item as GalleryItem} onPress={() => setDetailItem(item)} />
+        </View>
+      );
+    }
+    return null;
   };
 
   // ── Render: lista horizontal ──────────────────────────────────────────────
@@ -336,49 +366,49 @@ export default function FavoritesScreen() {
       {/* Filtros */}
       {showFilters && renderFilterPanel()}
 
-      {/* Contador */}
-      <Text style={localStyles.counter}>
-        {filteredData.length} {filteredData.length === 1 ? 'favorito' : 'favoritos'}
-      </Text>
+      {/* Contador + contenido + footer — todo en un ScrollView */}
+      <ScrollView
+        style={{ flex: 1 }}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+      >
+        <Text style={localStyles.counter}>
+          {filteredData.length} {filteredData.length === 1 ? 'favorito' : 'favoritos'}
+        </Text>
 
-      {/* Vacío */}
-      {filteredData.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="heart-outline" size={48} color={colors.textLight} />
-          <Text style={styles.emptyText}>No tienes favoritos aquí</Text>
-          <Text style={styles.emptySubtext}>Explora y guarda lo que te guste</Text>
-        </View>
-      ) : viewMode === 'grid' ? (
-        // ── CUADRÍCULA 2 COLUMNAS ────────────────────────────────────────
-        // numColumns=2 + columnWrapperStyle gestiona el espaciado entre columnas.
-        // Cada card tiene width=CARD_WIDTH fijo; el contenedor usa H_PADDING.
-        <FlatList
-          key="grid"
-          data={filteredData}
-          keyExtractor={item => item.id}
-          numColumns={2}
-          columnWrapperStyle={gridStyles.columnWrapper}
-          contentContainerStyle={gridStyles.listContent}
-          showsVerticalScrollIndicator={false}
-          renderItem={renderGridItem}
-          ListFooterComponent={<AppFooter />}
-        />
-      ) : (
-        // ── LISTA HORIZONTAL ─────────────────────────────────────────────
-        <FlatList
-          key="list"
-          data={filteredData}
-          keyExtractor={item => item.id}
-          contentContainerStyle={{ paddingHorizontal: H_PADDING }}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => renderListCard(item)}
-          ListFooterComponent={
-            <View style={{ marginHorizontal: -H_PADDING }}>
-              <AppFooter />
-            </View>
-          }
-        />
-      )}
+        {/* Vacío */}
+        {filteredData.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="heart-outline" size={48} color={colors.textLight} />
+            <Text style={styles.emptyText}>No tienes favoritos aquí</Text>
+            <Text style={styles.emptySubtext}>Explora y guarda lo que te guste</Text>
+          </View>
+        ) : viewMode === 'grid' ? (
+          // ── CUADRÍCULA 2 COLUMNAS ────────────────────────────────────────
+          <FlatList
+            key="grid"
+            data={filteredData}
+            keyExtractor={item => item.id}
+            numColumns={2}
+            scrollEnabled={false}
+            columnWrapperStyle={gridStyles.columnWrapper}
+            contentContainerStyle={gridStyles.listContent}
+            renderItem={renderGridItem}
+          />
+        ) : (
+          // ── LISTA ────────────────────────────────────────────────────────
+          <FlatList
+            key="list"
+            data={filteredData}
+            keyExtractor={item => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={{ paddingHorizontal: H_PADDING, paddingVertical: 8 }}
+            renderItem={({ item }) => renderListCard(item)}
+          />
+        )}
+
+        <AppFooter />
+      </ScrollView>
 
       {/* Detail Modal */}
       <Modal
@@ -432,9 +462,10 @@ const localStyles = StyleSheet.create({
 
 // ── Estilos cuadrícula ────────────────────────────────────────────────────────
 const gridStyles = StyleSheet.create({
+
   listContent: {
     paddingHorizontal: H_PADDING,
-    paddingTop: 4,
+    paddingTop: 16,
     paddingBottom: 16,
   },
   // columnWrapperStyle: alinea las 2 columnas sin margin en las cards
@@ -442,9 +473,10 @@ const gridStyles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: COLUMN_GAP,
   },
-  // Wrapper individual — sin margin horizontal; space-between hace el gap
+  // Wrapper individual — ancho fijo, centra la card del home dentro
   itemWrapper: {
-    flex: 1,
+    width: GRID_CARD_WIDTH,
+    alignItems: 'center',
   },
 });
 

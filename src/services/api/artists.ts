@@ -1,7 +1,8 @@
 import apiClient from './config';
 import { API_ENDPOINTS } from './endpoints';
-import type { Artist } from '../../types/explore'; // Cambiado a explore types
+import type { Artist } from '../../types/explore';
 import type { ExploreFilters } from '../../types/explore';
+import type { Service } from '../../types/services';
 import { getCategoryById } from '../../constants/artistCategories';
 
 // ── Tipos para la API ─────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ export const artistsService = {
       reviews: backendArtist.reviewsCount || 0,
       responseTime: backendArtist.responseTime || '~2 horas',
       price: Number(backendArtist.pricePerHour ?? backendArtist.hourlyRate ?? 0),
-      image: backendArtist.avatarUrl || backendArtist.profileImageUrl || backendArtist.user?.profileImageUrl || '',
+      image: backendArtist.avatarUrl || backendArtist.profileImageUrl || backendArtist.image || backendArtist.user?.profileImageUrl || '',
       gallery: backendArtist.portfolio?.photos?.map((p: any) => p.imageUrl || p.url) || [],
       tags: backendArtist.tags || [],
       bio: backendArtist.bio || backendArtist.user?.bio || backendArtist.shortBio || '',
@@ -204,7 +205,7 @@ export const artistsService = {
       } : undefined,
       workExperience: backendArtist.workExperience || [],
       education: backendArtist.education || [],
-      schedule: backendArtist.schedule || undefined,
+      schedule: backendArtist.schedule || backendArtist.user?.schedule || backendArtist.userSchedule || undefined,
     };
   },
 
@@ -231,4 +232,15 @@ export const artistsService = {
     const response = await apiClient.delete(API_ENDPOINTS.ARTISTS.DELETE(id));
     return response.data;
   },
+
+  // Obtener servicios de un artista específico
+  getArtistServices: async (artistId: string): Promise<Service[]> => {
+    try {
+      const response = await apiClient.get(`/api/artists/${artistId}/services`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting artist services:', error);
+      throw error;
+    }
+  }
 };
