@@ -19,8 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { useNavigation } from '@react-navigation/native';
 // ── Profile components modernos
-import { ProfileHero } from './components/header/Profilehero';
-import { ProfileIdentity, cycleAvailability } from './components/header/Profileidentity';
+import { ProfileHero } from './components/header/ProfileHero';
+import { ProfileIdentity } from './components/header/Profileidentity';
 import { ProfileSkeleton } from './components/header/ProfileSkeleton';
 import { TabBar } from './components/shared/TabBar';
 // BioModal ahora está en ModalContainer
@@ -92,7 +92,6 @@ const MAIN_TABS: TabItem[] = [
   { key: 'sobre', label: 'Sobre mí', icon: 'person-outline' },
   { key: 'tienda', label: 'Tienda', icon: 'storefront-outline' },
   { key: 'eventos', label: 'Eventos', icon: 'calendar-outline' },
-  { key: 'pagos', label: 'Pagos', icon: 'wallet-outline' },
   { key: 'agenda', label: 'Agenda', icon: 'time-outline' },
 ];
 
@@ -746,22 +745,6 @@ export default function ProfileScreen() {
     }
   }, [saveProInfo, closeInfoProfesionalModal, loadProfile]);
 
-  const handleToggleAvailability = useCallback(async () => {
-    try {
-      const current = effectiveArtist.info?.find(i => i.label === 'Disponibilidad')?.value ?? 'Disponible';
-      const next    = cycleAvailability(current);
-      await saveProInfo({
-        yearsExperience: effectiveArtist.info?.find(i => i.label === 'Experiencia')?.value ?? '',
-        style:           effectiveArtist.info?.find(i => i.label === 'Estilo')?.value ?? '',
-        responseTime:    effectiveArtist.info?.find(i => i.label === 'Horario')?.value ?? '',
-        availability:    next,
-      });
-      await loadProfile(auth.currentUser?.uid ?? '', auth.currentUser?.photoURL ?? '', auth.currentUser?.displayName ?? '');
-    } catch (e) {
-      Alert.alert('Error', 'No se pudo actualizar la disponibilidad.');
-    }
-  }, [effectiveArtist.info, saveProInfo, loadProfile]);
-
   const handleSaveExperience = useCallback(async (experience: any[]) => {
     try {
       await saveExperience(experience);
@@ -958,7 +941,7 @@ export default function ProfileScreen() {
       case 'sobre':
         try {
           return (
-            <SobreMiSection
+            <SobreMiSection 
               artist={effectiveArtist}
               services={services}
               portfolio={portfolio}
@@ -971,7 +954,6 @@ export default function ProfileScreen() {
               onEditCategory={handleEditCategory}
               onEditSocialLinks={handleEditSocialLinks}
               onServicesUpdated={reloadServices}
-              onPortfolioUpdated={reloadPortfolio}
             />
           );
         } catch (error) {
@@ -988,7 +970,11 @@ export default function ProfileScreen() {
           );
         }
       default:
-        return null;
+        return (
+          <View style={{ padding: 20, alignItems: 'center' }}>
+            <Text style={{ fontSize: 16, color: '#666' }}>Sección no encontrada</Text>
+          </View>
+        );
     }
   };
 
@@ -1036,7 +1022,6 @@ export default function ProfileScreen() {
               artist={viewingAsClient ? { ...effectiveArtist, isOwner: false } : effectiveArtist}
               onEditProfile={viewingAsClient ? undefined : handleEditProfile}
               onEditAvatar={viewingAsClient ? undefined : handleEditAvatar}
-              onToggleAvailability={viewingAsClient ? undefined : handleToggleAvailability}
               onShare={handleShare}
               onViewAsClient={handleViewAsClient}
               onMore={viewingAsClient ? undefined : handleMoreOptions}

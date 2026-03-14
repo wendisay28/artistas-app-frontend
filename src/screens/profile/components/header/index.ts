@@ -1,2 +1,2 @@
-export { ProfileHero } from './Profilehero';
+export { ProfileHero } from './ProfileHero';
 export { ProfileIdentity } from './Profileidentity';
