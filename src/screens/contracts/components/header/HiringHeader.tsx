@@ -9,9 +9,9 @@ import {
   Animated,
   LayoutChangeEvent,
 } from 'react-native';
+import type { TabType, ExploreSubTab, UrgentSubTab } from '../../../../types/hiring';
 import { Colors } from '../../../../theme/colors';
-
-type TabType = 'all' | 'mine' | 'saved';
+import AvailabilitySwitch from '../shared/AvailabilitySwitch';
 
 interface Tab {
   key: TabType;
@@ -23,19 +23,37 @@ interface HiringHeaderProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
   unreadCount?: number;
+  urgentCount?: number;
   myOffersCount?: number;
+  exploreSubTab?: ExploreSubTab;
+  onExploreSubTabChange?: (subTab: ExploreSubTab) => void;
+  urgentSubTab?: UrgentSubTab;
+  onUrgentSubTabChange?: (subTab: UrgentSubTab) => void;
+  isArtist?: boolean;
+  isAvailable?: boolean;
+  onAvailabilityToggle?: (value: boolean) => void;
+  realTimeOffersCount?: number;
 }
 
 export default function HiringHeader({
   activeTab,
   onTabChange,
   unreadCount = 0,
+  urgentCount = 0,
   myOffersCount = 0,
+  exploreSubTab = 'general',
+  onExploreSubTabChange,
+  urgentSubTab = 'pending',
+  onUrgentSubTabChange,
+  isArtist = false,
+  isAvailable = false,
+  onAvailabilityToggle,
+  realTimeOffersCount = 0,
 }: HiringHeaderProps) {
   const tabs: Tab[] = [
-    { key: 'all', label: 'Explorar', badgeCount: unreadCount },
+    { key: 'urgent', label: 'Urgentes', badgeCount: urgentCount },
+    { key: 'explore', label: 'Explorar', badgeCount: unreadCount },
     { key: 'mine', label: 'Mis ofertas', badgeCount: myOffersCount },
-    { key: 'saved', label: 'Guardadas' },
   ];
 
   // Animación del indicador deslizante
@@ -127,6 +145,69 @@ export default function HiringHeader({
           ]}
         />
       </View>
+
+      {/* Sub-tabs para Explorar */}
+      {activeTab === 'explore' && onExploreSubTabChange && (
+        <View style={styles.subTabsWrapper}>
+          <TouchableOpacity
+            style={[styles.subTab, exploreSubTab === 'general' && styles.subTabActive]}
+            onPress={() => onExploreSubTabChange('general')}
+          >
+            <Text style={[styles.subTabText, exploreSubTab === 'general' && styles.subTabTextActive]}>
+              Generales
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.subTab, exploreSubTab === 'saved' && styles.subTabActive]}
+            onPress={() => onExploreSubTabChange('saved')}
+          >
+            <Text style={[styles.subTabText, exploreSubTab === 'saved' && styles.subTabTextActive]}>
+              Guardadas
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Sub-tabs para Urgentes */}
+      {activeTab === 'urgent' && onUrgentSubTabChange && (
+        <View>
+          {/* Switch de disponibilidad — solo artistas y solo en tab urgentes */}
+          {isArtist && onAvailabilityToggle && (
+            <AvailabilitySwitch
+              isAvailable={isAvailable}
+              onToggle={onAvailabilityToggle}
+              nearbyOffersCount={realTimeOffersCount}
+            />
+          )}
+          
+          <View style={styles.subTabsWrapper}>
+            <TouchableOpacity
+              style={[styles.subTab, urgentSubTab === 'pending' && styles.subTabActive]}
+              onPress={() => onUrgentSubTabChange('pending')}
+            >
+              <Text style={[styles.subTabText, urgentSubTab === 'pending' && styles.subTabTextActive]}>
+                Pendientes
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.subTab, urgentSubTab === 'in_progress' && styles.subTabActive]}
+              onPress={() => onUrgentSubTabChange('in_progress')}
+            >
+              <Text style={[styles.subTabText, urgentSubTab === 'in_progress' && styles.subTabTextActive]}>
+                En curso
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.subTab, urgentSubTab === 'completed' && styles.subTabActive]}
+              onPress={() => onUrgentSubTabChange('completed')}
+            >
+              <Text style={[styles.subTabText, urgentSubTab === 'completed' && styles.subTabTextActive]}>
+                Finalizadas
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -199,5 +280,33 @@ const styles = StyleSheet.create({
     height: 2,
     backgroundColor: Colors.primary,
     borderRadius: 2,
+  },
+
+  // Sub-tabs para Explorar
+  subTabsWrapper: {
+    flexDirection: 'row',
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  subTab: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+  },
+  subTabActive: {
+    backgroundColor: Colors.primary + '15',
+  },
+  subTabText: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    color: Colors.textSecondary,
+  },
+  subTabTextActive: {
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: Colors.primary,
   },
 });

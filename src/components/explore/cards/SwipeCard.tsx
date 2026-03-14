@@ -47,7 +47,8 @@ export default function SwipeCard({
   children,
 }: SwipeCardProps) {
   const swipeX = useRef(new RNAnimated.Value(0)).current;
-  
+  const touchStartX = useRef(0);
+
   // Refs to store functions and avoid stale closures
   const flyOffRef = useRef<(direction: SwipeDirection) => void>(undefined);
   const snapBackRef = useRef<() => void>(undefined);
@@ -116,38 +117,36 @@ export default function SwipeCard({
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: (_, gs) => {
-        console.log(`[Swipe] onStart — dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)}`);
+      onStartShouldSetPanResponder: (evt, _gs) => {
+        touchStartX.current = evt.nativeEvent.locationX;
+        console.log(`[Swipe] START x:${evt.nativeEvent.locationX.toFixed(0)} CARD_WIDTH:${CARD_WIDTH} limit:${(CARD_WIDTH * 0.80).toFixed(0)}`);
         return false;
       },
-      onMoveShouldSetPanResponder: (_, gs) => {
-        // Solo captura si el gesto es claramente horizontal (2× más dx que dy)
-        const claim = Math.abs(gs.dx) > 15 && Math.abs(gs.dx) > Math.abs(gs.dy) * 2;
-        console.log(`[Swipe] onMove? dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)} → ${claim ? '✅ CLAIM' : '❌ skip'}`);
+      onMoveShouldSetPanResponder: (_evt, gs) => {
+        const inButtonZone = touchStartX.current > CARD_WIDTH * 0.80;
+        const claim = !inButtonZone && Math.abs(gs.dx) > 20 && Math.abs(gs.dx) > Math.abs(gs.dy) * 3;
+        console.log(`[Swipe] MOVE dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)} startX:${touchStartX.current.toFixed(0)} inBtnZone:${inButtonZone} → ${claim ? '✅ CLAIM' : '❌ skip'}`);
         return claim;
       },
-      onPanResponderGrant: (_, gs) => {
-        console.log(`[Swipe] GRANT — empezando swipe dx:${gs.dx.toFixed(1)}`);
+      onPanResponderGrant: () => {
+        console.log('[Swipe] GRANT — PanResponder tomó el control');
       },
       onPanResponderMove: (_, gs) => {
-        console.log(`[Swipe] MOVE dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)} vx:${gs.vx.toFixed(2)}`);
+        // Eliminado log en movimiento para mejorar rendimiento
         swipeX.setValue(gs.dx);
       },
       onPanResponderRelease: (_, gs) => {
-        console.log(`[Swipe] RELEASE dx:${gs.dx.toFixed(1)} vx:${gs.vx.toFixed(2)} threshold:${SWIPE_THRESHOLD}`);
+        console.log(`[Swipe] RELEASE dx:${gs.dx.toFixed(1)}`);
         if (gs.dx > SWIPE_THRESHOLD) {
-          console.log('[Swipe] → LIKE 💚');
           flyOffRef.current?.('like');
         } else if (gs.dx < -SWIPE_THRESHOLD) {
-          console.log('[Swipe] → NOPE ❌');
           flyOffRef.current?.('nope');
         } else {
-          console.log('[Swipe] → SNAP BACK (no llegó al umbral)');
           snapBackRef.current?.();
         }
       },
       onPanResponderTerminate: (_, gs) => {
-        console.log(`[Swipe] TERMINATE (otro gestor tomó el control) dx:${gs.dx.toFixed(1)}`);
+        console.log(`[Swipe] TERMINATE dx:${gs.dx.toFixed(1)}`);
         snapBackRef.current?.();
       },
       onPanResponderTerminationRequest: () => {

@@ -18,6 +18,7 @@ export interface ArtistsResponse {
 export interface ExploreArtistsParams {
   page?: number;
   limit?: number;
+  query?: string;
   category?: string;
   subCategory?: string;
   distance?: number;
@@ -49,6 +50,7 @@ export const artistsService = {
         params: {
           page: params.page || 1,
           limit: params.limit || 20,
+          query: params.query || undefined,
           category: params.category !== 'all' ? params.category : undefined,
           subCategory: params.subCategory !== 'all' ? params.subCategory : undefined,
           distance: params.distance,
@@ -136,58 +138,73 @@ export const artistsService = {
   },
 
   /**
-   * Mapear datos del backend al formato del frontend
+   * Mapear datos del backend al formato del frontend (optimizado)
    */
   mapBackendArtistToFrontend(backendArtist: any): Artist {
+    // Cache de categorías para evitar búsquedas repetidas
+    const categoryCache = new Map();
+    
+    const getCategoryId = (raw: any) => {
+      if (typeof raw !== 'string' || !raw) return undefined;
+      if (categoryCache.has(raw)) return categoryCache.get(raw);
+      const category = getCategoryById(raw);
+      if (category) {
+        categoryCache.set(raw, raw);
+        return raw;
+      }
+      return undefined;
+    };
+
+    // Extraer valores una sola vez
+    const userId = backendArtist.userId || backendArtist.user?.id || backendArtist.id;
+    const socialMedia = backendArtist.socialMedia || backendArtist.user?.socialMedia;
+    const userFields = backendArtist.user || {};
+    
+    // Procesar experiencia de forma más eficiente
     const yearsExp = backendArtist.yearsOfExperience ?? backendArtist.experience;
     const experienceStr = typeof yearsExp === 'number'
       ? `${yearsExp} ${yearsExp === 1 ? 'año' : 'años'}`
       : (yearsExp || '');
 
-    // socialMedia puede venir directo o anidado en user
-    const socialMedia = backendArtist.socialMedia || backendArtist.user?.socialMedia;
-
+    // Extraer IDs de categoría de una sola vez
     const rawCategoryId = backendArtist.categoryId || backendArtist.artistCategory?.categoryId;
     const rawDisciplineId = backendArtist.disciplineId || backendArtist.artistCategory?.disciplineId;
     const rawRoleId = backendArtist.roleId || backendArtist.artistCategory?.roleId;
 
-    const categoryId = typeof rawCategoryId === 'string' && getCategoryById(rawCategoryId)
-      ? rawCategoryId
-      : undefined;
+    const categoryId = getCategoryId(rawCategoryId);
     const disciplineId = typeof rawDisciplineId === 'string' ? rawDisciplineId : undefined;
     const roleId = typeof rawRoleId === 'string' ? rawRoleId : undefined;
 
+    // Construir objeto de forma optimizada
     return {
-      // En Explore, `id` se usa como userId (Firebase UID) para cargar servicios/portfolio.
-      id: (backendArtist.userId || backendArtist.user?.id || backendArtist.id).toString(),
+      id: (userId || backendArtist.id).toString(),
       type: 'artist' as const,
-      userId: backendArtist.userId || backendArtist.user?.id,
+      userId,
       name: backendArtist.displayName || backendArtist.artistName || backendArtist.name || 'Artista',
-      // Intentar construir la categoría como objeto si vienen los campos individuales
       category: (categoryId || disciplineId || roleId) ? {
-        categoryId: categoryId,
-        disciplineId: disciplineId,
-        roleId: roleId,
+        categoryId,
+        disciplineId,
+        roleId,
       } : (backendArtist.category || 'Artista'),
-      location: backendArtist.location || backendArtist.city || backendArtist.user?.city || 'Colombia',
-      rating: backendArtist.rating || 5.0,
-      reviews: backendArtist.reviewsCount || 0,
-      responseTime: backendArtist.responseTime || '~2 horas',
+      location: backendArtist.location || backendArtist.city || userFields.city || 'Colombia',
+      rating: Number(backendArtist.rating) || 5.0,
+      reviews: Number(backendArtist.reviewsCount) || 0,
+      responseTime: backendArtist.responseTime || userFields.responseTime || '~2 horas',
       price: Number(backendArtist.pricePerHour ?? backendArtist.hourlyRate ?? 0),
-      image: backendArtist.avatarUrl || backendArtist.profileImageUrl || backendArtist.image || backendArtist.user?.profileImageUrl || '',
+      image: backendArtist.avatarUrl || backendArtist.profileImageUrl || backendArtist.image || userFields.profileImageUrl || '',
       gallery: backendArtist.portfolio?.photos?.map((p: any) => p.imageUrl || p.url) || [],
       tags: backendArtist.tags || [],
-      bio: backendArtist.bio || backendArtist.user?.bio || backendArtist.shortBio || '',
-      description: backendArtist.description || backendArtist.details?.description || backendArtist.user?.description || '',
+      bio: backendArtist.bio || userFields.bio || backendArtist.shortBio || '',
+      description: backendArtist.description || backendArtist.details?.description || userFields.description || '',
       availability: backendArtist.availability || (backendArtist.isAvailable ? 'Disponible' : 'Ocupado'),
       experience: experienceStr,
       style: backendArtist.style || backendArtist.roleId || '',
       services: backendArtist.serviceTypes || [],
       distance: backendArtist.distance ? `${backendArtist.distance.toFixed(1)} km` : undefined,
-      verified: backendArtist.isVerified || backendArtist.user?.isVerified || false,
+      verified: Boolean(backendArtist.isVerified || userFields.isVerified),
       artistCategory: backendArtist.artistCategory,
-      specialty: backendArtist.specialty || backendArtist.user?.specialty,
-      niche: backendArtist.niche || backendArtist.user?.niche,
+      specialty: backendArtist.specialty || userFields.specialty,
+      niche: backendArtist.niche || userFields.niche,
       socialLinks: socialMedia ? {
         instagram: socialMedia.instagram,
         tiktok: socialMedia.tiktok,
@@ -195,17 +212,10 @@ export const artistsService = {
         spotify: socialMedia.spotify,
         facebook: socialMedia.facebook,
         twitter: socialMedia.twitter,
-      } as {
-        instagram?: string;
-        tiktok?: string;
-        youtube?: string;
-        spotify?: string;
-        facebook?: string;
-        twitter?: string;
       } : undefined,
       workExperience: backendArtist.workExperience || [],
       education: backendArtist.education || [],
-      schedule: backendArtist.schedule || backendArtist.user?.schedule || backendArtist.userSchedule || undefined,
+      schedule: backendArtist.schedule || userFields.schedule || backendArtist.userSchedule || backendArtist.metadata?.responseTime || undefined,
     };
   },
 

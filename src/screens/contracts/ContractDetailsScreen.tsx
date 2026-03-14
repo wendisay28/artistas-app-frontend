@@ -20,7 +20,10 @@ export default function ContractDetailsScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   
-  const { contractId } = route.params as { contractId: string };
+  const { contractId, initPoint: routeInitPoint } = route.params as {
+    contractId: string;
+    initPoint?: string;
+  };
   
   const [contract, setContract] = useState<Contract | null>(null);
   const [loading, setLoading] = useState(true);
@@ -144,8 +147,17 @@ export default function ContractDetailsScreen() {
   };
 
   const handleOpenPayment = () => {
-    if (contract?.mercadoPagoPreferenceId) {
-      Linking.openURL(`https://www.mercadopago.com.co/checkout/v1/redirect?preference_id=${contract.mercadoPagoPreferenceId}`);
+    // Preferir la URL de initPoint que viene por navegación (ya generada al contratar)
+    const url =
+      routeInitPoint ||
+      (contract?.mercadoPagoPreferenceId
+        ? `https://www.mercadopago.com.co/checkout/v1/redirect?preference_id=${contract.mercadoPagoPreferenceId}`
+        : null);
+
+    if (url) {
+      Linking.openURL(url);
+    } else {
+      Alert.alert('Pago no disponible', 'No se encontró un enlace de pago para este contrato.');
     }
   };
 
@@ -174,6 +186,8 @@ export default function ContractDetailsScreen() {
 
     switch (contract.status) {
       case 'pending_payment':
+      // 'pending' viene del backend cuando se acaba de crear el contrato
+      case 'pending' as any:
         buttons.push({
           text: 'Pagar ahora',
           icon: 'card-outline',

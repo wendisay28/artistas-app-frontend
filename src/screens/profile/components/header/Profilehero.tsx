@@ -192,7 +192,7 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
         </View>
       )}
 
-      {/* ── Botón editar portada — solo icono ── */}
+      {/* ── Botón editar portada ── */}
       {isOwner && (
         <TouchableOpacity style={styles.editCoverBtn} onPress={onEditCover} activeOpacity={0.75}>
           {hasCover ? (
@@ -203,9 +203,12 @@ export const ProfileHero: React.FC<ProfileHeroProps> = ({
               <Ionicons name="camera-outline" size={16} color="rgba(255,255,255,0.95)" />
             </LinearGradient>
           ) : (
-            <View style={styles.editCoverLightInner}>
-              <Ionicons name="camera-outline" size={16} color="#7c3aed" />
-            </View>
+            <LinearGradient
+              colors={['rgba(124,58,237,0.15)', 'rgba(124,58,237,0.08)']}
+              style={styles.editCoverInner}
+            >
+              <Ionicons name="camera-outline" size={16} color="#fff" />
+            </LinearGradient>
           )}
         </TouchableOpacity>
       )}

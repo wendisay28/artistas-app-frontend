@@ -225,7 +225,7 @@ export const UnifiedFiltersPanel: React.FC<UnifiedFiltersProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    // sin flex:1 — el panel controla su propio tamaño
   },
 });
 

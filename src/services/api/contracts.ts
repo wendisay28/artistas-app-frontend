@@ -1,72 +1,61 @@
 // src/services/api/contracts.ts
-// Servicio para gestionar contratos y pagos con Mercado Pago
-
-import { apiClient } from './index';
-import type { Contract, ContractStatus, CreateContractRequest } from '../../../types/contracts';
+import apiClient from './config';
 
 export const contractsService = {
-  // Crear un nuevo contrato (contratación inmediata)
-  async createContract(data: CreateContractRequest) {
-    const response = await apiClient.post('/api/contracts/create', data);
+  // Crear nueva contratación
+  async createContract(data: {
+    artistId: string;
+    serviceId?: number;
+    serviceType: string;
+    serviceName: string;
+    description?: string;
+    amount?: number;
+    serviceDate?: string;
+    metadata?: Record<string, any>;
+  }) {
+    const response = await apiClient.post('/v1/contracts', data);
     return response.data;
   },
 
-  // Obtener contratos del usuario actual
+  // Obtener contratos del usuario (como cliente o artista)
   async getUserContracts(type?: 'client' | 'artist') {
-    const response = await apiClient.get('/api/contracts', {
-      params: { type }
-    });
+    const response = await apiClient.get('/v1/contracts', { params: { type } });
     return response.data;
   },
 
-  // Obtener detalles de un contrato específico
-  async getContractById(id: string) {
-    const response = await apiClient.get(`/api/contracts/${id}`);
+  // Obtener contrato por ID
+  async getContractById(id: string | number) {
+    const response = await apiClient.get(`/v1/contracts/${id}`);
     return response.data;
   },
 
   // Actualizar estado del contrato
-  async updateContractStatus(id: string, status: ContractStatus, evidence?: any) {
-    const response = await apiClient.patch(`/api/contracts/${id}/status`, {
-      status,
-      evidence
+  async updateContractStatus(id: string | number, status: string, data?: any) {
+    const response = await apiClient.put(`/v1/contracts/${id}/status`, { status, ...data });
+    return response.data;
+  },
+
+  // Crear preferencia de MercadoPago para un contrato
+  async createMPPreference(contractId: number | string, title: string, amount: number, description?: string) {
+    const response = await apiClient.post('/v1/payments/mp/preference', {
+      contractId,
+      title,
+      amount,
+      description,
     });
-    return response.data;
+    return response.data as {
+      success: boolean;
+      data: {
+        preferenceId: string;
+        initPoint: string;
+        sandboxInitPoint: string;
+      };
+    };
   },
 
-  // Confirmar entrega del servicio (artista)
-  async markAsDelivered(id: string, deliveryData: any) {
-    const response = await apiClient.post(`/api/contracts/${id}/deliver`, deliveryData);
+  // Obtener historial de pagos de un contrato
+  async getPaymentStatus(contractId: string | number) {
+    const response = await apiClient.get(`/v1/payments/contract/${contractId}`);
     return response.data;
   },
-
-  // Confirmar recepción (cliente)
-  async confirmReceipt(id: string, rating?: number, review?: string) {
-    const response = await apiClient.post(`/api/contracts/${id}/confirm`, {
-      rating,
-      review
-    });
-    return response.data;
-  },
-
-  // Iniciar disputa
-  async startDispute(id: string, reason: string, description: string) {
-    const response = await apiClient.post(`/api/contracts/${id}/dispute`, {
-      reason,
-      description
-    });
-    return response.data;
-  },
-
-  // Obtener preferencia de pago de Mercado Pago
-  async getPaymentPreference(contractId: string) {
-    const response = await apiClient.get(`/api/contracts/${contractId}/payment`);
-    return response.data;
-  },
-
-  // Verificar estado del pago con Mercado Pago
-  async checkPaymentStatus(paymentId: string) {
-    const response = await apiClient.get(`/api/payments/${paymentId}/status`);
-    return response.data;
-  }
 };

@@ -14,6 +14,18 @@ import { GalleryItem, FeaturedItem } from '../../../../services/api/portfolio';
 import ReviewCard from '../../../../components/explore/shared/ReviewCard';
 import InfoPair from '../../../../components/explore/shared/InfoPair';
 import GalleryModal from '../../../../components/explore/shared/GalleryModal';
+// Mapeo JS día semana → prefijo del horario guardado
+const TODAY_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date().getDay()];
+const getTodaySchedule = (scheduleStr: string): string => {
+  if (!scheduleStr || scheduleStr === 'No especificado') return 'No especificado';
+  const parts = scheduleStr.split(',').map(p => p.trim());
+  const todayPart = parts.find(p => p.startsWith(TODAY_SHORT));
+  if (!todayPart) return 'No disponible hoy';
+  const match = todayPart.match(/^\S+\s+(.+)-(.+)$/);
+  if (!match) return todayPart;
+  return `Hoy: ${match[1]} – ${match[2]}`;
+};
+
 import {
   getLocalizedCategoryName,
   getLocalizedDisciplineName,
@@ -388,7 +400,7 @@ export const SobreMiSection: React.FC<Props> = ({
         <CardHeader title="Acerca de mí" isOwner={artist.isOwner} onEdit={onEditBio} />
         {artist.description ? (
           <>
-            <Text style={s.bioText} numberOfLines={bioExpanded ? undefined : 3}>
+            <Text style={[s.bioText, { marginTop: -1 }]} numberOfLines={bioExpanded ? undefined : 3}>
               {artist.description}
             </Text>
             <Pressable onPress={() => setBioExpanded(p => !p)} style={s.readMoreBtn}>
@@ -478,7 +490,7 @@ export const SobreMiSection: React.FC<Props> = ({
             valueColor={isAvailable ? '#16a34a' : '#d97706'}
           />
           <View style={s.divider} />
-          <InfoPair label="Horario" value={responseTime} />
+          <InfoPair label="Horario" value={getTodaySchedule(responseTime)} />
         </View>
       </GlassCard>
 
@@ -644,7 +656,7 @@ const s = StyleSheet.create({
 
   // Bio
   bioText: {
-    fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular',
+    fontSize: 15, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(30,27,75,0.7)', lineHeight: 22,
   },
   readMoreBtn: {

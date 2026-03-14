@@ -5,16 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import { CalendarView } from '../../../../../components/availability/CalendarView';
+import { LinearGradient } from 'expo-linear-gradient';
 import { availabilityApi, ArtistBooking } from '../../../../../services/api/availability';
-import { useAuthStore } from '../../../../../store/authStore';
 import { auth } from '../../../../../services/firebase/config';
-import { Colors, Radius, Spacing } from '../../../../../theme';
 
 interface Props {
   isOwner?: boolean;
@@ -22,92 +19,78 @@ interface Props {
   onEditSection?: () => void;
 }
 
-interface BookingCardProps {
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  pending:   { label: 'Pendiente',  color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
+  accepted:  { label: 'Confirmado', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
+  rejected:  { label: 'Rechazado', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
+  cancelled: { label: 'Cancelado',  color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+  completed: { label: 'Completado', color: '#7c3aed', bg: 'rgba(124,58,237,0.1)' },
+};
+
+const formatDate = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+};
+
+const BookingCard: React.FC<{
   booking: ArtistBooking;
   isOwner: boolean;
-  onUpdateStatus: (bookingId: string, status: 'accepted' | 'rejected' | 'cancelled') => void;
-}
-
-const BookingCard: React.FC<BookingCardProps> = ({ booking, isOwner, onUpdateStatus }) => {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    };
-    return date.toLocaleDateString('es-ES', options);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return Colors.warning;
-      case 'accepted': return Colors.success;
-      case 'rejected': return Colors.error;
-      case 'cancelled': return Colors.textMuted;
-      case 'completed': return Colors.primary;
-      default: return Colors.textMuted;
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'pending': return 'Pendiente';
-      case 'accepted': return 'Confirmado';
-      case 'rejected': return 'Rechazado';
-      case 'cancelled': return 'Cancelado';
-      case 'completed': return 'Completado';
-      default: return status;
-    }
-  };
-
-  const canUpdateStatus = isOwner && booking.status === 'pending';
+  onUpdateStatus: (id: string, status: 'accepted' | 'rejected' | 'cancelled') => void;
+}> = ({ booking, isOwner, onUpdateStatus }) => {
+  const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
+  const canAct = isOwner && booking.status === 'pending';
 
   return (
-    <View style={styles.bookingCard}>
-      <View style={styles.bookingHeader}>
-        <View style={styles.bookingInfo}>
-          <Text style={styles.bookingTitle}>{booking.title}</Text>
-          <Text style={styles.bookingMeta}>
-            {formatDate(booking.eventDate)} · {booking.startTime} - {booking.endTime}
-          </Text>
-          {booking.location && (
-            <Text style={styles.bookingLocation}>{booking.location}</Text>
-          )}
+    <View style={s.card}>
+      {/* Header */}
+      <View style={s.cardHeader}>
+        <View style={s.cardInfo}>
+          <Text style={s.cardTitle} numberOfLines={1}>{booking.title}</Text>
+          <View style={s.cardMeta}>
+            <Ionicons name="calendar-outline" size={11} color="rgba(109,40,217,0.5)" />
+            <Text style={s.cardMetaText}>
+              {formatDate(booking.eventDate)} · {booking.startTime} – {booking.endTime}
+            </Text>
+          </View>
+          {booking.location ? (
+            <View style={s.cardMeta}>
+              <Ionicons name="location-outline" size={11} color="rgba(109,40,217,0.5)" />
+              <Text style={s.cardMetaText} numberOfLines={1}>{booking.location}</Text>
+            </View>
+          ) : null}
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-          <Text style={styles.statusText}>{getStatusText(booking.status)}</Text>
+        <View style={[s.statusPill, { backgroundColor: cfg.bg }]}>
+          <Text style={[s.statusText, { color: cfg.color }]}>{cfg.label}</Text>
         </View>
       </View>
 
-      {booking.clientNotes && (
-        <Text style={styles.clientNotes} numberOfLines={2}>
-          Notas: {booking.clientNotes}
-        </Text>
-      )}
+      {booking.clientNotes ? (
+        <Text style={s.notes} numberOfLines={2}>"{booking.clientNotes}"</Text>
+      ) : null}
 
-      {booking.price && (
-        <Text style={styles.bookingPrice}>
-          Presupuesto: ${booking.price} {booking.currency}
-        </Text>
-      )}
+      {booking.price ? (
+        <Text style={s.price}>${booking.price} {booking.currency}</Text>
+      ) : null}
 
-      {canUpdateStatus && (
-        <View style={styles.actionButtons}>
+      {canAct && (
+        <View style={s.actions}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.acceptButton]}
+            style={s.acceptBtn}
             onPress={() => onUpdateStatus(booking.id, 'accepted')}
+            activeOpacity={0.85}
           >
-            <Ionicons name="checkmark" size={16} color={Colors.white} />
-            <Text style={styles.actionButtonText}>Aceptar</Text>
+            <LinearGradient colors={['#16a34a', '#15803d']} style={s.actionGrad}>
+              <Ionicons name="checkmark" size={14} color="#fff" />
+              <Text style={s.actionText}>Aceptar</Text>
+            </LinearGradient>
           </TouchableOpacity>
-          
           <TouchableOpacity
-            style={[styles.actionButton, styles.rejectButton]}
+            style={s.rejectBtn}
             onPress={() => onUpdateStatus(booking.id, 'rejected')}
+            activeOpacity={0.85}
           >
-            <Ionicons name="close" size={16} color={Colors.white} />
-            <Text style={styles.actionButtonText}>Rechazar</Text>
+            <Ionicons name="close" size={14} color="#dc2626" />
+            <Text style={[s.actionText, { color: '#dc2626' }]}>Rechazar</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -115,388 +98,225 @@ const BookingCard: React.FC<BookingCardProps> = ({ booking, isOwner, onUpdateSta
   );
 };
 
-export const AgendaSectionFunctional: React.FC<Props> = ({ 
-  isOwner, 
-  artistId, 
-  onEditSection 
-}) => {
-  const navigation = useNavigation();
-  const { user } = useAuthStore();
+export const AgendaSectionFunctional: React.FC<Props> = ({ isOwner, onEditSection }) => {
   const [bookings, setBookings] = useState<ArtistBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
+  useEffect(() => { loadBookings(); }, []);
 
   const loadBookings = async () => {
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
-
-      const data = await availabilityApi.getUserBookings(token, { 
-        role: isOwner ? 'artist' : 'client' 
+      const data = await availabilityApi.getUserBookings(token, {
+        role: isOwner ? 'artist' : 'client',
       });
       setBookings(data.bookings);
-    } catch (error) {
-      console.error('Error cargando reservas:', error);
-      Alert.alert('Error', 'No se pudieron cargar las reservas');
+    } catch {
+      // endpoint aún no disponible — mostrar empty state sin alert
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const handleUpdateBookingStatus = async (bookingId: string, status: 'accepted' | 'rejected' | 'cancelled') => {
+  const handleUpdateStatus = async (bookingId: string, status: 'accepted' | 'rejected' | 'cancelled') => {
     try {
       const token = await auth.currentUser?.getIdToken();
       if (!token) return;
-
       await availabilityApi.updateBookingStatus(bookingId, { status }, token);
-      
-      // Actualizar lista local
-      setBookings(prev => 
-        prev.map(booking => 
-          booking.id === bookingId 
-            ? { ...booking, status, acceptedAt: status === 'accepted' ? new Date().toISOString() : undefined }
-            : booking
-        )
+      setBookings(prev =>
+        prev.map(b => b.id === bookingId ? { ...b, status } : b)
       );
-
-      Alert.alert(
-        'Éxito',
-        `Reserva ${status === 'accepted' ? 'aceptada' : status === 'rejected' ? 'rechazada' : 'cancelada'} correctamente`
-      );
-    } catch (error) {
-      console.error('Error actualizando reserva:', error);
-      Alert.alert('Error', 'No se pudo actualizar el estado de la reserva');
+    } catch {
+      Alert.alert('Error', 'No se pudo actualizar la reserva');
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadBookings();
-  };
-
-  const handleViewAvailability = () => {
-    if (!artistId) return;
-    
-    navigation.navigate('ArtistAvailability' as never, {
-      artistId: artistId.toString(),
-      artistName: 'Mi Perfil' // Esto debería venir del perfil del artista
-    } as never);
-  };
-
-  const pendingBookings = bookings.filter(b => b.status === 'pending');
-  const confirmedBookings = bookings.filter(b => b.status === 'accepted');
-  const otherBookings = bookings.filter(b => !['pending', 'accepted'].includes(b.status));
+  const pending   = bookings.filter(b => b.status === 'pending');
+  const confirmed = bookings.filter(b => b.status === 'accepted');
+  const others    = bookings.filter(b => !['pending', 'accepted'].includes(b.status));
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Cargando agenda...</Text>
+      <View style={s.center}>
+        <Text style={s.loadingText}>Cargando agenda…</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView 
-      style={styles.container}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-      }
+    <ScrollView
+      style={s.root}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadBookings(); }} tintColor="#7c3aed" />}
     >
       {/* Header */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Mi Agenda</Text>
-        {isOwner && (
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.viewAvailabilityButton} onPress={handleViewAvailability}>
-              <Ionicons name="calendar-outline" size={16} color={Colors.primary} />
-              <Text style={styles.viewAvailabilityText}>Ver disponibilidad</Text>
-            </TouchableOpacity>
-            {onEditSection && (
-              <TouchableOpacity style={styles.editButton} onPress={onEditSection}>
-                <Ionicons name="create-outline" size={16} color={Colors.primary} />
-              </TouchableOpacity>
-            )}
-          </View>
+      <View style={s.header}>
+        <View>
+          <Text style={s.heading}>Mi Agenda</Text>
+          <Text style={s.subheading}>
+            {bookings.length === 0 ? 'Sin reservas activas' : `${bookings.length} reserva${bookings.length !== 1 ? 's' : ''}`}
+          </Text>
+        </View>
+        {isOwner && onEditSection && (
+          <TouchableOpacity style={s.editBtn} onPress={onEditSection} activeOpacity={0.7}>
+            <Ionicons name="create-outline" size={16} color="#7c3aed" />
+          </TouchableOpacity>
         )}
       </View>
 
-      {/* Quick Stats */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{pendingBookings.length}</Text>
-          <Text style={styles.statLabel}>Pendientes</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{confirmedBookings.length}</Text>
-          <Text style={styles.statLabel}>Confirmadas</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{bookings.length}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
+      {/* Stats */}
+      <View style={s.statsRow}>
+        {[
+          { label: 'Pendientes', value: pending.length, color: '#d97706' },
+          { label: 'Confirmadas', value: confirmed.length, color: '#16a34a' },
+          { label: 'Total', value: bookings.length, color: '#7c3aed' },
+        ].map(({ label, value, color }) => (
+          <View key={label} style={s.statCard}>
+            <Text style={[s.statNum, { color }]}>{value}</Text>
+            <Text style={s.statLabel}>{label}</Text>
+          </View>
+        ))}
       </View>
 
-      {/* Pending Bookings */}
-      {pendingBookings.length > 0 && (
-        <View style={styles.bookingsSection}>
-          <Text style={styles.subsectionTitle}>Reservas Pendientes</Text>
-          {pendingBookings.map(booking => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-              isOwner={isOwner}
-              onUpdateStatus={handleUpdateBookingStatus}
-            />
+      {/* Grupos */}
+      {pending.length > 0 && (
+        <Section title="Pendientes" icon="time-outline" iconColor="#d97706">
+          {pending.map(b => (
+            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} onUpdateStatus={handleUpdateStatus} />
           ))}
-        </View>
+        </Section>
       )}
 
-      {/* Confirmed Bookings */}
-      {confirmedBookings.length > 0 && (
-        <View style={styles.bookingsSection}>
-          <Text style={styles.subsectionTitle}>Reservas Confirmadas</Text>
-          {confirmedBookings.map(booking => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-              isOwner={isOwner}
-              onUpdateStatus={handleUpdateBookingStatus}
-            />
+      {confirmed.length > 0 && (
+        <Section title="Confirmadas" icon="checkmark-circle-outline" iconColor="#16a34a">
+          {confirmed.map(b => (
+            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} onUpdateStatus={handleUpdateStatus} />
           ))}
-        </View>
+        </Section>
       )}
 
-      {/* Other Bookings */}
-      {otherBookings.length > 0 && (
-        <View style={styles.bookingsSection}>
-          <Text style={styles.subsectionTitle}>Otras Reservas</Text>
-          {otherBookings.map(booking => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-              isOwner={isOwner}
-              onUpdateStatus={handleUpdateBookingStatus}
-            />
+      {others.length > 0 && (
+        <Section title="Historial" icon="archive-outline" iconColor="#6b7280">
+          {others.map(b => (
+            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} onUpdateStatus={handleUpdateStatus} />
           ))}
-        </View>
+        </Section>
       )}
 
-      {/* Empty State */}
+      {/* Empty */}
       {bookings.length === 0 && (
-        <View style={styles.emptyState}>
-          <Ionicons name="calendar-outline" size={48} color={Colors.textMuted} />
-          <Text style={styles.emptyTitle}>No tienes reservas</Text>
-          <Text style={styles.emptyText}>
-            {isOwner 
-              ? 'Cuando los clientes reserven tus servicios, aparecerán aquí'
-              : 'Tus reservas aparecerán aquí'
-            }
+        <View style={s.empty}>
+          <View style={s.emptyIcon}>
+            <Ionicons name="calendar-outline" size={36} color="rgba(124,58,237,0.4)" />
+          </View>
+          <Text style={s.emptyTitle}>Sin reservas aún</Text>
+          <Text style={s.emptySub}>
+            {isOwner
+              ? 'Cuando los clientes reserven tus servicios, aparecerán aquí.'
+              : 'Tus reservas aparecerán aquí.'}
           </Text>
-          {isOwner && (
-            <TouchableOpacity style={styles.emptyButton} onPress={handleViewAvailability}>
-              <Text style={styles.emptyButtonText}>Configurar disponibilidad</Text>
-            </TouchableOpacity>
-          )}
         </View>
       )}
+
+      <View style={{ height: 32 }} />
     </ScrollView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: Spacing.md,
+const Section: React.FC<{ title: string; icon: string; iconColor: string; children: React.ReactNode }> = ({ title, icon, iconColor, children }) => (
+  <View style={s.section}>
+    <View style={s.sectionHeader}>
+      <Ionicons name={icon as any} size={14} color={iconColor} />
+      <Text style={s.sectionTitle}>{title}</Text>
+    </View>
+    {children}
+  </View>
+);
+
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#faf9ff' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(109,40,217,0.5)' },
+
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  heading: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b' },
+  subheading: { fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(109,40,217,0.45)', marginTop: 2 },
+  editBtn: {
+    width: 34, height: 34, borderRadius: 10,
+    backgroundColor: 'rgba(124,58,237,0.08)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  loadingText: {
-    fontSize: 16,
-    color: Colors.textMuted,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Colors.text,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  viewAvailabilityButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  viewAvailabilityText: {
-    fontSize: 12,
-    color: Colors.primary,
-    fontWeight: '500',
-  },
-  editButton: {
-    padding: Spacing.sm,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
+
+  statsRow: {
+    flexDirection: 'row', gap: 10,
+    paddingHorizontal: 16, marginBottom: 20,
   },
   statCard: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    alignItems: 'center',
+    flex: 1, backgroundColor: '#fff', borderRadius: 14,
+    borderWidth: 1, borderColor: 'rgba(167,139,250,0.18)',
+    paddingVertical: 12, alignItems: 'center',
+    shadowColor: '#5b21b6', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.07, shadowRadius: 8, elevation: 2,
   },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors.primary,
+  statNum: { fontSize: 22, fontFamily: 'PlusJakartaSans_700Bold' },
+  statLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(109,40,217,0.5)', marginTop: 2 },
+
+  section: { paddingHorizontal: 16, marginBottom: 20 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  sectionTitle: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b' },
+
+  card: {
+    backgroundColor: '#fff', borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(167,139,250,0.18)',
+    padding: 14, marginBottom: 10,
+    shadowColor: '#5b21b6', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
   },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    marginTop: Spacing.xs,
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  cardInfo: { flex: 1, gap: 3 },
+  cardTitle: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b' },
+  cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardMetaText: { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(109,40,217,0.5)', flex: 1 },
+  statusPill: { borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  statusText: { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' },
+  notes: {
+    fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular',
+    color: '#6b7280', fontStyle: 'italic', marginTop: 8,
   },
-  bookingsSection: {
-    marginBottom: Spacing.xl,
+  price: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#7c3aed', marginTop: 6,
   },
-  subsectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.md,
+
+  actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  acceptBtn: { borderRadius: 10, overflow: 'hidden' },
+  actionGrad: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8 },
+  rejectBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(220,38,38,0.25)',
+    backgroundColor: 'rgba(220,38,38,0.05)',
   },
-  bookingCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
+  actionText: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
+
+  empty: {
+    alignItems: 'center', paddingHorizontal: 36, paddingTop: 32, gap: 10,
   },
-  bookingHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.sm,
+  emptyIcon: {
+    width: 72, height: 72, borderRadius: 20,
+    backgroundColor: 'rgba(124,58,237,0.06)',
+    borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.12)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  bookingInfo: {
-    flex: 1,
-  },
-  bookingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-  },
-  bookingMeta: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginBottom: Spacing.xs,
-  },
-  bookingLocation: {
-    fontSize: 12,
-    color: Colors.textMuted,
-  },
-  statusBadge: {
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: Colors.white,
-  },
-  clientNotes: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontStyle: 'italic',
-    marginBottom: Spacing.sm,
-  },
-  bookingPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.primary,
-    marginBottom: Spacing.sm,
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.sm,
-  },
-  acceptButton: {
-    backgroundColor: Colors.success,
-  },
-  rejectButton: {
-    backgroundColor: Colors.error,
-  },
-  actionButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.white,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xxl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.text,
-    marginTop: Spacing.md,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    marginTop: Spacing.sm,
-    marginBottom: Spacing.lg,
-    lineHeight: 20,
-  },
-  emptyButton: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-  },
-  emptyButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.white,
+  emptyTitle: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b' },
+  emptySub: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(109,40,217,0.45)', textAlign: 'center', lineHeight: 19,
   },
 });

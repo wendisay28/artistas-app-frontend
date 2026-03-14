@@ -23,6 +23,7 @@ import { colors } from '../../constants/colors';
 import { auth } from '../../services/firebase/config';
 import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
 import { PortalAutorScreen } from '../../screens/portal/PortalAutorScreen';
 
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.65;
@@ -72,6 +73,7 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   const user = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
+  const { isDark, toggleTheme } = useThemeStore();
   const navigation = useNavigation<any>();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [portalVisible, setPortalVisible] = useState(false);
@@ -155,6 +157,14 @@ export const TopBar: React.FC<TopBarProps> = ({
       onPress: () => {
         closeDrawer();
         setTimeout(() => navigation.navigate('Wallet'), 280);
+      },
+    },
+    {
+      icon: isDark ? 'sunny-outline' : 'moon-outline',
+      label: isDark ? 'Modo claro' : 'Modo oscuro',
+      onPress: () => {
+        toggleTheme();
+        closeDrawer();
       },
     },
     {

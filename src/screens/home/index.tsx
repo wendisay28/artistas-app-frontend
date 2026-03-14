@@ -16,17 +16,19 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  Modal, Animated,
+  Modal, Animated, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import TopBar from '../../components/shared/TopBar';
 import { AppFooter } from '../../components/shared/AppFooter';
+import { ComingSoonSection } from '../../components/shared/ComingSoonSection';
 import { LocationPickerModal } from './components/Locationpickermodal';
 import { PortalAutorScreen } from '../portal/PortalAutorScreen';
 import { useProximityLogic } from './hooks/useProximityLogic';
 import { useProfileCompletion } from './hooks/Useprofilecompletion';
+import { useHomeData } from './hooks/useHomeData';
 
 import HomeBanners from './components/HomeBanners';
 import SectionHeader from './components/SectionHeader';
@@ -37,8 +39,6 @@ import {
 
 import {
   EVENT_CATEGORIES,
-  MOCK_EVENTS,
-  MOCK_ARTISTS,
   MOCK_VENUES,
 } from './data/homeData';
 
@@ -120,6 +120,9 @@ function HomeScreen() {
   // ── Perfil completion — hook limpio con pesos que suman 100 ──────────────
   const { percentage: profilePct } = useProfileCompletion();
 
+  // ── Datos reales desde API (artistas + eventos) ──────────────────────────
+  const { artists: apiArtists, events: apiEvents, isLoading: dataLoading } = useHomeData();
+
   // ── Proximity / location ─────────────────────────────────────────────────
   const {
     userLocation,
@@ -144,14 +147,14 @@ function HomeScreen() {
   const filteredEvents: EventItem[] = sortByDistance(
     filterByProximity(
       activeCategory === 'todos'
-        ? MOCK_EVENTS
-        : MOCK_EVENTS.filter(e =>
+        ? apiEvents
+        : apiEvents.filter(e =>
             normalize(e.category).includes(normalize(activeCategory))
           )
     )
   );
 
-  const nearbyArtists: ArtistItem[] = sortByDistance(filterByProximity(MOCK_ARTISTS));
+  const nearbyArtists: ArtistItem[] = sortByDistance(filterByProximity(apiArtists));
   const nearbyVenues:  VenueItem[]  = filterByProximity(MOCK_VENUES);
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -221,7 +224,11 @@ function HomeScreen() {
               subtitle="Talento local disponible ahora"
               onSeeAll={() => {/* navegar a ArtistsScreen */}}
             />
-            {nearbyArtists.length > 0 ? (
+            {dataLoading ? (
+              <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+                <ActivityIndicator color="#7c3aed" />
+              </View>
+            ) : nearbyArtists.length > 0 ? (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -242,7 +249,7 @@ function HomeScreen() {
           </View>
         </AnimatedSection>
 
-        {/* ── Venues — también horizontal, sin lista vertical ──────────── */}
+        {/* ── Venues — Próximamente ──────────── */}
         <AnimatedSection delay={240}>
           <View style={s.section}>
             <SectionHeader
@@ -250,24 +257,10 @@ function HomeScreen() {
               subtitle={`Recintos disponibles en ${currentCity}`}
               onSeeAll={() => {/* navegar a VenuesScreen */}}
             />
-            {nearbyVenues.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={s.hScroll}
-                decelerationRate="fast"
-              >
-                {nearbyVenues.map(item => (
-                  <VenueCard
-                    key={item.id}
-                    item={item}
-                    onPress={() => console.log('Venue:', item.name)}
-                  />
-                ))}
-              </ScrollView>
-            ) : (
-              <EmptySection message={`No hay espacios registrados\nen ${currentCity} aún`} />
-            )}
+            <ComingSoonSection 
+              title="Salas y espacios" 
+              subtitle="Estamos construyendo la mejor forma de que encuentres el lugar perfecto para tu evento" 
+            />
           </View>
         </AnimatedSection>
 

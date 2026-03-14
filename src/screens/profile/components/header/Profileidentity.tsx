@@ -10,8 +10,8 @@ import {
   StyleSheet,
   Animated,
   Easing,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -25,7 +25,7 @@ const AVATAR_OVERLAP = 42;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const truncateBio = (bio: string, maxLength = 90): string => {
+const truncateBio = (bio: string, maxLength = 130): string => {
   if (bio.length <= maxLength) return bio;
   const truncated = bio.slice(0, maxLength - 3);
   const lastSpace = truncated.lastIndexOf(' ');
@@ -164,8 +164,8 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
   const availLabel = artist.info?.find(i => i.label === 'Disponibilidad')?.value;
   const avail      = getAvailOpt(availLabel);
 
-  // Bio corta para el header (máx ~90 chars)
-  const shortBio = artist.bio ? truncateBio(artist.bio.trim(), 105) : null;
+  // Bio corta para el header (máx ~130 chars)
+  const shortBio = artist.bio ? truncateBio(artist.bio.trim(), 130) : null;
   const tags     = artist.tags?.slice(0, 3) ?? [];
 
   // Horario de hoy: busca la entrada del día actual en el formato "Lun 9am-6pm, Dom 7am-5pm"
@@ -255,18 +255,6 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
           <Text style={styles.artistName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
             {artist.name}
           </Text>
-          <TouchableOpacity
-            style={[styles.availPill, { backgroundColor: avail.bg, borderColor: avail.border }]}
-            onPress={isOwner ? onToggleAvailability : undefined}
-            activeOpacity={isOwner ? 0.75 : 1}
-          >
-            <PulsingDot color={avail.dot} animate={avail.pulse} />
-            <Text style={[styles.availText, { color: avail.color }]}>{avail.label}</Text>
-            {isOwner && <View style={{ opacity: 0.6 }}><Ionicons name="chevron-forward" size={7} color={avail.color} /></View>}
-          </TouchableOpacity>
-          {artist.isVerified && (
-            <Ionicons name="checkmark-circle" size={17} color="#7c3aed" />
-          )}
         </View>
 
         {/* Rol / disciplina */}
@@ -279,18 +267,10 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
 
       </View>
 
-      {/* ══ META ROW: horario · ciudad ════════════════════════════ */}
+      {/* ══ META ROW: ubicación · disponibilidad ════════════════════════════ */}
       <View style={styles.metaRow}>
 
-        {/* Horario de hoy — sin contenedor, solo icono y texto */}
-        {todaySchedule ? (
-          <View style={styles.scheduleRow}>
-            <Ionicons name="time-outline" size={13} color="#7c3aed" />
-            <Text style={styles.scheduleText}>{todaySchedule}</Text>
-          </View>
-        ) : null}
-
-        {/* Ubicación — sin contenedor, solo icono y texto */}
+        {/* Ubicación con barrio */}
         {artist.location ? (
           <View style={styles.cityRow}>
             <Ionicons name="location-outline" size={13} color="#7c3aed" />
@@ -298,7 +278,17 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
           </View>
         ) : null}
 
-        {/* La insignia de Empresa la mantuve como caja por jerarquía, pero puedes cambiarla si deseas */}
+        {/* Disponibilidad */}
+        <TouchableOpacity
+          style={[styles.availPill, { backgroundColor: avail.bg, borderColor: avail.border }]}
+          onPress={isOwner ? onToggleAvailability : undefined}
+          activeOpacity={isOwner ? 0.75 : 1}
+        >
+          <PulsingDot color={avail.dot} animate={avail.pulse} />
+          <Text style={[styles.availText, { color: avail.color }]}>{avail.label}</Text>
+          {isOwner && <View style={{ opacity: 0.6 }}><Ionicons name="chevron-forward" size={7} color={avail.color} /></View>}
+        </TouchableOpacity>
+
         {artist?.userType === 'company' && (
           <View style={styles.companyBadge}>
             <Ionicons name="business-outline" size={10} color="#1E40AF" />
@@ -512,7 +502,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   artistName: {
-    fontSize: 22,
+    fontSize: 18,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#1e1b4b',
     letterSpacing: -0.5,

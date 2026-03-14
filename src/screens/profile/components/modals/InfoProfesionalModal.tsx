@@ -9,6 +9,150 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
+// ── Paleta de identidad visual (CONSERVADA) ──────────────────────────────────
+const Brand = {
+  purple:       '#7c3aed',
+  purpleLight:  'rgba(124,58,237,0.08)',
+  purpleMid:    'rgba(124,58,237,0.25)',
+  purpleFade:   'rgba(124,58,237,0.45)',
+  purpleText:   'rgba(124,58,237,0.55)',
+  blue:         '#2563eb',
+  bg:           '#faf9ff',
+  surface:      'rgba(255,255,255,0.85)',
+  border:       'rgba(167,139,250,0.2)',
+  borderFocus:  '#7c3aed',
+  text:         '#1e1b4b',
+  textSub:      'rgba(109,40,217,0.5)',
+  textMuted:    'rgba(109,40,217,0.35)',
+  textLight:    'rgba(124,58,237,0.25)',
+  white:        '#fff',
+};
+
+// ── ScheduleSelector (CONSERVADO COMPLETO) ───────────────────────────────────
+const DAYS = [
+  { key: 'lunes',     short: 'L',  label: 'Lunes'      },
+  { key: 'martes',    short: 'M',  label: 'Martes'     },
+  { key: 'miercoles', short: 'X',  label: 'Miércoles'  },
+  { key: 'jueves',    short: 'J',  label: 'Jueves'     },
+  { key: 'viernes',   short: 'V',  label: 'Viernes'    },
+  { key: 'sabado',    short: 'S',  label: 'Sábado'     },
+  { key: 'domingo',   short: 'D',  label: 'Domingo'    },
+];
+const TIMES = [
+  '6:00am','7:00am','8:00am','9:00am','10:00am','11:00am','12:00pm',
+  '1:00pm','2:00pm','3:00pm','4:00pm','5:00pm','6:00pm','7:00pm',
+  '8:00pm','9:00pm','10:00pm',
+];
+
+// ── Helpers (CONSERVADOS) ───────────────────────────────────────────────────
+const DAY_KEY_MAP: Record<string, string> = { 'Lun': 'lunes', 'Mar': 'martes', 'Mié': 'miercoles', 'Jue': 'jueves', 'Vie': 'viernes', 'Sáb': 'sabado', 'Dom': 'domingo' };
+const DAY_SHORT_MAP: Record<string, string> = { lunes: 'Lun', martes: 'Mar', miercoles: 'Mié', jueves: 'Jue', viernes: 'Vie', sabado: 'Sáb', domingo: 'Dom' };
+const DEFAULT_SCHEDULE_DAYS = {
+  lunes: { enabled: false, start: '9:00am', end: '6:00pm' }, martes: { enabled: false, start: '9:00am', end: '6:00pm' },
+  miercoles: { enabled: false, start: '9:00am', end: '6:00pm' }, jueves: { enabled: false, start: '9:00am', end: '6:00pm' },
+  viernes: { enabled: false, start: '9:00am', end: '6:00pm' }, sabado: { enabled: false, start: '9:00am', end: '6:00pm' },
+  domingo: { enabled: false, start: '9:00am', end: '6:00pm' },
+};
+
+// ── Componente ScheduleSelector ───────────────────────────────────────────────
+const ScheduleSelector: React.FC<{ scheduleDays: any; setScheduleDays: (days: any) => void; }> = ({ scheduleDays, setScheduleDays }) => {
+  const [showTimePicker, setShowTimePicker] = useState<{ day: string; field: 'start' | 'end'; } | null>(null);
+  const toggleDay = (dayKey: string) => {
+    setScheduleDays((prev: any) => ({ ...prev, [dayKey]: { ...prev[dayKey], enabled: !prev[dayKey].enabled } }));
+  };
+  const updateTime = (dayKey: string, field: 'start' | 'end', value: string) => {
+    setScheduleDays((prev: any) => ({ ...prev, [dayKey]: { ...prev[dayKey], [field]: value } }));
+  };
+  const enabledDays = DAYS.filter(d => scheduleDays[d.key]?.enabled);
+
+  return (
+    <View style={sc.wrapper}>
+      <View style={sc.bubblesRow}>
+        {DAYS.map((day) => {
+          const active = scheduleDays[day.key]?.enabled;
+          return (
+            <TouchableOpacity key={day.key} activeOpacity={0.75} onPress={() => toggleDay(day.key)} style={[sc.bubble, active && sc.bubbleActive]}>
+              <Text style={[sc.bubbleLetter, active && sc.bubbleLetterActive]}>{day.short}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      {enabledDays.map((day) => (
+        <View key={day.key} style={sc.timeRow}>
+          <Text style={sc.dayLabel}>{day.label}</Text>
+          <TouchableOpacity activeOpacity={0.75} onPress={() => setShowTimePicker({ day: day.key, field: 'start' })} style={sc.timeBtn}>
+            <Text style={sc.timeBtnLabel}>Desde</Text>
+            <View style={sc.timeBtnValue}>
+              <Ionicons name="sunny-outline" size={11} color={Brand.purple} />
+              <Text style={sc.timeBtnText}>{scheduleDays[day.key].start}</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={sc.timeDash} />
+          <TouchableOpacity activeOpacity={0.75} onPress={() => setShowTimePicker({ day: day.key, field: 'end' })} style={sc.timeBtn}>
+            <Text style={sc.timeBtnLabel}>Hasta</Text>
+            <View style={[sc.timeBtnValue, sc.timeBtnValueEnd]}>
+              <Ionicons name="moon-outline" size={11} color={Brand.blue} />
+              <Text style={sc.timeBtnText}>{scheduleDays[day.key].end}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+      ))}
+      {showTimePicker && (
+        <View style={sc.timePickerOverlay}>
+          <View style={sc.timePickerModal}>
+            <Text style={sc.timePickerTitle}>Seleccionar hora</Text>
+            <ScrollView style={sc.timeList} showsVerticalScrollIndicator={false}>
+              {TIMES.map((time) => (
+                <TouchableOpacity key={time} activeOpacity={0.75} onPress={() => {
+                  if (showTimePicker) {
+                    updateTime(showTimePicker.day, showTimePicker.field, time);
+                    setShowTimePicker(null);
+                  }
+                }} style={sc.timeOption}>
+                  <Text style={sc.timeOptionText}>{time}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity activeOpacity={0.75} onPress={() => setShowTimePicker(null)} style={sc.timePickerCancel}>
+              <Text style={sc.timePickerCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// ── Estilos para ScheduleSelector ───────────────────────────────────────────────
+const sc = StyleSheet.create({
+  wrapper: { marginTop: 16, marginBottom: 8 },
+  bubblesRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16, gap: 4 },
+  bubble: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.6)', borderWidth: 1.5, borderColor: Brand.border,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bubbleActive: { backgroundColor: Brand.purple, borderColor: Brand.purple },
+  bubbleLetter: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: Brand.textMuted },
+  bubbleLetterActive: { color: '#fff' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  dayLabel: { width: 70, fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.text },
+  timeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1, borderColor: Brand.border },
+  timeBtnLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: Brand.textMuted, marginBottom: 2 },
+  timeBtnValue: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  timeBtnValueEnd: { alignSelf: 'flex-end' },
+  timeBtnText: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.text },
+  timeDash: { width: 16, height: 1, backgroundColor: Brand.border, marginHorizontal: 8 },
+  timePickerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
+  timePickerModal: { backgroundColor: '#fff', borderRadius: 16, width: '80%', maxHeight: 300 },
+  timePickerTitle: { fontSize: 16, fontFamily: 'PlusJakartaSans_700Bold', color: Brand.text, textAlign: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Brand.border },
+  timeList: { maxHeight: 200 },
+  timeOption: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Brand.border },
+  timeOptionText: { fontSize: 14, fontFamily: 'PlusJakartaSans_500Medium', color: Brand.text, textAlign: 'center' },
+  timePickerCancel: { paddingVertical: 12, borderTopWidth: 1, borderTopColor: Brand.border },
+  timePickerCancelText: { fontSize: 14, fontFamily: 'PlusJakartaSans_600SemiBold', color: Brand.purple, textAlign: 'center' },
+});
+
 // ── Field (Optimizado para evitar parpadeos) ──────────────────────────────────
 type FieldProps = {
   label: string;
@@ -152,6 +296,7 @@ type ModalData = {
   style: string;
   responseTime: string;
   availability: string;
+  schedule: string;
 };
 
 type Props = {
@@ -170,11 +315,33 @@ export const InfoProfesionalModal: React.FC<Props> = ({
     style: '',
     availability: 'Disponible',
     responseTime: '',
+    schedule: '',
   });
+  const [scheduleDays, setScheduleDays] = useState<any>(DEFAULT_SCHEDULE_DAYS);
 
   useEffect(() => {
     if (visible && initialData) {
       setData(initialData);
+      
+      // Parsear horario guardado → scheduleDays
+      const parsed = Object.fromEntries(
+        Object.entries(DEFAULT_SCHEDULE_DAYS).map(([k, v]) => [k, { ...v }])
+      );
+      const scheduleStr = initialData.schedule as string | undefined;
+      if (scheduleStr) {
+        scheduleStr.split(',').forEach(part => {
+          const m = part.trim().match(/^(\S+)\s+(.+)-(.+)$/);
+          if (m) {
+            const dayKey = DAY_KEY_MAP[m[1]];
+            if (dayKey && parsed[dayKey]) {
+              parsed[dayKey].enabled = true;
+              parsed[dayKey].start = m[2];
+              parsed[dayKey].end = m[3];
+            }
+          }
+        });
+      }
+      setScheduleDays(parsed);
     }
   }, [visible, initialData]);
 
@@ -185,8 +352,10 @@ export const InfoProfesionalModal: React.FC<Props> = ({
   );
 
   const handleSave = useCallback(() => {
-    onSave(data);
-  }, [data, onSave]);
+    const enabled = Object.entries(scheduleDays).filter(([, d]: any) => d.enabled);
+    const scheduleText = enabled.length > 0 ? enabled.map(([k, d]: any) => `${DAY_SHORT_MAP[k]} ${d.start}-${d.end}`).join(', ') : 'No disponible';
+    onSave({ ...data, schedule: scheduleText });
+  }, [data, scheduleDays, onSave]);
 
   return (
     <Modal
@@ -249,13 +418,8 @@ export const InfoProfesionalModal: React.FC<Props> = ({
               placeholder="Ej. Minimalista, expresionista..."
               icon="color-palette-outline"
             />
-            <Field
-              label="Horario"
-              value={data.responseTime}
-              onChangeText={update('responseTime')}
-              placeholder="Ej. Lun-Vie 9am-6pm"
-              icon="time-outline"
-            />
+            <Text style={f.label}>Horario de atención</Text>
+            <ScheduleSelector scheduleDays={scheduleDays} setScheduleDays={setScheduleDays} />
             <AvailabilitySelector
               value={data.availability}
               onSelect={update('availability')}

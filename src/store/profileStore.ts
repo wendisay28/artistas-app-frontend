@@ -28,9 +28,11 @@ const formatNumber = (num: number): string => {
 };
 
 function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, firebaseUser?: { uid: string; photoURL?: string | null; displayName?: string | null }, artistResponse?: ArtistProfileResponse | null): Artist {
-  const displayName = artist?.artistName ?? user.displayName
+  const fullName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || undefined;
+  const displayName = artist?.artistName
+    ?? fullName
+    ?? user.displayName
     ?? user.email?.split('@')[0]
-    ?? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
     ?? firebaseUser?.displayName
     ?? 'Artista';
 
@@ -48,7 +50,7 @@ function mapBackendToArtist(user: BackendUser, artist: BackendArtist | null, fir
   const metadata = (artist as any)?.metadata as Record<string, string> | null | undefined;
   if (metadata?.style) info.push({ label: 'Estilo', icon: 'color-palette-outline', value: metadata.style });
   if (metadata?.artistAvailability) info.push({ label: 'Disponibilidad', icon: 'calendar-outline', value: metadata.artistAvailability });
-  if (metadata?.responseTime) info.push({ label: 'Tiempo de resp.', icon: 'chatbubble-ellipses-outline', value: metadata.responseTime });
+  if (metadata?.responseTime) info.push({ label: 'Horario', icon: 'time-outline', value: metadata.responseTime });
 
   // Redes sociales desde user.socialMedia (backend)
   const sm = (user as any).socialMedia as Record<string, string> | null | undefined;
@@ -403,7 +405,7 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
         set((s) => {
           if (!s.artistData) return s;
           const baseInfo = s.artistData.info.filter(i =>
-            !['Experiencia', 'Estilo', 'Disponibilidad', 'Tiempo de resp.'].includes(i.label)
+            !['Experiencia', 'Estilo', 'Disponibilidad', 'Horario'].includes(i.label)
           );
           return {
             artistData: {
@@ -413,7 +415,7 @@ export const useProfileStore = create<ProfileState & ProfileActions>()(
                 { label: 'Experiencia', icon: 'briefcase-outline', value: data.yearsExperience },
                 { label: 'Estilo', icon: 'color-palette-outline', value: data.style },
                 { label: 'Disponibilidad', icon: 'calendar-outline', value: data.availability },
-                { label: 'Tiempo de resp.', icon: 'chatbubble-ellipses-outline', value: data.responseTime },
+                { label: 'Horario', icon: 'time-outline', value: data.responseTime },
               ],
             },
           };

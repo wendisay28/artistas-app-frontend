@@ -12,6 +12,7 @@ import {
   Pressable,
   Platform,
   Animated,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -19,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../constants/colors';
 import type { GalleryItem } from '../../../types/explore';
+import { useFavoritesStore } from '../../../store/favoritesStore';
 
 interface GalleryCardContentProps {
   item: GalleryItem;
@@ -63,6 +65,8 @@ const formatCOP = (price: number) =>
 export default function GalleryCardContent({ item, distanceKm }: GalleryCardContentProps) {
   const [liked, setLiked] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
+  const { addFavorite, removeFavorite, isFavorited } = useFavoritesStore();
+  const isSaved = isFavorited(item.id);
   const heartScale = useRef(new Animated.Value(1)).current;
 
   const images = [item.image, ...(item.gallery || [])].slice(0, 3);
@@ -90,7 +94,7 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
   return (
     <View style={styles.container}>
 
-      {/* ══════════ IMAGEN 60% ══════════ */}
+      {/* ══════════ IMAGEN 66% ══════════ */}
       <View style={styles.imageSection}>
         <Image
           source={{ uri: images[imgIdx] }}
@@ -103,23 +107,21 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
           style={styles.imageGradient}
         />
 
-        {/* Rating top-left */}
-        <View style={styles.ratingPill}>
-          <Ionicons name="star" size={11} color="#fbbf24" />
-          <Text style={styles.ratingText}>{item.rating}</Text>
-          <Text style={styles.reviewsText}>({item.reviews || 0})</Text>
+        {/* Categoría top-left */}
+        <View style={styles.categoryChip}>
+          <Ionicons name={cat.icon as any} size={9} color="#1f2937" />
+          <Text style={styles.categoryText}>{cat.label}</Text>
         </View>
 
-        {/* Categoría / venta top-right */}
+        {/* Precio / no venta top-right */}
         {!isForSale ? (
           <View style={styles.soldOutChip}>
-            <Ionicons name="lock-closed" size={10} color="#fca5a5" />
-            <Text style={styles.closedText}>NO VENTA</Text>
+            <Ionicons name="eye-outline" size={10} color="#fff" />
+            <Text style={styles.closedText}>EXHIBICIÓN</Text>
           </View>
         ) : (
-          <View style={styles.categoryChip}>
-            <Ionicons name={cat.icon as any} size={11} color="#1f2937" />
-            <Text style={styles.categoryText}>{cat.label}</Text>
+          <View style={styles.pricePill}>
+            <Text style={styles.pricePillText}>desde {formatCOP(item.price)}</Text>
           </View>
         )}
 
@@ -136,7 +138,7 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
           </View>
         )}
 
-        {/* Corazón + compartir vertical derecha */}
+        {/* Acciones verticales derecha */}
         <View style={styles.sideActions}>
           <Pressable onPress={handleLike}>
             <Animated.View style={[
@@ -147,11 +149,27 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
               <Ionicons
                 name={liked ? 'heart' : 'heart-outline'}
                 size={20}
-                color={liked ? '#f87171' : '#fff'}
+                color='#fff'
               />
             </Animated.View>
           </Pressable>
-          <Pressable style={({ pressed }) => [styles.sideBtn, pressed && { opacity: 0.7 }]}>
+          <Pressable
+            style={[styles.sideBtn, isSaved && styles.sideBtnSaved]}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
+              isSaved ? removeFavorite(item.id) : addFavorite(item);
+            }}
+          >
+            <Ionicons
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color='#fff'
+            />
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.sideBtn, pressed && { opacity: 0.7 }]}
+            onPress={() => Share.share({ title: item.name, message: `${item.name} — ${item.location ?? ''}\n${item.bio ?? ''}` })}
+          >
             <Ionicons name="share-social-outline" size={19} color="#fff" />
           </Pressable>
         </View>
@@ -223,23 +241,17 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
           style={({ pressed }) => [
             styles.cta,
             !isForSale ? styles.ctaSoldOut : styles.ctaActive,
-            !isForSale && pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
+            isForSale && pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
           ]}
         >
-          <View style={[styles.ctaLeft, !isForSale && styles.ctaLeftSoldOut]}>
-            <Text style={[styles.ctaPrice, !isForSale && styles.ctaPriceSoldOut]}>
-              {isForSale ? formatCOP(item.price) : 'No disponible'}
-            </Text>
-          </View>
-          <View style={styles.ctaSep} />
           <View style={styles.ctaRight}>
             <Ionicons
-              name={!isForSale ? 'lock-closed-outline' : 'cart-outline'}
+              name={!isForSale ? 'eye-outline' : 'cart-outline'}
               size={14}
               color={!isForSale ? 'rgba(255,255,255,0.35)' : '#fff'}
             />
-            <Text style={[styles.ctaLabel, !isForSale && styles.ctaSoldOut]}>
-              {isForSale ? 'Comprar' : 'No disponible'}
+            <Text style={[styles.ctaLabel, !isForSale && styles.ctaLabelSoldOut]}>
+              {isForSale ? 'Comprar ahora' : 'Solo exhibición'}
             </Text>
             {isForSale && (
               <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
@@ -270,7 +282,7 @@ const styles = StyleSheet.create({
 
   // imagen
   imageSection: {
-    height: '60%',
+    height: '65%',
     backgroundColor: '#e5e7eb',
   },
   imageGradient: {
@@ -279,50 +291,30 @@ const styles = StyleSheet.create({
     height: '45%',
   },
 
-  // rating
-  ratingPill: {
+  // categoría top-left
+  categoryChip: {
     position: 'absolute',
-    top: 12, left: 12,
+    top: 10, left: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.48)',
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  categoryText: { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: '#1f2937' },
+
+  // precio top-right
+  pricePill: {
+    position: 'absolute',
+    top: 10, right: 10,
+    backgroundColor: colors.primary,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
-  ratingText:  { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fbbf24' },
-  reviewsText: { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.55)' },
-
-  // categoría top-right
-  categoryChip: {
-    position: 'absolute',
-    top: 12, right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  categoryText: { 
-    fontSize: 11, 
-    fontFamily: 'PlusJakartaSans_700Bold', 
-    color: '#1f2937',
-    textShadowColor: 'rgba(255,255,255,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
+  pricePillText: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.2 },
 
   // no venta top-right
   soldOutChip: {
@@ -357,6 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 10,
     alignItems: 'center',
+    zIndex: 20,
   },
   sideBtn: {
     width: 38, height: 38, borderRadius: 19,
@@ -367,6 +360,10 @@ const styles = StyleSheet.create({
   sideBtnLiked: {
     backgroundColor: 'rgba(248,113,113,0.22)',
     borderColor: 'rgba(248,113,113,0.45)',
+  },
+  sideBtnSaved: {
+    backgroundColor: 'rgba(167,139,250,0.22)',
+    borderColor: 'rgba(167,139,250,0.45)',
   },
 
   // ── panel blanco ──────────────────────────────────────────────────────────────────
@@ -387,10 +384,10 @@ const styles = StyleSheet.create({
 
   // título — grande y visible
   name: {
-    fontSize: 19,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0f0f0f',
-    lineHeight: 24,
+    lineHeight: 20,
     letterSpacing: -0.4,
   },
 
@@ -421,12 +418,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  // descripción — visible
+  // descripción
   description: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_400Regular',
     color: '#71717a',
-    lineHeight: 17,
+    lineHeight: 15,
   },
 
   // tags — visibles
@@ -448,7 +445,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 9,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.primary,
   },
@@ -487,25 +484,14 @@ const styles = StyleSheet.create({
   ctaActive:  { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
   ctaSoldOut: { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.08)' },
 
-  ctaLeft: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-  },
-  ctaLeftSoldOut: { backgroundColor: 'transparent' },
-  ctaPrice:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.2 },
-  ctaPriceSoldOut:{ color: 'rgba(0,0,0,0.3)' },
-
-  ctaSep: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)' },
-
   ctaRight: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
+    gap: 8,
+    paddingVertical: 8,
   },
-  ctaLabel:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
-  ctaSoldOut:{ color: 'rgba(0,0,0,0.3)' },
+  ctaLabel:        { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
+  ctaLabelSoldOut: { color: 'rgba(0,0,0,0.3)' },
 });

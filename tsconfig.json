@@ -3,7 +3,9 @@
   "compilerOptions": {
     "strict": false,
     "noImplicitAny": false,
-    "jsx": "react",
+    "jsx": "react-native",
+    "lib": ["ES2020", "dom"],
+    "target": "ES2020",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,

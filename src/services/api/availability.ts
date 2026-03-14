@@ -113,7 +113,14 @@ export const availabilityApi = {
     if (options?.status) params.append('status', options.status);
     if (options?.role) params.append('role', options.role);
 
-    const response = await apiClient.get(`/v1/bookings?${params.toString()}`);
-    return response.data;
+    try {
+      const response = await apiClient.get(`/v1/bookings?${params.toString()}`);
+      return response.data;
+    } catch (err: any) {
+      if (err?.response?.status === 404 || err?.status === 404) {
+        return { bookings: [] };
+      }
+      throw err;
+    }
   },
 };

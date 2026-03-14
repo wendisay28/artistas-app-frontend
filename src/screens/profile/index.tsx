@@ -9,13 +9,15 @@ import { signOutUser } from '../../services/firebase/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
 import { uploadToServer } from '../../hooks/useProfileImageUpload';
+import { ProfileMoreMenu } from './components/header/ProfileMoreMenu';
+import { useThemeStore } from '../../store/themeStore';
 import { useModalStore } from '../../store/modalStore';
 import TopBar from '../../components/shared/TopBar';
 import { AppFooter } from '../../components/shared/AppFooter';
 import { ModalContainer } from '../../components/ModalContainer';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
 
+import { useNavigation } from '@react-navigation/native';
 // ── Profile components modernos
 import { ProfileHero } from './components/header/Profilehero';
 import { ProfileIdentity, cycleAvailability } from './components/header/Profileidentity';
@@ -138,6 +140,8 @@ export default function ProfileScreen() {
   const [viewingAsClient,     setViewingAsClient]     = useState(false);
   const [pendingCoverAsset,   setPendingCoverAsset]   = useState<{ uri: string; width: number; height: number } | null>(null);
   const [uploadingCover,      setUploadingCover]      = useState(false);
+  const [showMoreMenu,        setShowMoreMenu]        = useState(false);
+  const { toggleTheme } = useThemeStore();
 
   // ── Interactive cover crop ──────────────────────────────────────────
   const panAnim    = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -277,6 +281,7 @@ export default function ProfileScreen() {
     style:           effectiveArtist.info?.find(i => i.label === 'Estilo')?.value || '',
     availability:    effectiveArtist.info?.find(i => i.label === 'Disponibilidad')?.value || '',
     responseTime:    effectiveArtist.info?.find(i => i.label === 'Horario')?.value || '',
+    schedule:        effectiveArtist.info?.find(i => i.label === 'Horario')?.value || '',
   }), [effectiveArtist.info]);
 
   const categoryInitialData = React.useMemo(() => ({
@@ -449,7 +454,39 @@ export default function ProfileScreen() {
     ]);
   }, [logout]);
 
-  // ── Share handler
+  // ── Opciones del menú desplegable
+  const menuItems = [
+    {
+      id: 'theme',
+      label: 'Cambiar tema',
+      icon: 'contrast-outline',
+      onPress: toggleTheme,
+    },
+    {
+      id: 'settings',
+      label: 'Configuración',
+      icon: 'settings-outline',
+      onPress: () => navigation.navigate('Settings' as never),
+    },
+    {
+      id: 'help',
+      label: 'Ayuda',
+      icon: 'help-circle-outline',
+      onPress: () => navigation.navigate('Help' as never),
+    },
+    {
+      id: 'logout',
+      label: 'Cerrar sesión',
+      icon: 'log-out-outline',
+      onPress: handleLogout,
+      destructive: true,
+    },
+  ];
+
+  // ── Handlers para menú desplegable
+  const handleMoreOptions = useCallback(() => {
+    setShowMoreMenu(true);
+  }, []);
   const handleShare = useCallback(async () => {
     const handle = effectiveArtist.handle?.replace('@', '') ?? '';
     const name   = effectiveArtist.name ?? '';
@@ -697,7 +734,7 @@ export default function ProfileScreen() {
         yearsExperience: data.yearsExperience,
         style: data.style,
         availability:    data.availability,
-        responseTime:    data.responseTime,
+        responseTime:    data.schedule,
       });
       // Recargar perfil para asegurar que los datos estén actualizados
       await loadProfile(auth.currentUser?.uid || '', auth.currentUser?.photoURL || '', auth.currentUser?.displayName || '');
@@ -813,7 +850,7 @@ export default function ProfileScreen() {
           return (
             <AgendaSectionFunctional
               isOwner={true}
-              artistId={effectiveArtist?.id}
+              artistId={Number(effectiveArtist?.id)}
               onEditSection={() => console.log('Edit agenda section')}
             />
           );
@@ -1002,6 +1039,7 @@ export default function ProfileScreen() {
               onToggleAvailability={viewingAsClient ? undefined : handleToggleAvailability}
               onShare={handleShare}
               onViewAsClient={handleViewAsClient}
+              onMore={viewingAsClient ? undefined : handleMoreOptions}
             />
 
             <View style={styles.mainTabsContainer}>
@@ -1068,7 +1106,7 @@ export default function ProfileScreen() {
                       { translateY: panAnim.y },
                     ],
                   }}
-                  contentFit="cover"
+                  resizeMode="cover"
                 />
               </View>
             );
@@ -1096,6 +1134,13 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Menú desplegable de opciones ── */}
+      <ProfileMoreMenu
+        visible={showMoreMenu}
+        onClose={() => setShowMoreMenu(false)}
+        items={menuItems}
+      />
 
     </View>
   );

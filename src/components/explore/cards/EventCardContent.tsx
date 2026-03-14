@@ -14,6 +14,7 @@ import {
   Pressable,
   Platform,
   Animated,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -21,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../constants/colors';
 import type { Event } from '../../../types/explore';
+import { useFavoritesStore } from '../../../store/favoritesStore';
 
 interface EventCardContentProps {
   event: Event;
@@ -75,6 +77,8 @@ const formatCOP = (price: number) =>
 export default function EventCardContent({ event, distanceKm }: EventCardContentProps) {
   const [liked,  setLiked]  = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
+  const { addFavorite, removeFavorite, isFavorited } = useFavoritesStore();
+  const isSaved = isFavorited(event.id);
   const heartScale = useRef(new Animated.Value(1)).current;
 
   const images  = [event.image, ...(event.gallery || []).slice(0, 2)];
@@ -103,7 +107,7 @@ export default function EventCardContent({ event, distanceKm }: EventCardContent
   return (
     <View style={styles.container}>
 
-      {/* ══════════ IMAGEN 60% ══════════ */}
+      {/* ══════════ IMAGEN 66% ══════════ */}
       <View style={styles.imageSection}>
         <Image
           source={{ uri: images[imgIdx] }}
@@ -116,23 +120,23 @@ export default function EventCardContent({ event, distanceKm }: EventCardContent
           style={styles.imageGradient}
         />
 
-        {/* Rating top-left */}
-        <View style={styles.ratingPill}>
-          <Ionicons name="star" size={11} color="#fbbf24" />
-          <Text style={styles.ratingText}>{event.rating}</Text>
-          <Text style={styles.reviewsText}>({event.reviews})</Text>
+        {/* Categoría top-left */}
+        <View style={styles.categoryChip}>
+          <Ionicons name={cat.icon as any} size={9} color="#1f2937" />
+          <Text style={styles.categoryText}>{cat.label}</Text>
         </View>
 
-        {/* Categoría / sold out top-right */}
+        {/* Precio / soldOut top-right */}
         {soldOut ? (
           <View style={styles.soldOutChip}>
             <Ionicons name="lock-closed" size={10} color="#fca5a5" />
             <Text style={styles.soldOutText}>AGOTADO</Text>
           </View>
         ) : (
-          <View style={styles.categoryChip}>
-            <Ionicons name={cat.icon as any} size={11} color="#1f2937" />
-            <Text style={styles.categoryText}>{cat.label}</Text>
+          <View style={styles.pricePill}>
+            <Text style={styles.pricePillText}>
+              {isFree ? 'Gratis' : `desde ${formatCOP(event.price)}`}
+            </Text>
           </View>
         )}
 
@@ -149,8 +153,9 @@ export default function EventCardContent({ event, distanceKm }: EventCardContent
           </View>
         )}
 
-        {/* Corazón + compartir vertical derecha */}
+        {/* Acciones verticales derecha */}
         <View style={styles.sideActions}>
+          {/* Me gusta */}
           <Pressable onPress={handleLike}>
             <Animated.View style={[
               styles.sideBtn,
@@ -160,11 +165,31 @@ export default function EventCardContent({ event, distanceKm }: EventCardContent
               <Ionicons
                 name={liked ? 'heart' : 'heart-outline'}
                 size={20}
-                color={liked ? '#f87171' : '#fff'}
+                color='#fff'
               />
             </Animated.View>
           </Pressable>
-          <Pressable style={({ pressed }) => [styles.sideBtn, pressed && { opacity: 0.7 }]}>
+
+          {/* Guardar en favoritos */}
+          <Pressable
+            style={[styles.sideBtn, isSaved && styles.sideBtnSaved]}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
+              isSaved ? removeFavorite(event.id) : addFavorite(event);
+            }}
+          >
+            <Ionicons
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color='#fff'
+            />
+          </Pressable>
+
+          {/* Compartir */}
+          <Pressable
+            style={({ pressed }) => [styles.sideBtn, pressed && { opacity: 0.7 }]}
+            onPress={() => Share.share({ title: event.name, message: `${event.name} — ${event.city ?? ''}\n${event.description ?? ''}` })}
+          >
             <Ionicons name="share-social-outline" size={19} color="#fff" />
           </Pressable>
         </View>
@@ -239,12 +264,6 @@ export default function EventCardContent({ event, distanceKm }: EventCardContent
             !soldOut && pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
           ]}
         >
-          <View style={[styles.ctaLeft, soldOut && styles.ctaLeftSoldOut]}>
-            <Text style={[styles.ctaPrice, soldOut && styles.ctaPriceSoldOut]}>
-              {soldOut ? '—' : isFree ? 'Gratis' : formatCOP(event.price)}
-            </Text>
-          </View>
-          <View style={styles.ctaSep} />
           <View style={styles.ctaRight}>
             <Ionicons
               name={soldOut ? 'lock-closed-outline' : isFree ? 'gift-outline' : 'ticket-outline'}
@@ -252,7 +271,7 @@ export default function EventCardContent({ event, distanceKm }: EventCardContent
               color={soldOut ? 'rgba(255,255,255,0.35)' : '#fff'}
             />
             <Text style={[styles.ctaLabel, soldOut && styles.ctaLabelSoldOut]}>
-              {soldOut ? 'Agotado' : 'Reservar'}
+              {soldOut ? 'Agotado' : 'Reservar ahora'}
             </Text>
             {!soldOut && (
               <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
@@ -284,7 +303,7 @@ const styles = StyleSheet.create({
 
   // imagen
   imageSection: {
-    height: '60%',
+    height: '65%',
     backgroundColor: '#e5e7eb',
   },
   imageGradient: {
@@ -293,50 +312,30 @@ const styles = StyleSheet.create({
     height: '45%',
   },
 
-  // rating
-  ratingPill: {
+  // categoría top-left
+  categoryChip: {
     position: 'absolute',
-    top: 12, left: 12,
+    top: 10, left: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(0,0,0,0.48)',
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  categoryText: { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: '#1f2937' },
+
+  // precio top-right
+  pricePill: {
+    position: 'absolute',
+    top: 10, right: 10,
+    backgroundColor: colors.primary,
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
   },
-  ratingText:  { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fbbf24' },
-  reviewsText: { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.55)' },
-
-  // categoría top-right
-  categoryChip: {
-    position: 'absolute',
-    top: 12, right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  categoryText: { 
-    fontSize: 11, 
-    fontFamily: 'PlusJakartaSans_700Bold', 
-    color: '#1f2937',
-    textShadowColor: 'rgba(255,255,255,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
+  pricePillText: { fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.2 },
 
   // sold out top-right
   soldOutChip: {
@@ -371,6 +370,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 10,
     alignItems: 'center',
+    zIndex: 20,
   },
   sideBtn: {
     width: 38, height: 38, borderRadius: 19,
@@ -381,6 +381,10 @@ const styles = StyleSheet.create({
   sideBtnLiked: {
     backgroundColor: 'rgba(248,113,113,0.22)',
     borderColor: 'rgba(248,113,113,0.45)',
+  },
+  sideBtnSaved: {
+    backgroundColor: 'rgba(167,139,250,0.22)',
+    borderColor: 'rgba(167,139,250,0.45)',
   },
 
   // ── panel blanco ──────────────────────────────────────────────────────────
@@ -400,13 +404,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // título — grande y visible
   name: {
-    fontSize: 19,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0f0f0f',
-    lineHeight: 24,
+    lineHeight: 20,
     letterSpacing: -0.4,
+    flexShrink: 1,
   },
 
   // meta — UNA línea, fuente pequeña
@@ -436,12 +440,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  // descripción — visible
+  // descripción
   description: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'PlusJakartaSans_400Regular',
     color: '#71717a',
-    lineHeight: 17,
+    lineHeight: 15,
   },
 
   // tags — visibles
@@ -463,7 +467,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   tagText: {
-    fontSize: 11,
+    fontSize: 9,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.primary,
   },
@@ -502,25 +506,14 @@ const styles = StyleSheet.create({
   ctaActive:  { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
   ctaSoldOut: { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.08)' },
 
-  ctaLeft: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-  },
-  ctaLeftSoldOut: { backgroundColor: 'transparent' },
-  ctaPrice:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.2 },
-  ctaPriceSoldOut:{ color: 'rgba(0,0,0,0.3)' },
-
-  ctaSep: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)' },
-
   ctaRight: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
+    gap: 8,
+    paddingVertical: 8,
   },
-  ctaLabel:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
+  ctaLabel:       { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
   ctaLabelSoldOut:{ color: 'rgba(0,0,0,0.3)' },
 });

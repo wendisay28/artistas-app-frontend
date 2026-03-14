@@ -34,16 +34,20 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    // Log detallado para debugging
-    console.error('[API Error]', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.message,
-      code: error.code,
-    });
-    
-    // No silenciar errores completamente, pero propagar con contexto
+    // No loguear 404s ni errores de red en desarrollo (backend no levantado)
+    const isNetworkError = error.code === 'ERR_NETWORK' || !error.response;
+    const is404 = error.response?.status === 404;
+    if (!is404 && !isNetworkError) {
+      console.error('[API Error]', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        message: error.message,
+        code: error.code,
+      });
+    } else if (isNetworkError) {
+      console.warn('[API] Backend no disponible — usando datos locales');
+    }
     return Promise.reject(error);
   }
 );

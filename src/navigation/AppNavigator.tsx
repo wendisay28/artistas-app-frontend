@@ -1,14 +1,16 @@
 // src/navigation/AppNavigator.tsx
 import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
+import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { onAuthChange } from '../services/firebase/auth';
 import { getMyProfile } from '../services/api/users';
 import { AuthStack } from './AuthStack';
-import { MainTabNavigator } from './MainTabNavigator';
+import { RootStack } from './RootStack';
 import OnboardingScreen from '../screens/auth/onboarding';
 import { SplashScreen } from '../screens/auth/splash';
 import { ModalContainer } from '../components/ModalContainer';
+import { registerForPushNotifications, setupNotificationListeners } from '../services/notifications/fcmService';
 
 const linking = {
   prefixes: ['http://localhost:8081'],
@@ -22,6 +24,15 @@ const linking = {
 
 export const AppNavigator = () => {
   const { isAuthenticated, isProfileComplete, isLoading, user, setUser, setLoading, logout } = useAuthStore();
+  const { isDark } = useThemeStore();
+
+  // Registrar FCM cuando el usuario está autenticado
+  useEffect(() => {
+    if (!user?.firebaseUid) return;
+    registerForPushNotifications(user.firebaseUid);
+    const cleanup = setupNotificationListeners();
+    return cleanup;
+  }, [user?.firebaseUid]);
 
   useEffect(() => {
     const unsubscribe = onAuthChange(async (firebaseUser) => {
@@ -131,11 +142,11 @@ export const AppNavigator = () => {
   const showSetupProfile = isAuthenticated && !isProfileComplete;
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} theme={isDark ? DarkTheme : DefaultTheme}>
       {!isAuthenticated && <AuthStack />}
       {showSetupProfile && <OnboardingScreen />}
       {isAuthenticated && (isProfileComplete || user?.role === 'client') && !showSetupProfile && (
-        <MainTabNavigator />
+        <RootStack />
       )}
     </NavigationContainer>
   );

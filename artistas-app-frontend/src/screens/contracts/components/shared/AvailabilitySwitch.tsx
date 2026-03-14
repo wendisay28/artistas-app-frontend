@@ -147,7 +147,7 @@ export default function AvailabilitySwitch({
 const styles = StyleSheet.create({
   wrapper: {
     marginHorizontal: 16,
-    marginVertical: 10,
+    marginVertical: 6,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
@@ -157,8 +157,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
   left: {
     flexDirection: 'row',
@@ -190,13 +190,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
   },
   statusLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: Colors.text,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   statusSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_400Regular',
     color: Colors.textSecondary,
   },

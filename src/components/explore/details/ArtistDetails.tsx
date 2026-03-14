@@ -52,6 +52,16 @@ interface ArtistDetailsProps {
 const formatCOP = (price: number) =>
   `$${price.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
 
+const TODAY_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date().getDay()];
+const getTodaySchedule = (scheduleStr?: string): string => {
+  if (!scheduleStr?.trim()) return 'No especificado';
+  const parts = scheduleStr.split(',').map(p => p.trim());
+  const todayPart = parts.find(p => p.startsWith(TODAY_SHORT));
+  if (!todayPart) return 'No disponible hoy';
+  const match = todayPart.match(/^\S+\s+(.+)-(.+)$/);
+  return match ? `Hoy: ${match[1]} – ${match[2]}` : todayPart;
+};
+
 // ── Meta de categorías (copiado de ServicesSection) ─────────────────────────────
 const getCategoryMeta = (category?: string, name?: string) => {
   const CATEGORY_META: Record<string, { icon: any; color: string }> = {
@@ -347,10 +357,6 @@ const st = StyleSheet.create({
 });
 
 export default function ArtistDetails({ artist, onHire, onMessage, onShare, socialLinks }: ArtistDetailsProps) {
-  console.log("🔥🔥🔥 ARTIST DETAILS ID:", artist.id);
-  console.log("🔥🔥🔥 ARTIST DETAILS NAME:", artist.name);
-  console.log("🔥🔥🔥 ARTIST DETAILS DESCRIPTION:", artist.description);
-  console.log("🔥🔥🔥 ¿TIENE DESCRIPTION?", !!artist.description);
   
   const [activeTab,   setActiveTab]   = useState<'services' | 'portfolio' | 'reviews'>('services');
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -501,7 +507,7 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
             <View style={s.divider} />
             <InfoPair
               label="Horario"
-              value={artist.schedule?.trim() || 'No especificado'}
+              value={getTodaySchedule(artist.schedule)}
             />
           </View>
         </GlassCard>

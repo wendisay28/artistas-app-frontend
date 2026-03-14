@@ -64,14 +64,20 @@ import { GalleryFilterPanel } from './components/filters/GalleryFilterPanel';
 import type { Artist, Event, Venue, GalleryItem, ExploreCard } from '../../types/explore';
 import { styles } from './styles/favorites.styles';
 
-type TabType = 'artists' | 'events' | 'venues' | 'gallery';
+// Projects
+import { ProjectsTab } from './components/projects/ProjectsTab';
+import { AddToProjectModal } from './components/projects/AddToProjectModal';
+import { ComingSoonSection } from '../../components/shared/ComingSoonSection';
+
+type TabType = 'artists' | 'events' | 'venues' | 'gallery' | 'projects';
 type ViewMode = 'grid' | 'list';
 
 const TAB_LABELS: Record<TabType, string> = {
-  artists: 'Artistas',
-  events: 'Eventos',
-  venues: 'Salas',
-  gallery: 'Galería',
+  artists:  'Artistas',
+  events:   'Eventos',
+  venues:   'Salas',
+  gallery:  'Galería',
+  projects: 'Proyectos',
 };
 
 const professions = [
@@ -86,6 +92,7 @@ export default function FavoritesScreen() {
   const { artists, events, venues, gallery, loading: favoritesLoading } = useFavoritesData();
 
   const [activeTab, setActiveTab]           = useState<TabType>('artists');
+  const [addToProjectItem, setAddToProjectItem] = useState<ExploreCard | null>(null);
   const [searchQuery, setSearchQuery]       = useState('');
   const [detailItem, setDetailItem]         = useState<ExploreCard | null>(null);
   const [viewMode, setViewMode]             = useState<ViewMode>('grid');
@@ -164,10 +171,14 @@ export default function FavoritesScreen() {
           gridStyles.itemWrapper,
           isLeftColumn ? { marginRight: COLUMN_GAP / 2 } : { marginLeft: COLUMN_GAP / 2 },
         ]}>
-          <HomeArtistCard
-            item={artistItem}
-            onPress={() => setDetailItem(item)}
-          />
+          <HomeArtistCard item={artistItem} onPress={() => setDetailItem(item)} />
+          <TouchableOpacity
+            style={gridStyles.addToProject}
+            onPress={() => setAddToProjectItem(item)}
+          >
+            <Ionicons name="folder-open-outline" size={11} color="#7c3aed" />
+            <Text style={gridStyles.addToProjectText}>Agregar a proyecto</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -181,6 +192,10 @@ export default function FavoritesScreen() {
       return (
         <View style={wrapperStyle}>
           <EventGridCard item={item as Event} onPress={() => setDetailItem(item)} />
+          <TouchableOpacity style={gridStyles.addToProject} onPress={() => setAddToProjectItem(item)}>
+            <Ionicons name="folder-open-outline" size={11} color="#7c3aed" />
+            <Text style={gridStyles.addToProjectText}>Agregar a proyecto</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -188,6 +203,10 @@ export default function FavoritesScreen() {
       return (
         <View style={wrapperStyle}>
           <VenueGridCard item={item as Venue} onPress={() => setDetailItem(item)} />
+          <TouchableOpacity style={gridStyles.addToProject} onPress={() => setAddToProjectItem(item)}>
+            <Ionicons name="folder-open-outline" size={11} color="#7c3aed" />
+            <Text style={gridStyles.addToProjectText}>Agregar a proyecto</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -195,6 +214,10 @@ export default function FavoritesScreen() {
       return (
         <View style={wrapperStyle}>
           <GalleryGridCard item={item as GalleryItem} onPress={() => setDetailItem(item)} />
+          <TouchableOpacity style={gridStyles.addToProject} onPress={() => setAddToProjectItem(item)}>
+            <Ionicons name="folder-open-outline" size={11} color="#7c3aed" />
+            <Text style={gridStyles.addToProjectText}>Agregar a proyecto</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -310,7 +333,7 @@ export default function FavoritesScreen() {
 
       {/* Tabs */}
       <View style={styles.tabsContainer}>
-        {(['artists', 'events', 'venues', 'gallery'] as TabType[]).map(tab => (
+        {(['artists', 'events', 'venues', 'gallery', 'projects'] as TabType[]).map(tab => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -366,8 +389,22 @@ export default function FavoritesScreen() {
       {/* Filtros */}
       {showFilters && renderFilterPanel()}
 
+      {/* AddToProject modal */}
+      <AddToProjectModal
+        visible={addToProjectItem !== null}
+        item={addToProjectItem}
+        onClose={() => setAddToProjectItem(null)}
+      />
+
+      {/* Tab Proyectos — renderizado fuera del ScrollView para evitar conflictos */}
+      {activeTab === 'projects' && (
+        <View style={{ flex: 1 }}>
+          <ProjectsTab />
+        </View>
+      )}
+
       {/* Contador + contenido + footer — todo en un ScrollView */}
-      <ScrollView
+      {activeTab !== 'projects' && <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
@@ -379,9 +416,18 @@ export default function FavoritesScreen() {
         {/* Vacío */}
         {filteredData.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="heart-outline" size={48} color={colors.textLight} />
-            <Text style={styles.emptyText}>No tienes favoritos aquí</Text>
-            <Text style={styles.emptySubtext}>Explora y guarda lo que te guste</Text>
+            {(activeTab === 'venues' || activeTab === 'gallery') ? (
+              <ComingSoonSection 
+                title={activeTab === 'venues' ? 'Salas y espacios' : 'Galería de arte'}
+                subtitle="Estamos construyendo algo nuevo para ti"
+              />
+            ) : (
+              <>
+                <Ionicons name="heart-outline" size={48} color={colors.textLight} />
+                <Text style={styles.emptyText}>No tienes favoritos aquí</Text>
+                <Text style={styles.emptySubtext}>Explora y guarda lo que te guste</Text>
+              </>
+            )}
           </View>
         ) : viewMode === 'grid' ? (
           // ── CUADRÍCULA 2 COLUMNAS ────────────────────────────────────────
@@ -408,7 +454,7 @@ export default function FavoritesScreen() {
         )}
 
         <AppFooter />
-      </ScrollView>
+      </ScrollView>}
 
       {/* Detail Modal */}
       <Modal
@@ -477,6 +523,24 @@ const gridStyles = StyleSheet.create({
   itemWrapper: {
     width: GRID_CARD_WIDTH,
     alignItems: 'center',
+  },
+  addToProject: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+    alignSelf: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: 'rgba(124,58,237,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,58,237,0.18)',
+  },
+  addToProjectText: {
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#7c3aed',
   },
 });
 

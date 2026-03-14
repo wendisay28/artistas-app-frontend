@@ -1,8 +1,45 @@
 // types/hiring.ts
 
 export type OfferType = 'collaboration' | 'hiring' | 'gig' | 'event';
+
+// Tipo de servicio — determina qué hitos aplican
+export type ServiceType = 'presencial' | 'hibrido' | 'digital';
+
+// Estado de hitos de un servicio activo
+export interface MilestoneState {
+  arrival_checked: boolean;
+  arrival_time?: string;
+  departure_checked: boolean;
+  departure_time?: string;
+  delivery_submitted: boolean;
+  delivery_link?: string;
+  delivery_accepted: boolean;
+  change_requested: boolean;      // cliente pidió cambio
+  change_request_used: boolean;   // si el único cambio permitido ya fue usado
+}
+
+// Datos extendidos de un contrato activo
+export interface ActiveContract extends Offer {
+  service_type: ServiceType;
+  milestones: MilestoneState;
+  service_start?: string;         // ISO timestamp cuando se aceptó
+  deadline?: string;              // ISO timestamp — deadline entrega digital
+  amount?: number;
+  currency?: string;
+}
+
+// Datos de un contrato finalizado
+export interface CompletedContract extends ActiveContract {
+  completed_at: string;
+  payment_status: 'pending' | 'released' | 'disputed';
+  artist_rating?: number;
+  client_rating?: number;
+  review?: string;
+}
 export type OfferStatus = 'active' | 'closed' | 'draft';
-export type TabType = 'all' | 'mine' | 'saved';
+export type TabType = 'explore' | 'urgent' | 'mine';
+export type ExploreSubTab = 'general' | 'saved';
+export type UrgentSubTab = 'pending' | 'in_progress' | 'completed';
 
 // Oferta base
 export interface Offer {
@@ -74,9 +111,12 @@ export interface OfferFilters {
 // Estado de la pantalla Hiring
 export interface HiringState {
   activeTab: TabType;
+  exploreSubTab?: ExploreSubTab;
+  urgentSubTab?: UrgentSubTab;
   searchQuery: string;
   filters: OfferFilters;
   offers: Offer[];
+  urgentOffers: Offer[];
   myOffers: MyOffer[];
   savedOffers: SavedOffer[];
   isLoading: boolean;

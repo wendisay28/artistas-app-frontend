@@ -12,7 +12,9 @@ import {
   Pressable,
   Platform,
   Animated,
+  Share,
 } from 'react-native';
+import HireModal from '../../modals/HireModal';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,11 +25,14 @@ import { portfolioService } from '../../../services/api/portfolio';
 import { artistsService } from '../../../services/api/artists';
 import { servicesService, type Service } from '../../../services/api/services';
 import { useProfileStore } from '../../../store/profileStore';
+import { useFavoritesStore } from '../../../store/favoritesStore';
 
 
 interface ArtistCardContentProps {
   artist: Artist;
   distanceKm?: number;
+  isFollowing?: boolean;
+  onFollow?: () => void;
 }
 
 // ── Disponibilidad (misma lógica que ProfileIdentity) ──────────────────────
@@ -137,14 +142,18 @@ const getTodaySchedule = (scheduleStr: string): string => {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function ArtistCardContent({ artist, distanceKm }: ArtistCardContentProps) {
+export default function ArtistCardContent({ artist, distanceKm, isFollowing = false, onFollow }: ArtistCardContentProps) {
   const [liked, setLiked] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoaded, setServicesLoaded] = useState(false);
+  const [showHireModal, setShowHireModal] = useState(false);
   const heartScale = useRef(new Animated.Value(1)).current;
   const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
-  const [schedule, setSchedule] = useState<string>(artist.schedule || '');
+  const [, setSchedule] = useState<string>(artist.schedule || '');
   const { artistData } = useProfileStore();
+  const { addFavorite, removeFavorite, isFavorited } = useFavoritesStore();
+  const isSaved = isFavorited(artist.id);
 
   // Lógica de disponibilidad igual que ProfileIdentity
   const availKey = (artist.availability as AvailabilityKey) ?? 'available';
@@ -199,7 +208,8 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
 
     servicesService.getUserServices(String(userId))
       .then(res => { if (Array.isArray(res)) setServices(res); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setServicesLoaded(true));
   }, [artist.id, artist.userId]);
 
   const galleryUrls = artist.gallery && artist.gallery.length > 0
@@ -212,27 +222,21 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
     ? (distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`)
     : '3 km'; // Valor temporal para prueba
 
-  const handleLike = () => {
-    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Animated.sequence([
-      Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 50, bounciness: 14 }),
-      Animated.spring(heartScale, { toValue: 1,   useNativeDriver: true, speed: 30, bounciness: 4  }),
-    ]).start();
-    setLiked(p => !p);
-  };
 
   const handleContact = () => {
     if (Platform.OS !== 'web')
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowHireModal(true);
   };
 
   const lowestPrice = getLowestPrice(services);
 
   return (
+    <>
     <View style={styles.outerWrapper}>
       <View style={styles.container}>
 
-        {/* ══════════ IMAGEN 60% ══════════ */}
+        {/* ══════════ IMAGEN 70% ══════════ */}
         <View style={styles.imageSection}>
         {images.length > 0 ? (
           <Image
@@ -240,6 +244,11 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
             style={StyleSheet.absoluteFill}
             contentFit="cover"
             transition={250}
+            placeholder="https://via.placeholder.com/400x300/f3f0ff/7c3aed?text=Cargando..."
+            placeholderContentFit="cover"
+            cachePolicy="memory-disk"
+            recyclingKey={artist.id}
+            priority="high"
           />
         ) : (
           <View style={[StyleSheet.absoluteFill, styles.noImagePlaceholder]}>
@@ -265,12 +274,16 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           </>
         )}
 
-        {/* Rating top-left */}
-        <View style={styles.ratingPill}>
-          <Ionicons name="star" size={11} color="#fbbf24" />
-          <Text style={styles.ratingText}>{artist.rating}</Text>
-          <Text style={styles.reviewsText}>({artist.reviews || 0})</Text>
-        </View>
+
+        {/* Precio top-right */}
+        {(servicesLoaded && lowestPrice) ? (
+          <View style={styles.pricePill}>
+            <Text style={styles.pricePillText}>
+              <Text style={styles.pricePillDesde}>desde </Text>
+              {formatCOP(lowestPrice)}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Rol del artista top-right */}
         {(() => {
@@ -281,7 +294,7 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           const label = roleId.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
           return (
             <View style={styles.categoryChip}>
-              <Ionicons name="ribbon-outline" size={11} color="#1f2937" />
+              <Ionicons name="ribbon-outline" size={9} color="#1f2937" />
               <Text style={styles.categoryText}>{label}</Text>
             </View>
           );
@@ -300,6 +313,58 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           </View>
         )}
 
+        {/* ── Acciones verticales derecha ── */}
+        <View style={styles.sideActions}>
+          {/* Me gusta */}
+          <Pressable
+            style={[styles.sideBtn, liked && styles.sideBtnLiked]}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Animated.sequence([
+                Animated.spring(heartScale, { toValue: 1.4, useNativeDriver: true, speed: 40 }),
+                Animated.spring(heartScale, { toValue: 1,   useNativeDriver: true, speed: 40 }),
+              ]).start();
+              setLiked(v => !v);
+            }}
+          >
+            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+              <Ionicons
+                name={liked ? 'heart' : 'heart-outline'}
+                size={20}
+                color='#fff'
+              />
+            </Animated.View>
+          </Pressable>
+
+          {/* Guardar en favoritos */}
+          <Pressable
+            style={[styles.sideBtn, isSaved && styles.sideBtnSaved]}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
+              isSaved ? removeFavorite(artist.id) : addFavorite(artist);
+            }}
+          >
+            <Ionicons
+              name={isSaved ? 'bookmark' : 'bookmark-outline'}
+              size={20}
+              color='#fff'
+            />
+          </Pressable>
+
+          {/* Compartir */}
+          <Pressable
+            style={styles.sideBtn}
+            onPress={() => {
+              Share.share({
+                title: artist.name,
+                message: `${artist.name} — artista en BuscArt\n${artist.bio ?? ''}`,
+              });
+            }}
+          >
+            <Ionicons name="share-social-outline" size={20} color="#fff" />
+          </Pressable>
+        </View>
+
       </View>
 
       {/* ══════════ PANEL BLANCO 40% ══════════ */}
@@ -308,49 +373,59 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
         {/* Bloque de texto — sin flex:1, ocupa solo su contenido */}
         <View style={styles.topBlock}>
 
-          {/* Título y verificación en la misma línea */}
+          {/* Nombre + verificado + seguir */}
           <View style={styles.titleRow}>
             <Text style={styles.name} numberOfLines={1}>{artist.name}</Text>
             {artist.verified === true && (
-              <Ionicons name="checkmark-circle" size={18} color="#7c3aed" />
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark" size={9} color="#fff" />
+              </View>
             )}
-          </View>
-
-          {/* Meta — indicador de disponibilidad sin emojis */}
-          <View style={styles.metaRow}>
-            {/* Indicador de disponibilidad solo con sombreado */}
-            <View style={[styles.availabilityIndicator, { backgroundColor: avail.bg }]}>
-              <Text style={[styles.availabilityText, { color: avail.color }]}>
-                {avail.label}
+            <Pressable
+              onPress={onFollow}
+              style={[styles.followBtn, isFollowing && styles.followBtnActive]}
+            >
+              <Ionicons
+                name={isFollowing ? 'checkmark' : 'person-add-outline'}
+                size={11}
+                color={isFollowing ? '#fff' : '#7c3aed'}
+              />
+              <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
+                {isFollowing ? 'Siguiendo' : 'Seguir'}
               </Text>
-            </View>
-            
-            {/* Ubicación */}
-            <Ionicons name="location-outline" size={11} color={colors.primary} />
-            <Text style={[styles.metaText, { flexShrink: 1 }]} numberOfLines={1}>
-              {artist.location || 'Colombia'}
-            </Text>
-            {distLabel && (
-              <>
-                <Text style={styles.metaText}> . </Text>
-                <Text style={styles.metaDist} numberOfLines={1}>{distLabel}</Text>
-              </>
-            )}
+            </Pressable>
           </View>
 
-          {/* Bio del header — texto corto */}
+          {/* Meta — rating | disponibilidad | ciudad */}
+          <View style={styles.metaRow}>
+            <Ionicons name="star" size={11} color="#fbbf24" />
+            <Text style={styles.metaRating}>{artist.rating ?? '5.0'}</Text>
+
+            <Text style={styles.metaSep}>·</Text>
+
+            <Text style={[styles.metaAvail, { color: avail.color }]}>{avail.label}</Text>
+
+            <Text style={styles.metaSep}>·</Text>
+
+            <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
+            <Text style={styles.metaCity} numberOfLines={1}>
+              {artist.location || 'Colombia'}{distLabel ? `, ${distLabel}` : ''}
+            </Text>
+          </View>
+
+          {/* Bio del header — mejor espaciado y presentación */}
           {artist.bio && (
             <Text style={styles.description} numberOfLines={3}>
               {artist.bio}
             </Text>
           )}
 
-          {/* Tags — diseño unificado con perfil */}
+          {/* Tags — mejor diseño y espaciado */}
           {artist.tags && artist.tags.length > 0 && (
             <View style={styles.tagsRow}>
               {artist.tags.slice(0, 3).map((tag, i) => (
                 <View key={i} style={styles.tag}>
-                  <Ionicons name={getTagIcon(tag) as any} size={11} color="#7c3aed" />
+                  <Ionicons name={getTagIcon(tag) as any} size={10} color="#7c3aed" />
                   <Text style={styles.tagText}>{tag}</Text>
                 </View>
               ))}
@@ -358,7 +433,7 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
           )}
         </View>
 
-        {/* Línea divisoria — va justo después del bloque de texto */}
+        {/* Línea divisoria */}
         <View style={styles.divider} />
 
         {/* CTA */}
@@ -370,20 +445,24 @@ export default function ArtistCardContent({ artist, distanceKm }: ArtistCardCont
             pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
           ]}
         >
-          <View style={styles.ctaLeft}>
-            <Text style={styles.ctaPrice}>
-              {lowestPrice ? formatCOP(lowestPrice) : 'Consultar'}
-            </Text>
-          </View>
-          <View style={styles.ctaSep} />
           <View style={styles.ctaRight}>
-            <Text style={styles.ctaLabel}>Contratar</Text>
+            <Ionicons name="briefcase-outline" size={14} color="#fff" />
+            <Text style={styles.ctaLabel}>Contratar ahora</Text>
+            <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
           </View>
         </Pressable>
 
       </View>
     </View>
     </View>
+
+    {/* Hire Modal — fuera del card para no quedar clippeado */}
+    <HireModal
+      visible={showHireModal}
+      artist={artist}
+      onClose={() => setShowHireModal(false)}
+    />
+    </>
   );
 }
 
@@ -431,7 +510,7 @@ const styles = StyleSheet.create({
 
   // imagen
   imageSection: {
-    height: '60%',
+    height: '66%',
     backgroundColor: '#e5e7eb',
   },
   noImagePlaceholder: {
@@ -462,32 +541,22 @@ const styles = StyleSheet.create({
   ratingText:  { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fbbf24' },
   reviewsText: { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.55)' },
 
-  // categoría top-right
+  // categoría top-left
   categoryChip: {
     position: 'absolute',
-    top: 12, right: 12,
+    top: 10, left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    gap: 3,
+    backgroundColor: 'rgba(255,255,255,0.88)',
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  categoryText: { 
-    fontSize: 11, 
-    fontFamily: 'PlusJakartaSans_700Bold', 
+  categoryText: {
+    fontSize: 9,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#1f2937',
-    textShadowColor: 'rgba(255,255,255,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
   },
 
   // dots de navegación
@@ -519,6 +588,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     gap: 10,
     alignItems: 'center',
+    zIndex: 20,
   },
   sideBtn: {
     width: 38, height: 38, borderRadius: 19,
@@ -529,6 +599,10 @@ const styles = StyleSheet.create({
   sideBtnLiked: {
     backgroundColor: 'rgba(248,113,113,0.22)',
     borderColor: 'rgba(248,113,113,0.45)',
+  },
+  sideBtnSaved: {
+    backgroundColor: 'rgba(167,139,250,0.22)',
+    borderColor: 'rgba(167,139,250,0.45)',
   },
 
   // especialidad con botón cápsula en parte inferior izquierda
@@ -563,16 +637,16 @@ const styles = StyleSheet.create({
   },
 
   topBlock: {
-    gap: 4,  // Reducido de 6 a 4 para espaciado consistente
     flex: 1,
+    gap: 6, // Reducido de 8 a 6 para compensar bio más larga
   },
 
   // título — grande y visible
   name: {
-    fontSize: 19,
+    fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#0f0f0f',
-    lineHeight: 24,
+    lineHeight: 20,
     letterSpacing: -0.4,
     flexShrink: 1,
   },
@@ -581,35 +655,36 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    flexWrap: 'nowrap',
   },
 
-  // etiqueta de verificación
-  verificationBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    // Efecto de cristal/transparencia
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    // Efecto de espejo
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
+  // badge verificado (círculo violeta con check)
   verifiedBadge: {
-    backgroundColor: 'rgba(16, 185, 129, 0.25)',  // Verde transparente
-    borderColor: 'rgba(16, 185, 129, 0.4)',
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: '#7c3aed',
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
-  unverifiedBadge: {
-    backgroundColor: 'rgba(239, 68, 68, 0.25)',  // Rojo transparente
-    borderColor: 'rgba(239, 68, 68, 0.4)',
+
+  // botón seguir inline
+  followBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    borderWidth: 1, borderColor: '#7c3aed',
+    borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3,
+    marginLeft: 'auto',
+    flexShrink: 0,
   },
+  followBtnActive: {
+    backgroundColor: '#7c3aed', borderColor: '#7c3aed',
+  },
+  followBtnText: {
+    fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed',
+  },
+  followBtnTextActive: {
+    color: '#fff',
+  },
+
   verificationText: {
     fontSize: 9,
     fontFamily: 'PlusJakartaSans_600SemiBold',
@@ -627,77 +702,68 @@ const styles = StyleSheet.create({
     textShadowRadius: 2,
   },
 
-  // meta — UNA línea, fuente pequeña
+  // meta — elementos separados con mejor espaciado
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     flexWrap: 'nowrap',
     overflow: 'hidden',
   },
-  metaText: {
-    fontSize: 12,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: '#71717a',
-    flexShrink: 1,
-  },
-  metaDot: {
-    width: 2.5, height: 2.5,
-    borderRadius: 1.5,
-    backgroundColor: '#d4d4d8',
-    marginHorizontal: 2,
-  },
-  metaDist: {
-    fontSize: 12,
+  metaRating: {
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: colors.primary,
-    flexShrink: 0,
+    color: '#374151',
   },
-
-  // indicador de disponibilidad (estilo consistente con el perfil)
-  availabilityIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginRight: 8,
+  metaSep: {
+    fontSize: 11,
+    color: '#d1d5db',
+    fontFamily: 'PlusJakartaSans_400Regular',
   },
-  availabilityText: {
+  metaAvail: {
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_600SemiBold',
   },
-
-  // descripción — con espacio para respirar
-  description: {
-    fontSize: 13,
+  metaCity: {
+    fontSize: 11,
     fontFamily: 'PlusJakartaSans_400Regular',
     color: '#6b7280',
-    lineHeight: 18,
-    marginTop: 2,
+    flexShrink: 1,
   },
 
-  // tags — unificados con perfil pero más compactos para explorador
+  // descripción — mejor espaciado y legibilidad
+  description: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: '#6b7280',
+    lineHeight: 15,
+    marginTop: 1, // Subido 2 pixels más (de 3 a 1)
+    marginBottom: 3, // Reducido de 4 a 3 para tags
+  },
+
+  // tags — mejor diseño y espaciado consistente
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 4, // Reducido de 6 a 4
+    gap: 6, // Aumentado para mejor separación
+    marginTop: 2, // Reducido de 4 a 2 para acercar más a la bio
   },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4, // Reducido de 5 a 4
-    backgroundColor: 'rgba(124,58,237,0.07)',
+    gap: 4,
+    backgroundColor: 'rgba(124,58,237,0.08)', // Ligeramente más visible
     borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.18)',
-    borderRadius: 16, // Reducido de 20 a 16
-    paddingHorizontal: 8, // Reducido de 10 a 8
-    paddingVertical: 3, // Reducido de 5 a 3
+    borderColor: 'rgba(124,58,237,0.2)', // Más definido
+    borderRadius: 20, // Redondeado más elegante
+    paddingHorizontal: 10,
+    paddingVertical: 4, // Ligeramente más alto
   },
   tagText: {
-    fontSize: 10, // Reducido de 11 a 10
+    fontSize: 9,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#7c3aed',
+    letterSpacing: 0.2,
   },
 
   // línea divisoria — separa contenido del CTA sin espacio muerto
@@ -716,27 +782,36 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
   },
-  ctaActive:  { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
+  ctaActive: { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
 
-  ctaLeft: {
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 12,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  // precio en imagen top-right
+  pricePill: {
+    position: 'absolute',
+    top: 10, right: 10,
+    backgroundColor: colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
-  ctaPrice:       { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.2 },
-
-  ctaSep: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)' },
+  pricePillText: {
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#fff',
+    letterSpacing: -0.2,
+  },
+  pricePillDesde: {
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_400Regular',
+    color: 'rgba(255,255,255,0.8)',
+  },
 
   ctaRight: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    gap: 8,
+    paddingVertical: 8,
   },
-  ctaLabel:       { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
-});
+  ctaLabel: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
+});;

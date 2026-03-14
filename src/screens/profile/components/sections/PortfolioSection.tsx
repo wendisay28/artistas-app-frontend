@@ -345,3 +345,5 @@ const styles = StyleSheet.create({
   },
   content: {}, // Sin flex:1 — crítico para evitar scroll infinito
 });
+
+export default PortfolioSection;

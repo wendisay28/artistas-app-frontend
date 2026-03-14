@@ -36,6 +36,7 @@ interface OffersListTabProps {
   onChatPress?: (offerId: string) => void;
   onApplyPress?: (offerId: string) => void;
   onSavePress?: (offerId: string) => void;
+  onAcceptPress?: (offerId: string) => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   onEndReached?: () => void;
@@ -48,6 +49,7 @@ export default function OffersListTab({
   onChatPress,
   onApplyPress,
   onSavePress,
+  onAcceptPress,
   onRefresh,
   isRefreshing = false,
   onEndReached,
@@ -73,6 +75,7 @@ export default function OffersListTab({
       onChatPress={() => onChatPress?.(item.id)}
       onApplyPress={() => onApplyPress?.(item.id)}
       onSavePress={() => onSavePress?.(item.id)}
+      onAcceptPress={onAcceptPress ? () => onAcceptPress(item.id) : undefined}
     />
   );
 

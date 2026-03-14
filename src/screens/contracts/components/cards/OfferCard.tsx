@@ -35,6 +35,8 @@ interface OfferCardProps {
   onChatPress?: () => void;
   onApplyPress?: () => void;
   onSavePress?: () => void;
+  /** Si se provee, reemplaza "Aplicar" con el botón verde "Aceptar oferta" */
+  onAcceptPress?: () => void;
 }
 
 const TYPE_CONFIG = {
@@ -108,6 +110,7 @@ export default function OfferCard({
   onChatPress,
   onApplyPress,
   onSavePress,
+  onAcceptPress,
 }: OfferCardProps) {
   const config = TYPE_CONFIG[offer.offer_type] ?? TYPE_CONFIG.hiring;
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -146,6 +149,12 @@ export default function OfferCard({
     e.stopPropagation();
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onApplyPress?.();
+  };
+
+  const handleAcceptPress = (e: any) => {
+    e.stopPropagation();
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onAcceptPress?.();
   };
 
   const handleSavePress = (e: any) => {
@@ -263,20 +272,35 @@ export default function OfferCard({
                 <Text style={styles.chatBtnText}>Chat</Text>
               </Pressable>
 
-              <Pressable
-                style={({ pressed }) => [styles.applyBtn, pressed && styles.btnPressed]}
-                onPress={handleApplyPress}
-              >
-                <LinearGradient
-                  // FIX: antes era Colors.primary + '20' que concatenaba string literal
-                  colors={[Colors.primary, Colors.accent ?? Colors.primary]}
-                  style={styles.applyGradient}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
+              {onAcceptPress ? (
+                <Pressable
+                  style={({ pressed }) => [styles.applyBtn, pressed && styles.btnPressed]}
+                  onPress={handleAcceptPress}
                 >
-                  <Text style={styles.applyText}>Aplicar</Text>
-                </LinearGradient>
-              </Pressable>
+                  <LinearGradient
+                    colors={['#10b981', '#059669']}
+                    style={styles.applyGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.applyText}>Aceptar ✓</Text>
+                  </LinearGradient>
+                </Pressable>
+              ) : (
+                <Pressable
+                  style={({ pressed }) => [styles.applyBtn, pressed && styles.btnPressed]}
+                  onPress={handleApplyPress}
+                >
+                  <LinearGradient
+                    colors={[Colors.primary, Colors.accent ?? Colors.primary]}
+                    style={styles.applyGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.applyText}>Aplicar</Text>
+                  </LinearGradient>
+                </Pressable>
+              )}
             </View>
           </View>
         </View>

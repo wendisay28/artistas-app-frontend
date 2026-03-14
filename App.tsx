@@ -11,8 +11,10 @@ import { useFonts,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { AppNavigator } from "./src/navigation/AppNavigator";
+import { useThemeStore } from "./src/store/themeStore";
 
 export default function App() {
+  const { isDark } = useThemeStore();
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_500Medium,
@@ -30,7 +32,7 @@ export default function App() {
   }
 
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={[styles.container, { backgroundColor: isDark ? '#0f0e17' : '#fff' }]}>
       <SafeAreaProvider>
         <AppNavigator />
       </SafeAreaProvider>
