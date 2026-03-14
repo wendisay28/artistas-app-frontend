@@ -55,14 +55,14 @@ const normalize = (str: string) =>
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 
-const EmptySection: React.FC<{ message: string; colors?: any }> = ({ message, colors }) => (
-  <View style={getEmptyStyles(colors).wrap}>
+const EmptySection: React.FC<{ message: string; colors?: any; isDark?: boolean }> = ({ message, colors, isDark = false }) => (
+  <View style={getEmptyStyles(colors, isDark).wrap}>
     <Ionicons name="search-outline" size={28} color={colors?.primary || '#7c3aed'} />
-    <Text style={getEmptyStyles(colors).text}>{message}</Text>
+    <Text style={getEmptyStyles(colors, isDark).text}>{message}</Text>
   </View>
 );
 
-const getEmptyStyles = (colors: any) => StyleSheet.create({
+const getEmptyStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   wrap: {
     marginHorizontal: 16,
     paddingVertical: 28,
@@ -115,8 +115,8 @@ const AnimatedSection: React.FC<{ delay?: number; children: React.ReactNode }> =
 // ── Carrusel reutilizable ─────────────────────────────────────────────────────
 
 const EventsCarousel: React.FC<{
-  events: EventItem[]; city: string; loading: boolean; colors: any;
-}> = ({ events, city, loading, colors }) => (
+  events: EventItem[]; city: string; loading: boolean; colors: any; isDark: boolean;
+}> = ({ events, city, loading, colors, isDark }) => (
   <View style={getStyles(colors).section}>
     <SectionHeader
       title="Eventos cerca de ti"
@@ -138,14 +138,14 @@ const EventsCarousel: React.FC<{
         ))}
       </ScrollView>
     ) : (
-      <EmptySection message={`No hay eventos cerca de ${city}`} colors={colors} />
+      <EmptySection message={`No hay eventos cerca de ${city}`} colors={colors} isDark={isDark} />
     )}
   </View>
 );
 
 const ArtistsCarousel: React.FC<{
-  artists: ArtistItem[]; loading: boolean; colors: any;
-}> = ({ artists, loading, colors }) => (
+  artists: ArtistItem[]; loading: boolean; colors: any; isDark: boolean;
+}> = ({ artists, loading, colors, isDark }) => (
   <View style={getStyles(colors).section}>
     <SectionHeader
       title="Artistas cerca de ti"
@@ -167,7 +167,7 @@ const ArtistsCarousel: React.FC<{
         ))}
       </ScrollView>
     ) : (
-      <EmptySection message="No encontramos artistas cerca por ahora" colors={colors} />
+      <EmptySection message="No encontramos artistas cerca por ahora" colors={colors} isDark={isDark} />
     )}
   </View>
 );
@@ -201,8 +201,8 @@ const FeedWithCarousels: React.FC<{
 }) => {
   // Los carruseles que se van a intercalar, en orden
   const carousels = [
-    <EventsCarousel key="events" events={events} city={currentCity} loading={dataLoading} colors={colors} />,
-    <ArtistsCarousel key="artists" artists={artists} loading={dataLoading} colors={colors} />,
+    <EventsCarousel key="events" events={events} city={currentCity} loading={dataLoading} colors={colors} isDark={isDark} />,
+    <ArtistsCarousel key="artists" artists={artists} loading={dataLoading} colors={colors} isDark={isDark} />,
   ];
 
   // Sin posts → solo carruseles juntos
