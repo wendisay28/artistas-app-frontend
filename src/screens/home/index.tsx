@@ -264,7 +264,7 @@ const FeedWithCarousels: React.FC<{
 function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
-  const { colors, toggleTheme } = useThemeStore();
+  const { colors, isDark, toggleTheme } = useThemeStore();
   const { show: showTabBar, hide: hideTabBar } = useTabBarStore();
   const lastScrollY = useRef(0);
 
