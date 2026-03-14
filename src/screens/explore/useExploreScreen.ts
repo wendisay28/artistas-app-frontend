@@ -64,6 +64,7 @@ export function useExploreScreen() {
     workExperience: any[]; education: any[];
     socialMedia: any; description: string | null;
   } | null>(null);
+  const [artistFullDataId, setArtistFullDataId]   = useState<string | null>(null);
 
   const scrollRef          = useRef<ScrollView>(null);
   const currentPageRef     = useRef(1);
@@ -179,14 +180,19 @@ export function useExploreScreen() {
 
   // Cargar detalles completos cuando cambia el artista visible
   useEffect(() => {
-    if (!topCard || topCard.type !== 'artist') { setArtistFullData(null); return; }
+    if (!topCard || topCard.type !== 'artist') { setArtistFullData(null); setArtistFullDataId(null); return; }
 
     const artist = topCard as Artist;
     const userId = artist.id;
-    if (!userId || userId.startsWith('mock-')) { setArtistFullData(null); return; }
+    if (!userId || userId.startsWith('mock-')) { setArtistFullData(null); setArtistFullDataId(null); return; }
+
+    // Limpiar datos del artista anterior SIEMPRE antes de cargar los nuevos
+    setArtistFullData(null);
+    setArtistFullDataId(null);
 
     if (detailsCache.current.has(userId)) {
       setArtistFullData(detailsCache.current.get(userId));
+      setArtistFullDataId(userId);
       return;
     }
 
@@ -207,7 +213,7 @@ export function useExploreScreen() {
           description: profileData?.description || profileData?.details?.description
             || (auth.currentUser?.uid === userId ? ownData?.description ?? null : null) || null,
         };
-        if (!cancelled) setArtistFullData(basicData);
+        if (!cancelled) { setArtistFullData(basicData); setArtistFullDataId(userId); }
 
         const [servicesRes, portfolioRes] = await Promise.allSettled([
           Promise.race([servicesService.getUserServices(userId), timeout]),
@@ -227,7 +233,7 @@ export function useExploreScreen() {
           education:      firstNonEmpty(profileData?.details?.education, profileData?.education, ownData?.studies as any[], artist.education as any[]).filter((x: any) => x?.institution || x?.degree),
         };
         detailsCache.current.set(userId, fullData);
-        if (!cancelled) setArtistFullData(fullData);
+        if (!cancelled) { setArtistFullData(fullData); setArtistFullDataId(userId); }
       } catch {
         if (!cancelled) {
           const ownData = auth.currentUser?.uid === userId ? useProfileStore.getState().artistData : null;
@@ -237,6 +243,7 @@ export function useExploreScreen() {
             education: ownData.studies || [],
             socialMedia: null, description: ownData.description || null,
           } : null);
+          setArtistFullDataId(ownData ? userId : null);
         }
       }
     })();
@@ -303,7 +310,7 @@ export function useExploreScreen() {
     filters, setFilters,
     isLoading, isLoadingMore, error,
     hireModalArtist, setHireModalArtist,
-    artistFullData,
+    artistFullData, artistFullDataId,
     connectedIds,
     scrollRef,
     topCard,

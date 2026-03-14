@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../../constants/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface CreateOfferModalProps {
   visible: boolean;
@@ -55,6 +56,7 @@ export default function CreateOfferModal({
   editData,
 }: CreateOfferModalProps) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeStore();
   const [formData, setFormData] = useState<OfferFormData>(
     editData || {
       title: '',
@@ -103,9 +105,9 @@ export default function CreateOfferModal({
       onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { paddingTop: (insets.top || webTopInset) + 8 }]}>
+        <View style={[styles.modalContent, { paddingTop: (insets.top || webTopInset) + 8 }, isDark && { backgroundColor: '#0a0618' }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
             <View style={styles.headerLeft}>
               <LinearGradient
                 colors={[colors.primary, colors.accent]}
@@ -113,18 +115,19 @@ export default function CreateOfferModal({
               >
                 <Ionicons name="add" size={20} color="#fff" />
               </LinearGradient>
-              <Text style={styles.headerTitle}>
+              <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>
                 {editData ? 'Editar Oferta' : 'Nueva Oferta'}
               </Text>
             </View>
             <Pressable
               style={({ pressed }) => [
                 styles.closeBtn,
+                isDark && { backgroundColor: 'rgba(139,92,246,0.12)' },
                 pressed && styles.closeBtnPressed,
               ]}
               onPress={handleClose}
             >
-              <Ionicons name="close" size={24} color={colors.text} />
+              <Ionicons name="close" size={24} color={isDark ? '#FFFFFF' : colors.text} />
             </Pressable>
           </View>
 
@@ -138,27 +141,28 @@ export default function CreateOfferModal({
           >
             {/* Title */}
             <View style={styles.field}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>
                 Título <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 value={formData.title}
                 onChangeText={(text) => updateField('title', text)}
                 placeholder="Ej: Músico para boda"
-                placeholderTextColor={colors.textLight}
-                style={styles.input}
+                placeholderTextColor={isDark ? '#71717A' : colors.textLight}
+                style={[styles.input, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)', color: '#FFFFFF' }]}
               />
             </View>
 
             {/* Type */}
             <View style={styles.field}>
-              <Text style={styles.label}>Tipo de oferta</Text>
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>Tipo de oferta</Text>
               <View style={styles.typeGrid}>
                 {OFFER_TYPES.map((type) => (
                   <Pressable
                     key={type.id}
                     style={({ pressed }) => [
                       styles.typeBtn,
+                      isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
                       formData.offer_type === type.id && styles.typeBtnActive,
                       pressed && styles.typeBtnPressed,
                     ]}
@@ -170,11 +174,12 @@ export default function CreateOfferModal({
                     <Ionicons
                       name={type.icon as any}
                       size={20}
-                      color={formData.offer_type === type.id ? colors.primary : colors.textSecondary}
+                      color={formData.offer_type === type.id ? colors.primary : (isDark ? '#A1A1AA' : colors.textSecondary)}
                     />
                     <Text
                       style={[
                         styles.typeText,
+                        isDark && { color: '#A1A1AA' },
                         formData.offer_type === type.id && styles.typeTextActive,
                       ]}
                     >
@@ -187,15 +192,15 @@ export default function CreateOfferModal({
 
             {/* Description */}
             <View style={styles.field}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>
                 Descripción <Text style={styles.required}>*</Text>
               </Text>
               <TextInput
                 value={formData.description}
                 onChangeText={(text) => updateField('description', text)}
                 placeholder="Describe los detalles de lo que buscas..."
-                placeholderTextColor={colors.textLight}
-                style={[styles.input, styles.textArea]}
+                placeholderTextColor={isDark ? '#71717A' : colors.textLight}
+                style={[styles.input, styles.textArea, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)', color: '#FFFFFF' }]}
                 multiline
                 numberOfLines={4}
                 textAlignVertical="top"
@@ -204,29 +209,29 @@ export default function CreateOfferModal({
 
             {/* Budget */}
             <View style={styles.field}>
-              <Text style={styles.label}>Presupuesto</Text>
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>Presupuesto</Text>
               <View style={styles.budgetRow}>
                 <View style={styles.budgetField}>
-                  <Text style={styles.budgetLabel}>Mínimo</Text>
+                  <Text style={[styles.budgetLabel, isDark && { color: '#71717A' }]}>Mínimo</Text>
                   <TextInput
                     value={formData.budget_min}
                     onChangeText={(text) => updateField('budget_min', text)}
                     placeholder="1000"
-                    placeholderTextColor={colors.textLight}
+                    placeholderTextColor={isDark ? '#71717A' : colors.textLight}
                     keyboardType="numeric"
-                    style={styles.budgetInput}
+                    style={[styles.budgetInput, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)', color: '#FFFFFF' }]}
                   />
                 </View>
-                <Text style={styles.budgetSeparator}>—</Text>
+                <Text style={[styles.budgetSeparator, isDark && { color: '#71717A' }]}>—</Text>
                 <View style={styles.budgetField}>
-                  <Text style={styles.budgetLabel}>Máximo</Text>
+                  <Text style={[styles.budgetLabel, isDark && { color: '#71717A' }]}>Máximo</Text>
                   <TextInput
                     value={formData.budget_max}
                     onChangeText={(text) => updateField('budget_max', text)}
                     placeholder="5000"
-                    placeholderTextColor={colors.textLight}
+                    placeholderTextColor={isDark ? '#71717A' : colors.textLight}
                     keyboardType="numeric"
-                    style={styles.budgetInput}
+                    style={[styles.budgetInput, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)', color: '#FFFFFF' }]}
                   />
                 </View>
               </View>
@@ -234,37 +239,37 @@ export default function CreateOfferModal({
 
             {/* Location */}
             <View style={styles.field}>
-              <Text style={styles.label}>Ubicación</Text>
-              <View style={styles.inputWithIcon}>
-                <Ionicons name="location-outline" size={18} color={colors.textSecondary} />
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>Ubicación</Text>
+              <View style={[styles.inputWithIcon, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
+                <Ionicons name="location-outline" size={18} color={isDark ? '#A1A1AA' : colors.textSecondary} />
                 <TextInput
                   value={formData.location}
                   onChangeText={(text) => updateField('location', text)}
                   placeholder="Madrid, España"
-                  placeholderTextColor={colors.textLight}
-                  style={styles.inputFlex}
+                  placeholderTextColor={isDark ? '#71717A' : colors.textLight}
+                  style={[styles.inputFlex, isDark && { color: '#FFFFFF' }]}
                 />
               </View>
             </View>
 
             {/* Date */}
             <View style={styles.field}>
-              <Text style={styles.label}>Fecha del evento</Text>
-              <View style={styles.inputWithIcon}>
-                <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>Fecha del evento</Text>
+              <View style={[styles.inputWithIcon, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
+                <Ionicons name="calendar-outline" size={18} color={isDark ? '#A1A1AA' : colors.textSecondary} />
                 <TextInput
                   value={formData.date}
                   onChangeText={(text) => updateField('date', text)}
                   placeholder="15 Mar 2024"
-                  placeholderTextColor={colors.textLight}
-                  style={styles.inputFlex}
+                  placeholderTextColor={isDark ? '#71717A' : colors.textLight}
+                  style={[styles.inputFlex, isDark && { color: '#FFFFFF' }]}
                 />
               </View>
             </View>
 
             {/* Category */}
             <View style={styles.field}>
-              <Text style={styles.label}>Categoría de artista</Text>
+              <Text style={[styles.label, isDark && { color: '#FFFFFF' }]}>Categoría de artista</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -275,6 +280,7 @@ export default function CreateOfferModal({
                     key={cat}
                     style={({ pressed }) => [
                       styles.categoryChip,
+                      isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
                       formData.category === cat && styles.categoryChipActive,
                       pressed && styles.categoryChipPressed,
                     ]}
@@ -286,6 +292,7 @@ export default function CreateOfferModal({
                     <Text
                       style={[
                         styles.categoryChipText,
+                        isDark && { color: '#A1A1AA' },
                         formData.category === cat && styles.categoryChipTextActive,
                       ]}
                     >
@@ -298,12 +305,12 @@ export default function CreateOfferModal({
 
             {/* Urgent */}
             <View style={styles.field}>
-              <View style={styles.switchRow}>
+              <View style={[styles.switchRow, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
                 <View style={styles.switchLeft}>
                   <Ionicons name="flame" size={20} color={colors.error} />
                   <View>
-                    <Text style={styles.switchLabel}>Marcar como urgente</Text>
-                    <Text style={styles.switchDesc}>
+                    <Text style={[styles.switchLabel, isDark && { color: '#FFFFFF' }]}>Marcar como urgente</Text>
+                    <Text style={[styles.switchDesc, isDark && { color: '#71717A' }]}>
                       Destaca tu oferta para más visibilidad
                     </Text>
                   </View>
@@ -319,15 +326,16 @@ export default function CreateOfferModal({
           </ScrollView>
 
           {/* Footer */}
-          <View style={[styles.footer, { paddingBottom: (insets.bottom || webBottomInset) + 16 }]}>
+          <View style={[styles.footer, { paddingBottom: (insets.bottom || webBottomInset) + 16 }, isDark && { backgroundColor: '#0a0618', borderTopColor: 'rgba(139,92,246,0.2)' }]}>
             <Pressable
               style={({ pressed }) => [
                 styles.cancelBtn,
+                isDark && { backgroundColor: 'rgba(139,92,246,0.12)' },
                 pressed && styles.cancelBtnPressed,
               ]}
               onPress={handleClose}
             >
-              <Text style={styles.cancelBtnText}>Cancelar</Text>
+              <Text style={[styles.cancelBtnText, isDark && { color: '#FFFFFF' }]}>Cancelar</Text>
             </Pressable>
 
             <Pressable

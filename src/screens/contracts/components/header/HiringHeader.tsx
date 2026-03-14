@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import type { TabType, ExploreSubTab, UrgentSubTab } from '../../../../types/hiring';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 import AvailabilitySwitch from '../shared/AvailabilitySwitch';
 
 interface Tab {
@@ -50,6 +51,7 @@ export default function HiringHeader({
   onAvailabilityToggle,
   realTimeOffersCount = 0,
 }: HiringHeaderProps) {
+  const { isDark } = useThemeStore();
   const tabs: Tab[] = [
     { key: 'urgent', label: 'Urgentes', badgeCount: urgentCount },
     { key: 'explore', label: 'Explorar', badgeCount: unreadCount },
@@ -92,7 +94,7 @@ export default function HiringHeader({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && { backgroundColor: '#0a0618', borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
       <View style={styles.tabsWrapper}>
         {tabs.map((tab, index) => {
           const isActive = tab.key === activeTab;
@@ -108,6 +110,7 @@ export default function HiringHeader({
                 <Text
                   style={[
                     styles.tabText,
+                    isDark && { color: '#71717A' },
                     isActive && styles.tabTextActive,
                   ]}
                 >
@@ -148,12 +151,12 @@ export default function HiringHeader({
 
       {/* Sub-tabs para Explorar */}
       {activeTab === 'explore' && onExploreSubTabChange && (
-        <View style={styles.subTabsWrapper}>
+        <View style={[styles.subTabsWrapper, isDark && { backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.2)' }]}>
           <TouchableOpacity
             style={[styles.subTab, exploreSubTab === 'general' && styles.subTabActive]}
             onPress={() => onExploreSubTabChange('general')}
           >
-            <Text style={[styles.subTabText, exploreSubTab === 'general' && styles.subTabTextActive]}>
+            <Text style={[styles.subTabText, isDark && { color: '#71717A' }, exploreSubTab === 'general' && styles.subTabTextActive]}>
               Generales
             </Text>
           </TouchableOpacity>
@@ -161,7 +164,7 @@ export default function HiringHeader({
             style={[styles.subTab, exploreSubTab === 'saved' && styles.subTabActive]}
             onPress={() => onExploreSubTabChange('saved')}
           >
-            <Text style={[styles.subTabText, exploreSubTab === 'saved' && styles.subTabTextActive]}>
+            <Text style={[styles.subTabText, isDark && { color: '#71717A' }, exploreSubTab === 'saved' && styles.subTabTextActive]}>
               Guardadas
             </Text>
           </TouchableOpacity>
@@ -180,12 +183,12 @@ export default function HiringHeader({
             />
           )}
           
-          <View style={styles.subTabsWrapper}>
+          <View style={[styles.subTabsWrapper, isDark && { backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.2)' }]}>
             <TouchableOpacity
               style={[styles.subTab, urgentSubTab === 'pending' && styles.subTabActive]}
               onPress={() => onUrgentSubTabChange('pending')}
             >
-              <Text style={[styles.subTabText, urgentSubTab === 'pending' && styles.subTabTextActive]}>
+              <Text style={[styles.subTabText, isDark && { color: '#71717A' }, urgentSubTab === 'pending' && styles.subTabTextActive]}>
                 Pendientes
               </Text>
             </TouchableOpacity>
@@ -193,7 +196,7 @@ export default function HiringHeader({
               style={[styles.subTab, urgentSubTab === 'in_progress' && styles.subTabActive]}
               onPress={() => onUrgentSubTabChange('in_progress')}
             >
-              <Text style={[styles.subTabText, urgentSubTab === 'in_progress' && styles.subTabTextActive]}>
+              <Text style={[styles.subTabText, isDark && { color: '#71717A' }, urgentSubTab === 'in_progress' && styles.subTabTextActive]}>
                 En curso
               </Text>
             </TouchableOpacity>
@@ -201,7 +204,7 @@ export default function HiringHeader({
               style={[styles.subTab, urgentSubTab === 'completed' && styles.subTabActive]}
               onPress={() => onUrgentSubTabChange('completed')}
             >
-              <Text style={[styles.subTabText, urgentSubTab === 'completed' && styles.subTabTextActive]}>
+              <Text style={[styles.subTabText, isDark && { color: '#71717A' }, urgentSubTab === 'completed' && styles.subTabTextActive]}>
                 Finalizadas
               </Text>
             </TouchableOpacity>

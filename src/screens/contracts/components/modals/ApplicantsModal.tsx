@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../../constants/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 import ApplicantCard from '../cards/ApplicantCard';
 import type { Applicant } from '../../../types/hiring';
 
@@ -39,6 +40,7 @@ export default function ApplicantsModal({
   onAcceptPress,
 }: ApplicantsModalProps) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeStore();
   const [sortBy, setSortBy] = useState<SortType>('recent');
 
   const webTopInset = Platform.OS === 'web' ? 67 : 0;
@@ -100,22 +102,23 @@ export default function ApplicantsModal({
       onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { paddingTop: (insets.top || webTopInset) + 8 }]}>
+        <View style={[styles.modalContent, { paddingTop: (insets.top || webTopInset) + 8 }, isDark && { backgroundColor: '#0a0618' }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
             <View style={styles.headerLeft}>
               <Pressable
                 style={({ pressed }) => [
                   styles.backBtn,
+                  isDark && { backgroundColor: 'rgba(139,92,246,0.12)' },
                   pressed && styles.backBtnPressed,
                 ]}
                 onPress={handleClose}
               >
-                <Ionicons name="chevron-back" size={24} color={colors.text} />
+                <Ionicons name="chevron-back" size={24} color={isDark ? '#FFFFFF' : colors.text} />
               </Pressable>
               <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Aplicantes</Text>
-                <Text style={styles.headerSubtitle} numberOfLines={1}>
+                <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>Aplicantes</Text>
+                <Text style={[styles.headerSubtitle, isDark && { color: '#71717A' }]} numberOfLines={1}>
                   {offerTitle}
                 </Text>
               </View>
@@ -126,63 +129,32 @@ export default function ApplicantsModal({
           </View>
 
           {/* Sort Options */}
-          <View style={styles.sortContainer}>
-            <Ionicons name="funnel-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.sortLabel}>Ordenar:</Text>
+          <View style={[styles.sortContainer, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
+            <Ionicons name="funnel-outline" size={16} color={isDark ? '#A1A1AA' : colors.textSecondary} />
+            <Text style={[styles.sortLabel, isDark && { color: '#A1A1AA' }]}>Ordenar:</Text>
             <View style={styles.sortOptions}>
-              <Pressable
-                style={({ pressed }) => [
-                  styles.sortChip,
-                  sortBy === 'recent' && styles.sortChipActive,
-                  pressed && styles.sortChipPressed,
-                ]}
-                onPress={() => handleSortChange('recent')}
-              >
-                <Text
-                  style={[
-                    styles.sortChipText,
-                    sortBy === 'recent' && styles.sortChipTextActive,
+              {(['recent', 'rating', 'name'] as SortType[]).map((type) => (
+                <Pressable
+                  key={type}
+                  style={({ pressed }) => [
+                    styles.sortChip,
+                    isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
+                    sortBy === type && styles.sortChipActive,
+                    pressed && styles.sortChipPressed,
                   ]}
+                  onPress={() => handleSortChange(type)}
                 >
-                  Recientes
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.sortChip,
-                  sortBy === 'rating' && styles.sortChipActive,
-                  pressed && styles.sortChipPressed,
-                ]}
-                onPress={() => handleSortChange('rating')}
-              >
-                <Text
-                  style={[
-                    styles.sortChipText,
-                    sortBy === 'rating' && styles.sortChipTextActive,
-                  ]}
-                >
-                  Rating
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.sortChip,
-                  sortBy === 'name' && styles.sortChipActive,
-                  pressed && styles.sortChipPressed,
-                ]}
-                onPress={() => handleSortChange('name')}
-              >
-                <Text
-                  style={[
-                    styles.sortChipText,
-                    sortBy === 'name' && styles.sortChipTextActive,
-                  ]}
-                >
-                  Nombre
-                </Text>
-              </Pressable>
+                  <Text
+                    style={[
+                      styles.sortChipText,
+                      isDark && { color: '#A1A1AA' },
+                      sortBy === type && styles.sortChipTextActive,
+                    ]}
+                  >
+                    {type === 'recent' ? 'Recientes' : type === 'rating' ? 'Rating' : 'Nombre'}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
           </View>
 

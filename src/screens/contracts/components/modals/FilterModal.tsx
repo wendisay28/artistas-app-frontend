@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // import Slider from '@react-native-community/slider'; // TODO: Install this package or replace with alternative
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../../constants/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface FilterModalProps {
   visible: boolean;
@@ -54,6 +55,7 @@ export default function FilterModal({
   initialFilters,
 }: FilterModalProps) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeStore();
   const [filters, setFilters] = useState<FilterData>(
     initialFilters || {
       types: [],
@@ -128,12 +130,12 @@ export default function FilterModal({
       onRequestClose={handleClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.modalContent, { paddingTop: (insets.top || webTopInset) + 8 }]}>
+        <View style={[styles.modalContent, { paddingTop: (insets.top || webTopInset) + 8 }, isDark && { backgroundColor: '#0a0618' }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
             <View style={styles.headerLeft}>
               <Ionicons name="options-outline" size={24} color={colors.primary} />
-              <Text style={styles.headerTitle}>Filtros</Text>
+              <Text style={[styles.headerTitle, isDark && { color: '#FFFFFF' }]}>Filtros</Text>
               {activeFiltersCount > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{activeFiltersCount}</Text>
@@ -143,11 +145,12 @@ export default function FilterModal({
             <Pressable
               style={({ pressed }) => [
                 styles.closeBtn,
+                isDark && { backgroundColor: 'rgba(139,92,246,0.12)' },
                 pressed && styles.closeBtnPressed,
               ]}
               onPress={handleClose}
             >
-              <Ionicons name="close" size={24} color={colors.text} />
+              <Ionicons name="close" size={24} color={isDark ? '#FFFFFF' : colors.text} />
             </Pressable>
           </View>
 
@@ -161,13 +164,14 @@ export default function FilterModal({
           >
             {/* Type */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Tipo de oferta</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Tipo de oferta</Text>
               <View style={styles.chipGrid}>
                 {OFFER_TYPES.map((type) => (
                   <Pressable
                     key={type.id}
                     style={({ pressed }) => [
                       styles.chip,
+                      isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
                       filters.types.includes(type.id) && styles.chipActive,
                       pressed && styles.chipPressed,
                     ]}
@@ -176,6 +180,7 @@ export default function FilterModal({
                     <Text
                       style={[
                         styles.chipText,
+                        isDark && { color: '#A1A1AA' },
                         filters.types.includes(type.id) && styles.chipTextActive,
                       ]}
                     >
@@ -189,7 +194,7 @@ export default function FilterModal({
             {/* Budget */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Presupuesto máximo</Text>
+                <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Presupuesto máximo</Text>
                 <Text style={styles.budgetValue}>
                   ${filters.budget_max.toLocaleString()}
                 </Text>
@@ -218,7 +223,7 @@ export default function FilterModal({
 
             {/* Location */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Ubicación</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Ubicación</Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -229,6 +234,7 @@ export default function FilterModal({
                     key={loc}
                     style={({ pressed }) => [
                       styles.locationChip,
+                      isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
                       filters.location === loc && styles.locationChipActive,
                       pressed && styles.chipPressed,
                     ]}
@@ -243,11 +249,12 @@ export default function FilterModal({
                     <Ionicons
                       name="location"
                       size={14}
-                      color={filters.location === loc ? colors.primary : colors.textSecondary}
+                      color={filters.location === loc ? colors.primary : (isDark ? '#A1A1AA' : colors.textSecondary)}
                     />
                     <Text
                       style={[
                         styles.locationChipText,
+                        isDark && { color: '#A1A1AA' },
                         filters.location === loc && styles.locationChipTextActive,
                       ]}
                     >
@@ -260,13 +267,14 @@ export default function FilterModal({
 
             {/* Categories */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Categoría de artista</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Categoría de artista</Text>
               <View style={styles.chipGrid}>
                 {CATEGORIES.map((cat) => (
                   <Pressable
                     key={cat}
                     style={({ pressed }) => [
                       styles.chip,
+                      isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
                       filters.categories.includes(cat) && styles.chipActive,
                       pressed && styles.chipPressed,
                     ]}
@@ -275,6 +283,7 @@ export default function FilterModal({
                     <Text
                       style={[
                         styles.chipText,
+                        isDark && { color: '#A1A1AA' },
                         filters.categories.includes(cat) && styles.chipTextActive,
                       ]}
                     >
@@ -328,15 +337,16 @@ export default function FilterModal({
           </ScrollView>
 
           {/* Footer */}
-          <View style={[styles.footer, { paddingBottom: (insets.bottom || webBottomInset) + 16 }]}>
+          <View style={[styles.footer, { paddingBottom: (insets.bottom || webBottomInset) + 16 }, isDark && { backgroundColor: '#0a0618', borderTopColor: 'rgba(139,92,246,0.2)' }]}>
             <Pressable
               style={({ pressed }) => [
                 styles.clearBtn,
+                isDark && { backgroundColor: 'rgba(139,92,246,0.12)' },
                 pressed && styles.clearBtnPressed,
               ]}
               onPress={handleClear}
             >
-              <Text style={styles.clearBtnText}>Limpiar</Text>
+              <Text style={[styles.clearBtnText, isDark && { color: '#FFFFFF' }]}>Limpiar</Text>
             </Pressable>
 
             <Pressable

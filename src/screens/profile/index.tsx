@@ -140,7 +140,7 @@ export default function ProfileScreen() {
   const [pendingCoverAsset,   setPendingCoverAsset]   = useState<{ uri: string; width: number; height: number } | null>(null);
   const [uploadingCover,      setUploadingCover]      = useState(false);
   const [showMoreMenu,        setShowMoreMenu]        = useState(false);
-  const { toggleTheme } = useThemeStore();
+  const { toggleTheme, isDark } = useThemeStore();
 
   // ── Interactive cover crop ──────────────────────────────────────────
   const panAnim    = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -979,9 +979,9 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isDark && { backgroundColor: '#0a0618' }]}>
       <TopBar title={effectiveArtist.handle?.replace('@', '') ?? effectiveArtist.name} topInset={insets.top} usernameMode={true} />
-      
+
       {/* Banner "vista de cliente" - ahora arriba de todo */}
       {viewingAsClient && (
         <View style={styles.clientViewBanner}>
@@ -995,7 +995,7 @@ export default function ProfileScreen() {
       )}
       
       <ScrollView
-        style={styles.scroll}
+        style={[styles.scroll, isDark && { backgroundColor: '#0a0618' }]}
         showsVerticalScrollIndicator={false}
         bounces={true}
       >

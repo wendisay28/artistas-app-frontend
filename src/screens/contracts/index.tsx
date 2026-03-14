@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParams } from '../../navigation/RootStack';
 import { Colors } from '../../theme/colors';
+import { useThemeStore } from '../../store/themeStore';
 
 // ── Shared
 import TopBar from '../../components/shared/TopBar';
@@ -386,6 +387,7 @@ interface ContractsScreenProps {
 export default function ContractsScreen({ accountType = 'artist' }: ContractsScreenProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation() as NativeStackNavigationProp<RootStackParams>;
+  const { isDark } = useThemeStore();
   const isArtist = accountType === 'artist';
 
   // ── State principal
@@ -654,11 +656,11 @@ export default function ContractsScreen({ accountType = 'artist' }: ContractsScr
   // ── Empty state helper
   const EmptyTabState = ({ icon, title, sub }: { icon: string; title: string; sub: string }) => (
     <View style={urgentStyles.empty}>
-      <View style={urgentStyles.emptyIcon}>
-        <Ionicons name={icon as any} size={36} color="#9ca3af" />
+      <View style={[urgentStyles.emptyIcon, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+        <Ionicons name={icon as any} size={36} color={isDark ? '#A78BFA' : '#9ca3af'} />
       </View>
-      <Text style={urgentStyles.emptyTitle}>{title}</Text>
-      <Text style={urgentStyles.emptySub}>{sub}</Text>
+      <Text style={[urgentStyles.emptyTitle, isDark && { color: '#FFFFFF' }]}>{title}</Text>
+      <Text style={[urgentStyles.emptySub, isDark && { color: '#71717A' }]}>{sub}</Text>
     </View>
   );
 
@@ -699,7 +701,7 @@ export default function ContractsScreen({ accountType = 'artist' }: ContractsScr
               c.title.toLowerCase().includes(searchQuery.toLowerCase())
           );
           return (
-            <ScrollView style={urgentStyles.container} showsVerticalScrollIndicator={false}>
+            <ScrollView style={[urgentStyles.container, isDark && { backgroundColor: '#0a0618' }]} showsVerticalScrollIndicator={false}>
               {filtered.length === 0 ? (
                 <EmptyTabState
                   icon="play-circle-outline"
@@ -735,7 +737,7 @@ export default function ContractsScreen({ accountType = 'artist' }: ContractsScr
             c.title.toLowerCase().includes(searchQuery.toLowerCase())
         );
         return (
-          <ScrollView style={urgentStyles.container} showsVerticalScrollIndicator={false}>
+          <ScrollView style={[urgentStyles.container, isDark && { backgroundColor: '#0a0618' }]} showsVerticalScrollIndicator={false}>
             {filteredCompleted.length === 0 ? (
               <EmptyTabState
                 icon="checkmark-done-circle-outline"
@@ -767,7 +769,7 @@ export default function ContractsScreen({ accountType = 'artist' }: ContractsScr
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isDark && { backgroundColor: '#0a0618' }]}>
       {/* TopBar */}
       <TopBar
         title="Contratación"

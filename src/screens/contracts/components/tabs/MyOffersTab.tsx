@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 import MyOfferCard from '../cards/MyOfferCard';
 import { AppFooter } from '../../../../components/shared/AppFooter';
 
@@ -49,14 +50,15 @@ export default function MyOffersTab({
   isRefreshing = false,
   onCreatePress,
 }: MyOffersTabProps) {
+  const { isDark } = useThemeStore();
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIconBg}>
-        <Ionicons name="newspaper-outline" size={32} color={Colors.textLight} />
+      <View style={[styles.emptyIconBg, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+        <Ionicons name="newspaper-outline" size={32} color={isDark ? '#A78BFA' : Colors.textLight} />
       </View>
-      <Text style={styles.emptyTitle}>No has publicado ofertas</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={[styles.emptyTitle, isDark && { color: '#FFFFFF' }]}>No has publicado ofertas</Text>
+      <Text style={[styles.emptySubtitle, isDark && { color: '#71717A' }]}>
         Crea tu primera oferta para empezar a recibir aplicaciones
       </Text>
       {onCreatePress && (

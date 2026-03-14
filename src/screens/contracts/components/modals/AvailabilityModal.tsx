@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface AvailabilityModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ export default function AvailabilityModal({
   onSkip,
   onClose,
 }: AvailabilityModalProps) {
+  const { isDark } = useThemeStore();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -75,7 +77,7 @@ export default function AvailabilityModal({
       onRequestClose={onClose}
     >
       <View style={styles.overlay}>
-        <Animated.View style={[styles.modalContainer, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.modalContainer, { opacity: fadeAnim }, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)', borderWidth: 1 }]}>
           {/* Header con icono */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
@@ -89,32 +91,32 @@ export default function AvailabilityModal({
               </LinearGradient>
             </View>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={20} color={Colors.textSecondary} />
+              <Ionicons name="close" size={20} color={isDark ? '#A1A1AA' : Colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Contenido */}
           <View style={styles.content}>
-            <Text style={styles.title}>¿Activa tu disponibilidad?</Text>
-            
-            <Text style={styles.description}>
+            <Text style={[styles.title, isDark && { color: '#FFFFFF' }]}>¿Activa tu disponibilidad?</Text>
+
+            <Text style={[styles.description, isDark && { color: '#A1A1AA' }]}>
               Recibe ofertas urgentes en tiempo real y sé el primero en responder. 
               Los clientes pueden contactarte inmediatamente si estás disponible.
             </Text>
 
             {/* Beneficios */}
-            <View style={styles.benefits}>
+            <View style={[styles.benefits, isDark && { backgroundColor: 'rgba(139,92,246,0.08)', borderColor: 'rgba(139,92,246,0.15)' }]}>
               <View style={styles.benefit}>
                 <Ionicons name="time-outline" size={20} color="#10B981" />
-                <Text style={styles.benefitText}>Respuesta inmediata</Text>
+                <Text style={[styles.benefitText, isDark && { color: '#FFFFFF' }]}>Respuesta inmediata</Text>
               </View>
               <View style={styles.benefit}>
                 <Ionicons name="star-outline" size={20} color="#F59E0B" />
-                <Text style={styles.benefitText}>Más oportunidades</Text>
+                <Text style={[styles.benefitText, isDark && { color: '#FFFFFF' }]}>Más oportunidades</Text>
               </View>
               <View style={styles.benefit}>
                 <Ionicons name="cash-outline" size={20} color="#3B82F6" />
-                <Text style={styles.benefitText}>Ingresos extra</Text>
+                <Text style={[styles.benefitText, isDark && { color: '#FFFFFF' }]}>Ingresos extra</Text>
               </View>
             </View>
           </View>
@@ -122,10 +124,10 @@ export default function AvailabilityModal({
           {/* Botones de acción */}
           <View style={styles.actions}>
             <TouchableOpacity
-              style={[styles.button, styles.skipButton]}
+              style={[styles.button, styles.skipButton, isDark && { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.2)' }]}
               onPress={handleSkip}
             >
-              <Text style={styles.skipButtonText}>Ahora no</Text>
+              <Text style={[styles.skipButtonText, isDark && { color: '#FFFFFF' }]}>Ahora no</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -145,7 +147,7 @@ export default function AvailabilityModal({
           </View>
 
           {/* Nota informativa */}
-          <Text style={styles.note}>
+          <Text style={[styles.note, isDark && { color: '#71717A' }]}>
             Puedes activarla o desactivarla en cualquier momento
           </Text>
         </Animated.View>

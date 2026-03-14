@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ServiceType } from '../../../../types/hiring';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface ServiceTypeModalProps {
   visible: boolean;
@@ -61,6 +62,7 @@ export default function ServiceTypeModal({
   onClose,
   onConfirm,
 }: ServiceTypeModalProps) {
+  const { isDark } = useThemeStore();
   const [selected, setSelected] = useState<ServiceType | null>(null);
 
   const handleConfirm = () => {
@@ -77,12 +79,12 @@ export default function ServiceTypeModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
       <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable style={[styles.sheet, isDark && { backgroundColor: '#130d2a' }]} onPress={() => {}}>
           {/* Handle */}
-          <View style={styles.handle} />
+          <View style={[styles.handle, isDark && { backgroundColor: 'rgba(139,92,246,0.3)' }]} />
 
-          <Text style={styles.title}>¿Cómo prestarás el servicio?</Text>
-          <Text style={styles.sub} numberOfLines={2}>{offerTitle}</Text>
+          <Text style={[styles.title, isDark && { color: '#FFFFFF' }]}>¿Cómo prestarás el servicio?</Text>
+          <Text style={[styles.sub, isDark && { color: '#71717A' }]} numberOfLines={2}>{offerTitle}</Text>
 
           {/* Opciones */}
           <View style={styles.options}>
@@ -93,6 +95,7 @@ export default function ServiceTypeModal({
                   key={opt.type}
                   style={[
                     styles.option,
+                    isDark && { backgroundColor: '#0a0618', borderColor: 'rgba(139,92,246,0.2)' },
                     isSelected && { borderColor: opt.color, backgroundColor: opt.bg },
                   ]}
                   onPress={() => setSelected(opt.type)}
@@ -102,10 +105,10 @@ export default function ServiceTypeModal({
                     <Ionicons name={opt.icon as any} size={22} color={opt.color} />
                   </View>
                   <View style={styles.optionBody}>
-                    <Text style={[styles.optionLabel, isSelected && { color: opt.color }]}>
+                    <Text style={[styles.optionLabel, isDark && { color: '#FFFFFF' }, isSelected && { color: opt.color }]}>
                       {opt.label}
                     </Text>
-                    <Text style={styles.optionDesc}>{opt.description}</Text>
+                    <Text style={[styles.optionDesc, isDark && { color: '#71717A' }]}>{opt.description}</Text>
                   </View>
                   {isSelected && (
                     <Ionicons name="checkmark-circle" size={22} color={opt.color} />
@@ -129,7 +132,7 @@ export default function ServiceTypeModal({
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleClose} style={styles.cancelBtn}>
-            <Text style={styles.cancelText}>Cancelar</Text>
+            <Text style={[styles.cancelText, isDark && { color: '#A1A1AA' }]}>Cancelar</Text>
           </TouchableOpacity>
         </Pressable>
       </Pressable>

@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../../theme/colors'; // FIX: unificado con el resto
 import type { Offer } from '../../../types/hiring'; // FIX: tipo centralizado
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface OfferDetailModalProps {
   visible: boolean;
@@ -65,6 +66,7 @@ export default function OfferDetailModal({
   onSharePress,
 }: OfferDetailModalProps) {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeStore();
 
   if (!offer) return null;
 
@@ -121,32 +123,32 @@ export default function OfferDetailModal({
       onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
-        <View style={[styles.sheet, { paddingTop: (insets.top || webTopInset) + 8 }]}>
+        <View style={[styles.sheet, { paddingTop: (insets.top || webTopInset) + 8 }, isDark && { backgroundColor: '#0a0618' }]}>
 
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
             <Pressable
-              style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }, pressed && { opacity: 0.7 }]}
               onPress={handleClose}
             >
-              <Ionicons name="chevron-back" size={22} color={Colors.text} />
+              <Ionicons name="chevron-back" size={22} color={isDark ? '#FFFFFF' : Colors.text} />
             </Pressable>
 
             <View style={styles.headerActions}>
               <Pressable
-                style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }, pressed && { opacity: 0.7 }]}
                 onPress={handleShare}
               >
-                <Ionicons name="share-outline" size={20} color={Colors.text} />
+                <Ionicons name="share-outline" size={20} color={isDark ? '#FFFFFF' : Colors.text} />
               </Pressable>
               <Pressable
-                style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+                style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }, pressed && { opacity: 0.7 }]}
                 onPress={handleSavePress}
               >
                 <Ionicons
                   name={isSaved ? 'bookmark' : 'bookmark-outline'}
                   size={20}
-                  color={isSaved ? Colors.primary : Colors.text}
+                  color={isSaved ? Colors.primary : (isDark ? '#FFFFFF' : Colors.text)}
                 />
               </Pressable>
             </View>
@@ -176,59 +178,59 @@ export default function OfferDetailModal({
             </View>
 
             {/* Título */}
-            <Text style={styles.title}>{offer.title}</Text>
+            <Text style={[styles.title, isDark && { color: '#FFFFFF' }]}>{offer.title}</Text>
 
             {/* Descripción */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Descripción</Text>
-              <Text style={styles.description}>{offer.description}</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Descripción</Text>
+              <Text style={[styles.description, isDark && { color: '#A1A1AA' }]}>{offer.description}</Text>
             </View>
 
             {/* Detalles */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Detalles</Text>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Detalles</Text>
               <View style={styles.detailsGrid}>
                 {budget && (
-                  <View style={styles.detailItem}>
+                  <View style={[styles.detailItem, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
                     <View style={[styles.detailIcon, { backgroundColor: '#10B98115' }]}>
                       <Ionicons name="cash-outline" size={20} color="#10B981" />
                     </View>
                     <View>
-                      <Text style={styles.detailLabel}>Presupuesto</Text>
+                      <Text style={[styles.detailLabel, isDark && { color: '#71717A' }]}>Presupuesto</Text>
                       <Text style={[styles.detailValue, { color: '#10B981' }]}>{budget}</Text>
                     </View>
                   </View>
                 )}
                 {offer.location && (
-                  <View style={styles.detailItem}>
+                  <View style={[styles.detailItem, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
                     <View style={[styles.detailIcon, { backgroundColor: Colors.primary + '15' }]}>
                       <Ionicons name="location-outline" size={20} color={Colors.primary} />
                     </View>
                     <View>
-                      <Text style={styles.detailLabel}>Ubicación</Text>
-                      <Text style={styles.detailValue}>{offer.location}</Text>
+                      <Text style={[styles.detailLabel, isDark && { color: '#71717A' }]}>Ubicación</Text>
+                      <Text style={[styles.detailValue, isDark && { color: '#FFFFFF' }]}>{offer.location}</Text>
                     </View>
                   </View>
                 )}
                 {offer.date && (
-                  <View style={styles.detailItem}>
+                  <View style={[styles.detailItem, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
                     <View style={[styles.detailIcon, { backgroundColor: '#3B82F615' }]}>
                       <Ionicons name="calendar-outline" size={20} color="#3B82F6" />
                     </View>
                     <View>
-                      <Text style={styles.detailLabel}>Fecha</Text>
-                      <Text style={styles.detailValue}>{offer.date}</Text>
+                      <Text style={[styles.detailLabel, isDark && { color: '#71717A' }]}>Fecha</Text>
+                      <Text style={[styles.detailValue, isDark && { color: '#FFFFFF' }]}>{offer.date}</Text>
                     </View>
                   </View>
                 )}
                 {offer.category && (
-                  <View style={styles.detailItem}>
+                  <View style={[styles.detailItem, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
                     <View style={[styles.detailIcon, { backgroundColor: '#8B5CF615' }]}>
                       <Ionicons name="person-outline" size={20} color="#8B5CF6" />
                     </View>
                     <View>
-                      <Text style={styles.detailLabel}>Categoría</Text>
-                      <Text style={styles.detailValue}>{offer.category}</Text>
+                      <Text style={[styles.detailLabel, isDark && { color: '#71717A' }]}>Categoría</Text>
+                      <Text style={[styles.detailValue, isDark && { color: '#FFFFFF' }]}>{offer.category}</Text>
                     </View>
                   </View>
                 )}
@@ -237,8 +239,8 @@ export default function OfferDetailModal({
 
             {/* Publicado por */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Publicado por</Text>
-              <View style={styles.posterCard}>
+              <Text style={[styles.sectionTitle, isDark && { color: '#FFFFFF' }]}>Publicado por</Text>
+              <View style={[styles.posterCard, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
                 {/* Avatar con color determinista */}
                 <View style={[styles.posterAvatar, { backgroundColor: avatarColor(offer.poster_name) }]}>
                   <Text style={styles.posterAvatarText}>
@@ -246,27 +248,27 @@ export default function OfferDetailModal({
                   </Text>
                 </View>
                 <View style={styles.posterInfo}>
-                  <Text style={styles.posterName}>{offer.poster_name ?? 'Anónimo'}</Text>
-                  <Text style={styles.posterMeta}>Miembro verificado</Text>
+                  <Text style={[styles.posterName, isDark && { color: '#FFFFFF' }]}>{offer.poster_name ?? 'Anónimo'}</Text>
+                  <Text style={[styles.posterMeta, isDark && { color: '#71717A' }]}>Miembro verificado</Text>
                 </View>
                 <Pressable
-                  style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+                  style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }, pressed && { opacity: 0.7 }]}
                   onPress={handleChatPress}
                 >
-                  <MaterialCommunityIcons name="chat-outline" size={18} color={Colors.text} />
+                  <MaterialCommunityIcons name="chat-outline" size={18} color={isDark ? '#FFFFFF' : Colors.text} />
                 </Pressable>
               </View>
             </View>
           </ScrollView>
 
           {/* Footer */}
-          <View style={[styles.footer, { paddingBottom: (insets.bottom || webBottomInset) + 16 }]}>
+          <View style={[styles.footer, { paddingBottom: (insets.bottom || webBottomInset) + 16 }, isDark && { backgroundColor: '#0a0618', borderTopColor: 'rgba(139,92,246,0.2)' }]}>
             <Pressable
-              style={({ pressed }) => [styles.chatBtn, pressed && { opacity: 0.7 }]}
+              style={({ pressed }) => [styles.chatBtn, isDark && { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.2)' }, pressed && { opacity: 0.7 }]}
               onPress={handleChatPress}
             >
-              <MaterialCommunityIcons name="chat-outline" size={20} color={Colors.text} />
-              <Text style={styles.chatBtnText}>Chat</Text>
+              <MaterialCommunityIcons name="chat-outline" size={20} color={isDark ? '#FFFFFF' : Colors.text} />
+              <Text style={[styles.chatBtnText, isDark && { color: '#FFFFFF' }]}>Chat</Text>
             </Pressable>
 
             <Pressable

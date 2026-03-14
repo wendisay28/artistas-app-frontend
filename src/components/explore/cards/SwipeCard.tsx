@@ -1,6 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// SwipeCard.tsx — Base swipeable card wrapper (PanResponder + Animated)
-// Renders any CardContent as children; handles swipe physics & overlays.
+// SwipeCard.tsx — All-in-One card (Bumble/Tinder style)
+// Contiene imagen + detalles en un ScrollView interno.
+// PanResponder horizontal coexiste con scroll vertical interno.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React, { useRef, useCallback } from 'react';
@@ -11,11 +12,11 @@ import {
   Dimensions,
   Platform,
   Text,
-  View,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors } from '../../../constants/colors';
+
 import type { ExploreCard, SwipeDirection } from '../../../types/explore';
 import { useThemeStore } from '../../../store/themeStore';
 
@@ -23,20 +24,23 @@ import { useThemeStore } from '../../../store/themeStore';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export const CARD_WIDTH  = Math.min(SCREEN_WIDTH - 16, 480);
+export const CARD_WIDTH        = Math.min(SCREEN_WIDTH - 16, 480);
+// Altura total de la tarjeta: imagen + panel + detalles scrollables
+// Fallback estático — se sobreescribe con el prop `height` desde ExploreScreen
 export const CARD_HEIGHT = SCREEN_HEIGHT * 0.72;
 
-const SWIPE_THRESHOLD = 80; // Reducido de 120px para swipe más sensible
+const SWIPE_THRESHOLD = 80;
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface SwipeCardProps {
   card: ExploreCard;
   zIndex: number;
-  /** Called when the card flies off screen */
   onDismiss: (id: string, direction: SwipeDirection) => void;
-  /** Content to render inside the card (ArtistCardContent, EventCardContent…) */
   children: React.ReactNode;
+  scrollRef?: React.RefObject<ScrollView>;
+  /** Altura calculada dinámicamente con useSafeAreaInsets en el padre */
+  height?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -46,13 +50,15 @@ export default function SwipeCard({
   zIndex,
   onDismiss,
   children,
+  scrollRef,
+  height = CARD_HEIGHT,
 }: SwipeCardProps) {
   const { isDark } = useThemeStore();
-  const swipeX = useRef(new RNAnimated.Value(0)).current;
+  const swipeX      = useRef(new RNAnimated.Value(0)).current;
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
-  // Refs to store functions and avoid stale closures
-  const flyOffRef = useRef<(direction: SwipeDirection) => void>(undefined);
+  const flyOffRef   = useRef<(direction: SwipeDirection) => void>(undefined);
   const snapBackRef = useRef<() => void>(undefined);
 
   // ── Derived animated values ──────────────────────────────────────────────
@@ -95,7 +101,7 @@ export default function SwipeCard({
 
       RNAnimated.timing(swipeX, {
         toValue,
-        duration: 250, // Reducido de 280ms para respuesta más rápida
+        duration: 250,
         useNativeDriver: true,
       }).start(() => onDismiss(card.id, direction));
     },
@@ -111,34 +117,31 @@ export default function SwipeCard({
     }).start();
   }, [swipeX]);
 
-  // Store functions in refs
-  flyOffRef.current = flyOff;
+  flyOffRef.current   = flyOff;
   snapBackRef.current = snapBack;
 
   // ── PanResponder ─────────────────────────────────────────────────────────
+  // Regla: el swipe horizontal toma control solo si |dx| > |dy|
+  // Esto permite que el ScrollView interno maneje el scroll vertical sin conflicto.
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: (evt, _gs) => {
         touchStartX.current = evt.nativeEvent.locationX;
-        console.log(`[Swipe] START x:${evt.nativeEvent.locationX.toFixed(0)} CARD_WIDTH:${CARD_WIDTH} limit:${(CARD_WIDTH * 0.80).toFixed(0)}`);
-        return false;
+        touchStartY.current = evt.nativeEvent.locationY;
+        return false; // No tomar control al inicio — esperar al movimiento
       },
       onMoveShouldSetPanResponder: (_evt, gs) => {
         const inButtonZone = touchStartX.current > CARD_WIDTH * 0.80;
-        const claim = !inButtonZone && Math.abs(gs.dx) > 20 && Math.abs(gs.dx) > Math.abs(gs.dy) * 3;
-        console.log(`[Swipe] MOVE dx:${gs.dx.toFixed(1)} dy:${gs.dy.toFixed(1)} startX:${touchStartX.current.toFixed(0)} inBtnZone:${inButtonZone} → ${claim ? '✅ CLAIM' : '❌ skip'}`);
-        return claim;
-      },
-      onPanResponderGrant: () => {
-        console.log('[Swipe] GRANT — PanResponder tomó el control');
+        // Solo reclamar si el movimiento es claramente horizontal (|dx| > |dy|)
+        // y supera el umbral mínimo de 10px para evitar micro-twitches
+        const isHorizontal = Math.abs(gs.dx) > Math.abs(gs.dy) && Math.abs(gs.dx) > 10;
+        return !inButtonZone && isHorizontal;
       },
       onPanResponderMove: (_, gs) => {
-        // Eliminado log en movimiento para mejorar rendimiento
         swipeX.setValue(gs.dx);
       },
       onPanResponderRelease: (_, gs) => {
-        console.log(`[Swipe] RELEASE dx:${gs.dx.toFixed(1)}`);
         if (gs.dx > SWIPE_THRESHOLD) {
           flyOffRef.current?.('like');
         } else if (gs.dx < -SWIPE_THRESHOLD) {
@@ -147,19 +150,13 @@ export default function SwipeCard({
           snapBackRef.current?.();
         }
       },
-      onPanResponderTerminate: (_, gs) => {
-        console.log(`[Swipe] TERMINATE dx:${gs.dx.toFixed(1)}`);
+      onPanResponderTerminate: () => {
         snapBackRef.current?.();
       },
-      onPanResponderTerminationRequest: () => {
-        // No ceder el gesto una vez que el swipe horizontal fue reclamado
-        return false;
-      },
+      // No ceder el gesto una vez que el swipe horizontal fue reclamado
+      onPanResponderTerminationRequest: () => false,
     }),
   ).current;
-
-  // Store flyOff and snapBack in refs to avoid stale closures
-  // Note: Functions are already stored above
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -169,6 +166,7 @@ export default function SwipeCard({
         styles.card,
         isDark ? styles.cardDark : styles.cardLight,
         {
+          height, // altura dinámica desde el padre
           zIndex,
           transform: [
             { translateX: swipeX },
@@ -179,7 +177,20 @@ export default function SwipeCard({
       ]}
       {...panResponder.panHandlers}
     >
-      {/* GUARDAR badge — swipe derecha */}
+      {/* ScrollView interno — maneja scroll vertical, no interfiere con swipe horizontal */}
+      <ScrollView
+        ref={scrollRef}
+        nestedScrollEnabled
+        showsVerticalScrollIndicator={false}
+        scrollEventThrottle={16}
+        keyboardShouldPersistTaps="handled"
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {children}
+      </ScrollView>
+
+      {/* GUARDAR badge — swipe derecha (flota sobre el ScrollView) */}
       <RNAnimated.View style={[styles.badge, styles.saveBadge, { opacity: likeOpacity }]}>
         <Ionicons name="bookmark" size={20} color="#10B981" />
         <Text style={styles.saveText}>Guardar</Text>
@@ -190,9 +201,6 @@ export default function SwipeCard({
         <Text style={styles.nextText}>Siguiente</Text>
         <Ionicons name="arrow-forward" size={20} color="#7c3aed" />
       </RNAnimated.View>
-
-      {/* Card content injected by parent */}
-      {children}
     </RNAnimated.View>
   );
 }
@@ -201,33 +209,39 @@ export default function SwipeCard({
 
 const styles = StyleSheet.create({
   card: {
-    position: 'absolute',
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 24,
-    elevation: 10,
+    // Sin sombra — el contenido (ArtistCardContent) define su propio diseño visual
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
   cardLight: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.25)',
+    backgroundColor: '#F8F9FA',
+    borderWidth: 0,
   },
   cardDark: {
+    // Fondo oscuro base — las tarjetas de detalle blancas destacan sobre él
     backgroundColor: '#0a0618',
-    borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.35)',
-    shadowOpacity: 0.35,
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexDirection: 'column',
+    paddingBottom: 32,
+  },
+
+  // Badges flotan absolutamente sobre el ScrollView — zIndex 20
   badge: {
     position: 'absolute',
-    top: '38%',
+    top: '22%',
     zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,9 +1,16 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// ExploreScreen — All-in-One (Bumble/Tinder style)
+// ArtistDetails vive DENTRO de SwipeCard → desync imposible.
+// El ScrollView interno de SwipeCard maneja el scroll vertical.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import React from 'react';
 import {
-  View, Text, StyleSheet, Pressable,
-  Platform, ActivityIndicator, ScrollView, TextInput,
-  StatusBar, useColorScheme,
+  View, Text, Pressable,
+  Platform, ActivityIndicator, TextInput,
+  StatusBar, StyleSheet,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -20,9 +27,7 @@ import EventDetails   from '../../components/explore/details/EventDetails';
 import GalleryDetails from '../../components/explore/details/GalleryDetails';
 import VenueDetails   from '../../components/explore/details/VenueDetails';
 
-import UnifiedFiltersPanel from './components/shared/UnifiedFiltersPanel';
-import HireModal           from '../../components/modals/HireModal';
-import { ComingSoonSection } from '../../components/shared/ComingSoonSection';
+import HireModal from '../../components/modals/HireModal';
 
 import type { Artist, Event, Venue, GalleryItem, ExploreCard, CategoryId } from '../../types/explore';
 import { useExploreScreen } from './useExploreScreen';
@@ -33,34 +38,44 @@ const CATEGORY_LABELS: Record<CategoryId, string> = {
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme(); // Detecta el tema del sistema: 'light' o 'dark'
-  const isDarkSystem = colorScheme === 'dark';
   const { isDark, toggleTheme } = useThemeStore();
 
   const {
-    selectedCategory, stack, currentIndex,
+    selectedCategory, stack,
     showFilters, setShowFilters,
     showSearch, setShowSearch,
     filters, setFilters,
-    isLoading, error,
+    isLoading,
     hireModalArtist, setHireModalArtist,
-    artistFullData, connectedIds,
+    artistFullData, artistFullDataId, connectedIds,
     scrollRef,
     topCard,
     handleCategoryChange,
     handleNext, handlePrev, handleConnect,
-    handleResetFilters, handleReset, loadCategoryData,
   } = useExploreScreen();
 
-  const webTop    = Platform.OS === 'web' ? 67 : 0;
-  const webBottom = Platform.OS === 'web' ? 34 : 0;
+  const webTop = Platform.OS === 'web' ? 67 : 0;
 
-  // 1. Definición de estilos dinámicos según el tema actual
-  const themeContainer = isDark ? s.bgDark : s.bgLight;
-  const themeText      = isDark ? s.textDark : s.textLight;
+  // Altura de la tarjeta calculada con insets reales (como en modales)
+  const { height: SCREEN_HEIGHT } = require('react-native').Dimensions.get('window');
+  const TAB_BAR_H = 49 + (insets.bottom || 0); // tab bar + safe area inferior
+  const HEADER_H  = (insets.top || webTop) + 56; // status bar + contenido del header
+  const cardHeight = SCREEN_HEIGHT - HEADER_H - TAB_BAR_H - 20;
+
+  // Estilos dinámicos de tema
+  const themeContainer = isDark ? s.bgDark   : s.bgLight;
+  const themeText      = isDark ? s.textDark  : s.textLight;
   const themeHeader    = isDark ? s.headerDark : s.headerLight;
   const themeCapsule   = isDark ? s.capsuleDark : s.capsuleLight;
   const themeActionBtn = isDark ? s.actionBtnDark : s.actionBtnLight;
+
+  // Cortafuegos: solo usar artistFullData cuando pertenece al artista visible
+  const safeFullData = topCard?.id === artistFullDataId ? artistFullData : null;
+
+  // Altura del header para calcular el paddingTop del área de tarjetas
+  const headerH = (insets.top || webTop) + 56;
+
+  // ── Contenido de la tarjeta (imagen + panel) ────────────────────────────
 
   const renderCardContent = (card: ExploreCard) => {
     switch (card.type) {
@@ -72,6 +87,8 @@ export default function ExploreScreen() {
     }
   };
 
+  // ── Detalles expandidos (ahora van DENTRO de SwipeCard) ─────────────────
+
   const renderDetails = (card: ExploreCard) => {
     switch (card.type) {
       case 'artist': {
@@ -80,43 +97,50 @@ export default function ExploreScreen() {
           <ArtistDetails
             artist={{
               ...c,
-              description: artistFullData?.description ?? c.description ?? '',
-              services: artistFullData?.services?.map(s => s.name) ?? [],
-              servicesData: artistFullData?.services ?? [],
-              workExperience: artistFullData?.workExperience ?? [],
-              education: artistFullData?.education ?? [],
+              description:    safeFullData?.description ?? c.description ?? '',
+              services:       safeFullData?.services?.map(sv => sv.name) ?? [],
+              servicesData:   safeFullData?.services ?? [],
+              workExperience: safeFullData?.workExperience ?? [],
+              education:      safeFullData?.education ?? [],
             }}
             onHire={() => setHireModalArtist(c)}
             onMessage={() => {}}
             onShare={() => {}}
-            socialLinks={artistFullData?.socialMedia ?? c.socialLinks}
+            socialLinks={safeFullData?.socialMedia ?? c.socialLinks}
           />
         );
       }
-      case 'event': return <EventDetails event={card as Event} onBuyTicket={() => {}} onShare={() => {}} onViewDetails={() => {}} />;
-      case 'gallery': return <GalleryDetails item={card as GalleryItem} onBuy={() => {}} onContact={() => {}} onShare={() => {}} />;
-      case 'venue': return <VenueDetails venue={card as Venue} onReserve={() => {}} onContact={() => {}} onShare={() => {}} />;
+      case 'event':
+        return <EventDetails event={card as Event} onBuyTicket={() => {}} onShare={() => {}} onViewDetails={() => {}} />;
+      case 'gallery':
+        return <GalleryDetails item={card as GalleryItem} onBuy={() => {}} onContact={() => {}} onShare={() => {}} />;
+      case 'venue':
+        return <VenueDetails venue={card as Venue} onReserve={() => {}} onContact={() => {}} onShare={() => {}} />;
     }
   };
 
+  // ── Render ───────────────────────────────────────────────────────────────
+
   return (
     <View style={[s.root, themeContainer]}>
-      {/* 2. StatusBar se adapta para que la hora y batería se lean bien en ambos fondos */}
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
-      {/* ══ HEADER ══ */}
+      {/* ══ HEADER (absolute) ══ */}
       <View style={[s.header, themeHeader, { paddingTop: (insets.top || webTop) + 8 }]}>
         {showSearch ? (
           <>
-            <Pressable onPress={() => { setShowSearch(false); setFilters(prev => ({ ...prev, query: '' })); }} style={s.backBtn}>
-              <Ionicons name="close-outline" size={24} color={isDark ? "#FFF" : "#000"} />
+            <Pressable
+              onPress={() => { setShowSearch(false); setFilters(prev => ({ ...prev, query: '' })); }}
+              style={s.backBtn}
+            >
+              <Ionicons name="close-outline" size={24} color={isDark ? '#FFF' : '#000'} />
             </Pressable>
             <View style={[s.searchContainer, isDark && s.searchContainerDark, themeActionBtn]}>
-              <Ionicons name="search-outline" size={16} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+              <Ionicons name="search-outline" size={16} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'} />
               <TextInput
                 autoFocus
                 placeholder="Buscar..."
-                placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"}
+                placeholderTextColor={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'}
                 value={filters.query}
                 onChangeText={v => setFilters(prev => ({ ...prev, query: v }))}
                 style={[s.searchInput, themeText]}
@@ -130,10 +154,9 @@ export default function ExploreScreen() {
               onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); setShowFilters(p => !p); }}
               style={[s.actionBtn, themeActionBtn, showFilters && s.actionBtnActive]}
             >
-              <Ionicons name="options-outline" size={16} color={showFilters ? colors.primary : (isDark ? "#FFF" : "#000")} />
+              <Ionicons name="options-outline" size={16} color={showFilters ? colors.primary : (isDark ? '#FFF' : '#000')} />
             </Pressable>
 
-            {/* CÁPSULA TIPO TINDER/INSTAGRAM */}
             <View style={[s.tabCapsule, themeCapsule]}>
               {(['artists', 'events', 'venues', 'gallery'] as CategoryId[]).map(cat => (
                 <Pressable
@@ -141,10 +164,18 @@ export default function ExploreScreen() {
                   onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); handleCategoryChange(cat); }}
                   style={[s.tabItem, selectedCategory === cat && s.tabItemActive]}
                 >
+                  {selectedCategory === cat && (
+                    <LinearGradient
+                      colors={['#9333ea', '#2563eb']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={s.tabItemActiveGradient}
+                    />
+                  )}
                   <Text style={[
-                    s.tabText, 
+                    s.tabText,
                     isDark ? s.tabTextDark : s.tabTextLight,
-                    selectedCategory === cat && s.tabTextActive
+                    selectedCategory === cat && s.tabTextActive,
                   ]}>
                     {CATEGORY_LABELS[cat]}
                   </Text>
@@ -156,43 +187,75 @@ export default function ExploreScreen() {
               onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); setShowSearch(true); setShowFilters(false); }}
               style={[s.actionBtn, themeActionBtn]}
             >
-              <Ionicons name="search-outline" size={16} color={isDark ? "#FFF" : "#000"} />
+              <Ionicons name="search-outline" size={16} color={isDark ? '#FFF' : '#000'} />
             </Pressable>
           </>
         )}
       </View>
 
-      <ScrollView
-        ref={scrollRef}
-        style={s.scroll}
-        contentContainerStyle={[s.scrollContent, { paddingBottom: (insets.bottom || webBottom) + 96 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ height: (insets.top || webTop) + 62 }} />
-
-        <View style={s.cardWrapper}>
-          {isLoading ? (
-            <View style={s.centerState}><ActivityIndicator size="large" color={colors.primary} /></View>
-          ) : stack.length === 0 ? (
-            <View style={s.centerState}>
-              <Ionicons name="albums-outline" size={48} color={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
-              <Text style={[s.stateTitle, themeText]}>Has visto todo</Text>
-            </View>
-          ) : topCard ? (
-            <SwipeCard key={topCard.id} card={topCard} zIndex={1} onDismiss={(_, dir) => dir === 'like' ? handleNext() : handlePrev()}>
+      {/* ══ ÁREA DE TARJETAS ══ */}
+      <View style={[s.cardArea, { paddingTop: headerH + 5 }]}>
+        {isLoading ? (
+          <View style={[s.centerState, { height: cardHeight }]}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : stack.length === 0 ? (
+          <View style={[s.centerState, { height: cardHeight }]}>
+            <Ionicons name="albums-outline" size={48} color={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
+            <Text style={[s.stateTitle, themeText]}>Has visto todo</Text>
+          </View>
+        ) : topCard ? (
+          // key={topCard.id} garantiza que al cambiar de artista
+          // SwipeCard + TODO su contenido (incluyendo ArtistDetails) se desmonta/remonta.
+          // Desync de datos es estructuralmente imposible.
+          <SwipeCard
+            key={topCard.id}
+            card={topCard}
+            zIndex={1}
+            height={cardHeight}
+            scrollRef={scrollRef}
+            onDismiss={(_, dir) => dir === 'like' ? handleNext() : handlePrev()}
+          >
+            {/* La tarjeta llena todo el área visible — los detalles quedan DEBAJO del scroll */}
+            <View style={{
+              height: cardHeight,
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: isDark ? 'rgba(139,92,246,0.35)' : 'rgba(139,92,246,0.20)',
+              overflow: 'hidden',
+            }}>
               {renderCardContent(topCard)}
-            </SwipeCard>
-          ) : null}
-        </View>
+            </View>
 
-        {topCard && <View style={s.detailsWrapper}>{renderDetails(topCard)}</View>}
-      </ScrollView>
+            {/* Separador visual + pista de scroll */}
+            <View style={s.swipeHint}>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={isDark ? 'rgba(255,255,255,0.35)' : colors.textSecondary}
+              />
+              <Text style={[s.swipeHintText, isDark && { color: 'rgba(255,255,255,0.35)' }]}>
+                Desliza para ver más
+              </Text>
+            </View>
+
+            {/* Detalles completos — viven con la tarjeta, nunca se dessincronizan */}
+            <View style={s.detailsInner}>
+              {renderDetails(topCard)}
+            </View>
+          </SwipeCard>
+        ) : null}
+      </View>
 
       {hireModalArtist && (
-        <HireModal visible={!!hireModalArtist} artist={hireModalArtist} onClose={() => setHireModalArtist(null)} />
+        <HireModal
+          visible={!!hireModalArtist}
+          artist={hireModalArtist}
+          onClose={() => setHireModalArtist(null)}
+        />
       )}
 
-      {/* Botón flotante para cambiar tema (temporal) */}
+      {/* Botón flotante de tema */}
       <Pressable
         style={[s.themeToggle, isDark ? s.themeToggleDark : s.themeToggleLight]}
         onPress={() => {
@@ -200,108 +263,111 @@ export default function ExploreScreen() {
           toggleTheme();
         }}
       >
-        <Ionicons 
-          name={isDark ? "sunny-outline" : "moon-outline"} 
-          size={20} 
-          color={isDark ? "#FFF" : "#000"} 
+        <Ionicons
+          name={isDark ? 'sunny-outline' : 'moon-outline'}
+          size={20}
+          color={isDark ? '#FFF' : '#000'}
         />
       </Pressable>
     </View>
   );
 }
 
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const s = StyleSheet.create({
   root: { flex: 1 },
-  
-  // 3. Variables de color para los fondos principales
-  bgDark: { backgroundColor: '#0a0618' },
+
+  bgDark:  { backgroundColor: '#0a0618' },
   bgLight: { backgroundColor: '#F8F9FA' },
-  
-  // Variables de color para textos
-  textDark: { color: '#FFFFFF' },
+
+  textDark:  { color: '#FFFFFF' },
   textLight: { color: '#000000' },
 
+  // Header flotante
   header: {
     position: 'absolute', top: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 16, paddingBottom: 10, zIndex: 50,
     borderBottomWidth: 1,
   },
-  headerDark: { backgroundColor: '#0a0618', borderBottomColor: 'rgba(139,92,246,0.18)' },
+  headerDark:  { backgroundColor: '#0a0618', borderBottomColor: 'rgba(139,92,246,0.18)' },
   headerLight: { backgroundColor: '#FFFFFF', borderBottomColor: 'rgba(0,0,0,0.05)' },
 
+  // Cápsula de categorías
   tabCapsule: {
-    flex: 1, flexDirection: 'row', borderRadius: 20, padding: 3, marginHorizontal: 8, height: 38, alignItems: 'center',
+    flex: 1, flexDirection: 'row', borderRadius: 20, padding: 3,
+    marginHorizontal: 8, height: 38, alignItems: 'center',
   },
-  capsuleDark: { 
-    backgroundColor: '#0a0618',
-    borderColor: 'rgba(139,92,246,0.25)',
-    borderWidth: 1,
-  },
+  capsuleDark:  { backgroundColor: '#0a0618', borderColor: 'rgba(139,92,246,0.25)', borderWidth: 1 },
   capsuleLight: { backgroundColor: '#E9ECEF' },
 
   tabItem: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 17 },
-  tabItemActive: { backgroundColor: colors.primary },
-
-  tabText: { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' },
-  tabTextDark: { color: 'rgba(255,255,255,0.4)' },
-  tabTextLight: { color: 'rgba(0,0,0,0.5)' },
+  tabItemActive: { backgroundColor: 'transparent' },
+  tabItemActiveGradient: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    borderRadius: 17, overflow: 'hidden',
+  },
+  tabText:       { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold' },
+  tabTextDark:   { color: 'rgba(255,255,255,0.4)' },
+  tabTextLight:  { color: 'rgba(0,0,0,0.5)' },
   tabTextActive: { color: '#FFFFFF' },
 
+  // Botones de acción (filtros / búsqueda)
   actionBtn: {
-    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  actionBtnDark: { 
-    backgroundColor: '#0a0618', 
-    borderColor: 'rgba(139,92,246,0.25)',
-    borderWidth: 1,
-  },
-  actionBtnLight: { backgroundColor: '#F1F3F5', borderColor: 'rgba(0, 0, 0, 0.05)' },
+  actionBtnDark:   { backgroundColor: '#0a0618', borderColor: 'rgba(139,92,246,0.25)', borderWidth: 1 },
+  actionBtnLight:  { backgroundColor: '#F1F3F5', borderColor: 'rgba(0,0,0,0.05)' },
   actionBtnActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
 
+  // Búsqueda expandida
   backBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   searchContainer: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: 18, paddingHorizontal: 12, height: 36, borderWidth: 1, marginHorizontal: 8,
   },
-  searchContainerDark: {
-    backgroundColor: '#0a0618',
-    borderColor: 'rgba(139,92,246,0.25)',
-  },
+  searchContainerDark: { backgroundColor: '#0a0618', borderColor: 'rgba(139,92,246,0.25)' },
   searchInput: { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', padding: 0 },
 
-  scroll: { flex: 1 },
-  scrollContent: { alignItems: 'center' },
-  cardWrapper: { width: CARD_WIDTH, height: CARD_HEIGHT, marginBottom: 40 },
-  centerState: { width: CARD_WIDTH, height: CARD_HEIGHT, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  // Área principal — ocupa todo el espacio disponible bajo el header
+  cardArea: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+
+  // Estados vacío / cargando
+  centerState: {
+    width: CARD_WIDTH, height: CARD_HEIGHT,
+    alignItems: 'center', justifyContent: 'center', gap: 10,
+  },
   stateTitle: { fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold' },
-  detailsWrapper: { width: CARD_WIDTH, paddingBottom: 16 },
+
+  // Pista de scroll dentro de la tarjeta
+  swipeHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingVertical: 10, justifyContent: 'center',
+  },
+  swipeHintText: {
+    fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular', color: colors.textSecondary,
+  },
+
+  // Wrapper de detalles dentro de la tarjeta
+  detailsInner: {
+    paddingHorizontal: 0,
+    paddingBottom: 16,
+  },
 
   // Botón flotante de tema
   themeToggle: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 100,
+    position: 'absolute', bottom: 30, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25, shadowRadius: 4, elevation: 5, zIndex: 100,
   },
-  themeToggleLight: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
-  },
-  themeToggleDark: {
-    backgroundColor: '#0a0618',
-    borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.3)',
-  },
+  themeToggleLight: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  themeToggleDark:  { backgroundColor: '#0a0618', borderWidth: 1, borderColor: 'rgba(139,92,246,0.3)' },
 });

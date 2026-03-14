@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 import OfferCard from '../cards/OfferCard';
 import { AppFooter } from '../../../../components/shared/AppFooter';
 
@@ -54,14 +55,15 @@ export default function OffersListTab({
   isRefreshing = false,
   onEndReached,
 }: OffersListTabProps) {
+  const { isDark } = useThemeStore();
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIconBg}>
-        <Ionicons name="briefcase-outline" size={32} color={Colors.textLight} />
+      <View style={[styles.emptyIconBg, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+        <Ionicons name="briefcase-outline" size={32} color={isDark ? '#A78BFA' : Colors.textLight} />
       </View>
-      <Text style={styles.emptyTitle}>No hay ofertas disponibles</Text>
-      <Text style={styles.emptySubtitle}>
+      <Text style={[styles.emptyTitle, isDark && { color: '#FFFFFF' }]}>No hay ofertas disponibles</Text>
+      <Text style={[styles.emptySubtitle, isDark && { color: '#71717A' }]}>
         Prueba ajustando los filtros o vuelve más tarde
       </Text>
     </View>

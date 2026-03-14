@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface AvailabilitySwitchProps {
   isAvailable: boolean;
@@ -29,6 +30,7 @@ export default function AvailabilitySwitch({
   onToggle,
   nearbyOffersCount = 0,
 }: AvailabilitySwitchProps) {
+  const { isDark } = useThemeStore();
   const slideAnim = useRef(new Animated.Value(isAvailable ? 1 : 0)).current;
   const bgAnim = useRef(new Animated.Value(isAvailable ? 1 : 0)).current;
   const glowAnim = useRef(new Animated.Value(0)).current;
@@ -83,12 +85,12 @@ export default function AvailabilitySwitch({
   });
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, isDark && { borderColor: 'rgba(139,92,246,0.2)' }]}>
       <LinearGradient
         colors={
           isAvailable
             ? ['#10B98108', '#10B98114']
-            : [Colors.background, Colors.background]
+            : isDark ? ['#0a0618', '#0a0618'] : [Colors.background, Colors.background]
         }
         style={styles.container}
       >
@@ -106,10 +108,10 @@ export default function AvailabilitySwitch({
           </View>
 
           <View>
-            <Text style={styles.statusLabel}>
+            <Text style={[styles.statusLabel, isDark && { color: '#FFFFFF' }]}>
               {isAvailable ? 'Disponible ahora' : 'No disponible'}
             </Text>
-            <Text style={styles.statusSubtitle}>
+            <Text style={[styles.statusSubtitle, isDark && { color: '#71717A' }]}>
               {isAvailable
                 ? nearbyOffersCount > 0
                   ? `${nearbyOffersCount} oferta${nearbyOffersCount !== 1 ? 's' : ''} cerca de ti`

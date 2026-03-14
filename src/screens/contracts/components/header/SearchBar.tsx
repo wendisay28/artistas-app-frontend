@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface SearchBarProps {
   value: string;
@@ -28,6 +29,7 @@ export default function SearchBar({
   hasActiveFilters,
   placeholder = 'Buscar ofertas...',
 }: SearchBarProps) {
+  const { isDark } = useThemeStore();
   const [isFocused, setIsFocused] = useState(false);
   const focusAnim = useRef(new Animated.Value(0)).current;
   const inputRef = useRef<TextInput>(null);
@@ -64,21 +66,21 @@ export default function SearchBar({
   });
 
   return (
-    <View style={styles.container}>
-      <Animated.View style={[styles.searchWrapper, { borderColor }]}>
+    <View style={[styles.container, isDark && { backgroundColor: '#0a0618' }]}>
+      <Animated.View style={[styles.searchWrapper, { borderColor }, isDark && { backgroundColor: '#130d2a' }]}>
         {/* Icono de búsqueda */}
         <Ionicons
           name="search-outline"
           size={18}
-          color={isFocused ? Colors.primary : Colors.textSecondary}
+          color={isFocused ? Colors.primary : (isDark ? '#71717A' : Colors.textSecondary)}
           style={styles.searchIcon}
         />
 
         <TextInput
           ref={inputRef}
-          style={styles.input}
+          style={[styles.input, isDark && { color: '#FFFFFF' }]}
           placeholder={placeholder}
-          placeholderTextColor={Colors.textLight}
+          placeholderTextColor={isDark ? '#71717A' : Colors.textLight}
           value={value}
           onChangeText={onChangeText}
           onFocus={handleFocus}

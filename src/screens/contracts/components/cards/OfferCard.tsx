@@ -13,6 +13,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface OfferCardProps {
   offer: {
@@ -115,6 +116,7 @@ export default function OfferCard({
   const config = TYPE_CONFIG[offer.offer_type] ?? TYPE_CONFIG.hiring;
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const budget = formatBudget(offer.budget_min, offer.budget_max);
+  const { isDark } = useThemeStore();
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -169,7 +171,7 @@ export default function OfferCard({
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
-        style={styles.card}
+        style={[styles.card, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}
       >
         {/* Franja de color izquierda según tipo */}
         <View style={[styles.typeAccent, { backgroundColor: config.color }]} />
@@ -213,11 +215,11 @@ export default function OfferCard({
           </View>
 
           {/* ── Título y descripción ── */}
-          <Text style={styles.title} numberOfLines={2}>
+          <Text style={[styles.title, isDark && { color: '#FFFFFF' }]} numberOfLines={2}>
             {offer.title}
           </Text>
           {offer.description ? (
-            <Text style={styles.description} numberOfLines={2}>
+            <Text style={[styles.description, isDark && { color: '#A1A1AA' }]} numberOfLines={2}>
               {offer.description}
             </Text>
           ) : null}
@@ -225,38 +227,38 @@ export default function OfferCard({
           {/* ── Meta chips ── */}
           <View style={styles.metaRow}>
             {budget && (
-              <View style={[styles.chip, styles.chipBudget]}>
+              <View style={[styles.chip, styles.chipBudget, isDark && { backgroundColor: 'rgba(16,185,129,0.12)' }]}>
                 <Ionicons name="cash-outline" size={12} color="#10B981" />
                 <Text style={[styles.chipText, { color: '#10B981' }]}>{budget}</Text>
               </View>
             )}
             {offer.location && (
-              <View style={styles.chip}>
-                <Ionicons name="location-outline" size={12} color={Colors.textSecondary} />
-                <Text style={styles.chipText}>{offer.location}</Text>
+              <View style={[styles.chip, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+                <Ionicons name="location-outline" size={12} color={isDark ? '#A78BFA' : Colors.textSecondary} />
+                <Text style={[styles.chipText, isDark && { color: '#A78BFA' }]}>{offer.location}</Text>
               </View>
             )}
             {offer.date && (
-              <View style={styles.chip}>
-                <Ionicons name="calendar-outline" size={12} color={Colors.textSecondary} />
-                <Text style={styles.chipText}>{offer.date}</Text>
+              <View style={[styles.chip, isDark && { backgroundColor: 'rgba(139,92,246,0.12)' }]}>
+                <Ionicons name="calendar-outline" size={12} color={isDark ? '#A78BFA' : Colors.textSecondary} />
+                <Text style={[styles.chipText, isDark && { color: '#A78BFA' }]}>{offer.date}</Text>
               </View>
             )}
           </View>
 
           {/* ── Footer ── */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, isDark && { borderTopColor: 'rgba(139,92,246,0.15)' }]}>
             {/* Poster */}
             <View style={styles.posterRow}>
               <View style={[styles.avatar, { backgroundColor: avatarColor(offer.poster_name) }]}>
                 <Text style={styles.avatarText}>{getInitials(offer.poster_name)}</Text>
               </View>
               <View>
-                <Text style={styles.posterName} numberOfLines={1}>
+                <Text style={[styles.posterName, isDark && { color: '#FFFFFF' }]} numberOfLines={1}>
                   {offer.poster_name ?? 'Anónimo'}
                 </Text>
                 {offer.category && (
-                  <Text style={styles.posterCategory}>{offer.category}</Text>
+                  <Text style={[styles.posterCategory, isDark && { color: '#71717A' }]}>{offer.category}</Text>
                 )}
               </View>
             </View>
@@ -264,12 +266,12 @@ export default function OfferCard({
             {/* Acciones */}
             <View style={styles.actions}>
               <Pressable
-                style={({ pressed }) => [styles.chatBtn, pressed && styles.btnPressed]}
+                style={({ pressed }) => [styles.chatBtn, isDark && { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.2)' }, pressed && styles.btnPressed]}
                 onPress={handleChatPress}
                 hitSlop={4}
               >
-                <MaterialCommunityIcons name="chat-outline" size={15} color={Colors.textSecondary} />
-                <Text style={styles.chatBtnText}>Chat</Text>
+                <MaterialCommunityIcons name="chat-outline" size={15} color={isDark ? '#A78BFA' : Colors.textSecondary} />
+                <Text style={[styles.chatBtnText, isDark && { color: '#A78BFA' }]}>Chat</Text>
               </Pressable>
 
               {onAcceptPress ? (
