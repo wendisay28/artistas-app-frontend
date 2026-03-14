@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../constants/colors';
+import { useThemeStore } from '../../store/themeStore';
 import SwipeCard, { CARD_WIDTH, CARD_HEIGHT } from '../../components/explore/cards/SwipeCard';
 import ArtistCardContent  from '../../components/explore/cards/ArtistCardContent';
 import EventCardContent   from '../../components/explore/cards/EventCardContent';
@@ -33,7 +34,8 @@ const CATEGORY_LABELS: Record<CategoryId, string> = {
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme(); // Detecta el tema del sistema: 'light' o 'dark'
-  const isDark = colorScheme === 'dark';
+  const isDarkSystem = colorScheme === 'dark';
+  const { isDark, toggleTheme } = useThemeStore();
 
   const {
     selectedCategory, stack, currentIndex,
@@ -109,7 +111,7 @@ export default function ExploreScreen() {
             <Pressable onPress={() => { setShowSearch(false); setFilters(prev => ({ ...prev, query: '' })); }} style={s.backBtn}>
               <Ionicons name="close-outline" size={24} color={isDark ? "#FFF" : "#000"} />
             </Pressable>
-            <View style={[s.searchContainer, themeActionBtn]}>
+            <View style={[s.searchContainer, isDark && s.searchContainerDark, themeActionBtn]}>
               <Ionicons name="search-outline" size={16} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
               <TextInput
                 autoFocus
@@ -189,6 +191,21 @@ export default function ExploreScreen() {
       {hireModalArtist && (
         <HireModal visible={!!hireModalArtist} artist={hireModalArtist} onClose={() => setHireModalArtist(null)} />
       )}
+
+      {/* Botón flotante para cambiar tema (temporal) */}
+      <Pressable
+        style={[s.themeToggle, isDark ? s.themeToggleDark : s.themeToggleLight]}
+        onPress={() => {
+          if (Platform.OS !== 'web') Haptics.selectionAsync();
+          toggleTheme();
+        }}
+      >
+        <Ionicons 
+          name={isDark ? "sunny-outline" : "moon-outline"} 
+          size={20} 
+          color={isDark ? "#FFF" : "#000"} 
+        />
+      </Pressable>
     </View>
   );
 }
@@ -197,7 +214,7 @@ const s = StyleSheet.create({
   root: { flex: 1 },
   
   // 3. Variables de color para los fondos principales
-  bgDark: { backgroundColor: '#000000' },
+  bgDark: { backgroundColor: '#0a0618' },
   bgLight: { backgroundColor: '#F8F9FA' },
   
   // Variables de color para textos
@@ -210,13 +227,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 10, zIndex: 50,
     borderBottomWidth: 1,
   },
-  headerDark: { backgroundColor: '#000000', borderBottomColor: 'rgba(255,255,255,0.08)' },
+  headerDark: { backgroundColor: '#0a0618', borderBottomColor: 'rgba(139,92,246,0.18)' },
   headerLight: { backgroundColor: '#FFFFFF', borderBottomColor: 'rgba(0,0,0,0.05)' },
 
   tabCapsule: {
     flex: 1, flexDirection: 'row', borderRadius: 20, padding: 3, marginHorizontal: 8, height: 38, alignItems: 'center',
   },
-  capsuleDark: { backgroundColor: '#161616' },
+  capsuleDark: { 
+    backgroundColor: '#0a0618',
+    borderColor: 'rgba(139,92,246,0.25)',
+    borderWidth: 1,
+  },
   capsuleLight: { backgroundColor: '#E9ECEF' },
 
   tabItem: { flex: 1, height: '100%', alignItems: 'center', justifyContent: 'center', borderRadius: 17 },
@@ -230,7 +251,11 @@ const s = StyleSheet.create({
   actionBtn: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1,
   },
-  actionBtnDark: { backgroundColor: '#161616', borderColor: 'rgba(255, 255, 255, 0.05)' },
+  actionBtnDark: { 
+    backgroundColor: '#0a0618', 
+    borderColor: 'rgba(139,92,246,0.25)',
+    borderWidth: 1,
+  },
   actionBtnLight: { backgroundColor: '#F1F3F5', borderColor: 'rgba(0, 0, 0, 0.05)' },
   actionBtnActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
 
@@ -238,6 +263,10 @@ const s = StyleSheet.create({
   searchContainer: {
     flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
     borderRadius: 18, paddingHorizontal: 12, height: 36, borderWidth: 1, marginHorizontal: 8,
+  },
+  searchContainerDark: {
+    backgroundColor: '#0a0618',
+    borderColor: 'rgba(139,92,246,0.25)',
   },
   searchInput: { flex: 1, fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', padding: 0 },
 
@@ -247,4 +276,32 @@ const s = StyleSheet.create({
   centerState: { width: CARD_WIDTH, height: CARD_HEIGHT, alignItems: 'center', justifyContent: 'center', gap: 10 },
   stateTitle: { fontSize: 18, fontFamily: 'PlusJakartaSans_700Bold' },
   detailsWrapper: { width: CARD_WIDTH, paddingBottom: 16 },
+
+  // Botón flotante de tema
+  themeToggle: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 100,
+  },
+  themeToggleLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  themeToggleDark: {
+    backgroundColor: '#0a0618',
+    borderWidth: 1,
+    borderColor: 'rgba(139,92,246,0.3)',
+  },
 });

@@ -400,8 +400,8 @@ const pbd = StyleSheet.create({
   container: {
     marginHorizontal: 16, marginBottom: 14,
     borderRadius: 16, overflow: 'hidden',
-    backgroundColor: '#000',
-    borderWidth: 1, borderColor: '#3a3a3a',
+    backgroundColor: '#0a0618',
+    borderWidth: 1, borderColor: 'rgba(139,92,246,0.25)',
   },
   title: { fontSize: 12.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.1 },
   pct:   { fontSize: 12.5, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#a78bfa' },
@@ -467,7 +467,7 @@ const cp = StyleSheet.create({
   pillInactive:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.75)', backgroundColor: 'rgba(255,255,255,0.5)' },
   label:            { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#000' },
   // Vista oscura
-  pillInactiveDark: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, backgroundColor: '#000', borderWidth: 1, borderColor: '#3a3a3a' },
+  pillInactiveDark: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, backgroundColor: '#0a0618', borderWidth: 1, borderColor: 'rgba(139,92,246,0.25)' },
   labelDark:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
   labelActive:      { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 });

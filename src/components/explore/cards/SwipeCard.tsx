@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(139,92,246,0.25)',
   },
   cardDark: {
-    backgroundColor: '#0b0b0f',
+    backgroundColor: '#0a0618',
     borderWidth: 1,
     borderColor: 'rgba(139,92,246,0.35)',
     shadowOpacity: 0.35,

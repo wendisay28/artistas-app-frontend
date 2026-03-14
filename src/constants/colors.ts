@@ -18,21 +18,21 @@ export const colors = {
   secondary: '#8B5CF6',
 };
 
-// Paleta de modo oscuro
+// Paleta de modo oscuro — fondo unificado #0a0618
 export const darkColors = {
   primary: '#8B5CF6',
-  background: '#000000',
-  backgroundSecondary: '#1A1A1A',
+  background: '#0a0618',
+  backgroundSecondary: '#130d2a',
   text: '#FFFFFF',
   textSecondary: '#A1A1AA',
-  border: '#2A2A2A',
-  white: '#000000',
+  border: 'rgba(139,92,246,0.2)',
+  white: '#0a0618',
   error: '#EF4444',
   success: '#10B981',
   warning: '#F59E0B',
   starYellow: '#FCD34D',
-  surfaceAlt: '#1F1F1F',
-  borderLight: '#2A2A2A',
+  surfaceAlt: '#130d2a',
+  borderLight: 'rgba(139,92,246,0.12)',
   accent: '#A78BFA',
   textLight: '#71717A',
   secondary: '#A78BFA',

@@ -69,15 +69,15 @@ const getEmptyStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderRadius: 16,
-    backgroundColor: colors?.background === '#000000' ? 'rgba(139,92,246,0.1)' : 'rgba(124,58,237,0.04)',
+    backgroundColor: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(124,58,237,0.04)',
     borderWidth: 1,
-    borderColor: colors?.background === '#000000' ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)',
+    borderColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)',
     borderStyle: 'dashed',
   },
   text: {
     fontSize: 13,
     fontFamily: 'PlusJakartaSans_500Medium',
-    color: colors?.background === '#000000' ? 'rgba(167,139,250,0.8)' : 'rgba(124,58,237,0.7)',
+    color: isDark ? 'rgba(167,139,250,0.8)' : 'rgba(124,58,237,0.7)',
     textAlign: 'center',
   },
 });
@@ -372,7 +372,7 @@ function HomeScreen() {
             currentCity={currentCity}
             dataLoading={dataLoading}
             colors={colors}
-            isDark={colors.background === '#000000'}
+            isDark={isDark}
             onOpenDetail={(post, focusComments) => {
               setDetailPost(post);
               setDetailFocusComments(!!focusComments);
@@ -420,7 +420,7 @@ function HomeScreen() {
         visible={detailVisible}
         post={detailPost}
         focusComments={detailFocusComments}
-        isDark={colors.background === '#000000'}
+        isDark={isDark}
         onClose={() => {
           setDetailVisible(false);
           setDetailPost(null);
@@ -430,7 +430,7 @@ function HomeScreen() {
 
       <SaveToCollectionModal
         visible={saveVisible}
-        isDark={colors.background === '#000000'}
+        isDark={isDark}
         onClose={() => {
           setSaveVisible(false);
         }}

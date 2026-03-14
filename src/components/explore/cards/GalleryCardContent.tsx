@@ -23,6 +23,7 @@ import { colors } from '../../../constants/colors';
 import type { GalleryItem } from '../../../types/explore';
 import { useFavoritesStore } from '../../../store/favoritesStore';
 import VideoUploadModal, { type VideoUploadResult } from '../shared/VideoUploadModal';
+import { useThemeStore } from '../../../store/themeStore';
 
 type MediaItem = { type: 'image'; uri: string } | { type: 'video'; uri: string; startTime: number };
 
@@ -67,6 +68,7 @@ const formatCOP = (price: number) =>
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GalleryCardContent({ item, distanceKm }: GalleryCardContentProps) {
+  const { isDark } = useThemeStore();
   const [liked, setLiked] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const [showVideoModal, setShowVideoModal] = useState(false);
@@ -117,7 +119,7 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
 
   return (
     <>
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && styles.containerDark]}>
 
       {/* ══════════ IMAGEN / VIDEO 66% ══════════ */}
       <View style={styles.imageSection}>
@@ -130,14 +132,17 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
           return uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} /> : null;
         })()}
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.20)']}
+          colors={isDark
+            ? ['transparent', 'rgba(10,6,24,0.4)', 'rgba(10,6,24,0.85)', '#0a0618']
+            : ['transparent', 'rgba(255,255,255,0.15)', 'rgba(255,255,255,0.6)']}
+          locations={isDark ? [0, 0.4, 0.7, 1] : [0.4, 0.7, 1]}
           style={styles.imageGradient}
         />
 
         {/* Categoría top-left */}
-        <View style={styles.categoryChip}>
+        <View style={[styles.categoryChip, isDark && styles.categoryChipDark]}>
           <Ionicons name={cat.icon as any} size={9} color="#1f2937" />
-          <Text style={styles.categoryText}>{cat.label}</Text>
+          <Text style={[styles.categoryText, isDark && styles.categoryTextDark]}>{cat.label}</Text>
         </View>
 
         {/* Precio / no venta top-right */}
@@ -203,7 +208,7 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
       </View>
 
       {/* ══════════ PANEL BLANCO 40% ══════════ */}
-      <View style={styles.panel}>
+      <View style={[styles.panel, isDark && styles.panelDark]}>
 
         {/* Bloque de texto — sin flex:1, ocupa solo su contenido */}
         <View style={styles.topBlock}>
@@ -259,7 +264,7 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
         </View>
 
         {/* Línea divisoria — va justo después del bloque de texto */}
-        <View style={styles.divider} />
+        <View style={[styles.divider, isDark && styles.dividerDark]} />
 
         {/* CTA */}
         <Pressable
@@ -267,7 +272,7 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
           onPress={handlePurchase}
           style={({ pressed }) => [
             styles.cta,
-            !isForSale ? styles.ctaSoldOut : styles.ctaActive,
+            !isForSale ? styles.ctaSoldOut : (isDark ? styles.ctaDark : styles.ctaActive),
             isForSale && pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
           ]}
         >
@@ -316,6 +321,11 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
+  containerDark: {
+    backgroundColor: '#0a0618',
+    borderColor: 'rgba(255,255,255,0.10)',
+    shadowOpacity: 0.30,
+  },
 
   // imagen
   imageSection: {
@@ -341,6 +351,12 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   categoryText: { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: '#1f2937' },
+  categoryChipDark: {
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  categoryTextDark: { color: 'rgba(255,255,255,0.92)' },
 
   // precio top-right
   pricePill: {
@@ -416,6 +432,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     flexDirection: 'column',
     justifyContent: 'flex-start',
+  },
+  panelDark: {
+    backgroundColor: '#0a0618',
   },
 
   topBlock: {
@@ -513,6 +532,9 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 6,
   },
+  dividerDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
 
   // CTA
   cta: {
@@ -522,7 +544,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
   },
-  ctaActive:  { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
+  ctaActive: { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
+  ctaDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
   ctaSoldOut: { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.08)' },
 
   ctaRight: {
@@ -533,6 +559,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 8,
   },
-  ctaLabel:        { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
+  ctaLabel: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
   ctaLabelSoldOut: { color: 'rgba(0,0,0,0.3)' },
 });

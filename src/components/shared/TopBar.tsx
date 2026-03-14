@@ -282,7 +282,7 @@ export const TopBar: React.FC<TopBarProps> = ({
     <>
       <View style={[styles.container, { 
         paddingTop: topInset + 8,
-        backgroundColor: isDark ? '#000' : '#fff',
+        backgroundColor: isDark ? '#0a0618' : '#fff',
         borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
       }]}>
 

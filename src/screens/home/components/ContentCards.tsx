@@ -249,7 +249,7 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
       </View>
 
       {/* Info inferior — glass */}
-      <BlurView intensity={colors.background === '#000000' ? 30 : 55} tint={colors.background === '#000000' ? 'dark' : 'light'} style={styles.info}>
+      <BlurView intensity={isDark ? 30 : 55} tint={isDark ? 'dark' : 'light'} style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
 
         <View style={styles.metaRow}>
@@ -275,10 +275,10 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
 const getEventStyles = (colors: any) => StyleSheet.create({
   card: {
     width:185, marginRight:12, borderRadius:20,
-    backgroundColor: colors.background === '#000000' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor: colors.background === '#000000' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
     overflow:'hidden',
-    shadowColor: colors.background === '#000000' ? '#8b5cf6' : '#6d28d9', 
+    shadowColor: isDark ? '#8b5cf6' : '#6d28d9', 
     shadowOffset:{width:0, height:8},
     shadowOpacity:0.16, shadowRadius:20, elevation:6,
   },
@@ -302,7 +302,7 @@ const getEventStyles = (colors: any) => StyleSheet.create({
   info:  { padding:12, gap:4 },
   title: { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:colors.text, lineHeight:18, marginBottom:3 },
   metaRow: { flexDirection:'row', alignItems:'center', gap:4 },
-  meta:    { fontSize:10.5, fontFamily:'PlusJakartaSans_500Medium', color:colors.background === '#000000' ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', flex:1 },
+  meta:    { fontSize:10.5, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', flex:1 },
   priceRow:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginTop:6 },
   price:   { fontSize:14, fontFamily:'PlusJakartaSans_800ExtraBold', color:colors.text },
   arrowBtn:{ width:28, height:28, borderRadius:14, alignItems:'center', justifyContent:'center' },
@@ -373,10 +373,10 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
 const getArtistStyles = (colors: any) => StyleSheet.create({
   card: {
     width:148, marginRight:12, borderRadius:20,
-    backgroundColor: colors.background === '#000000' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor: colors.background === '#000000' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
     overflow:'hidden',
-    shadowColor: colors.background === '#000000' ? '#8b5cf6' : '#6d28d9', 
+    shadowColor: isDark ? '#8b5cf6' : '#6d28d9', 
     shadowOffset:{width:0, height:8},
     shadowOpacity:0.16, shadowRadius:20, elevation:6,
   },
@@ -408,7 +408,7 @@ const getArtistStyles = (colors: any) => StyleSheet.create({
   },
   discipline: {
     fontSize:11, fontFamily:'PlusJakartaSans_500Medium',
-    color:colors.background === '#000000' ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', 
+    color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', 
     textAlign:'center', marginTop:2,
   },
   divider: {
@@ -430,7 +430,7 @@ const getArtistStyles = (colors: any) => StyleSheet.create({
   },
   works: {
     fontSize:10, fontFamily:'PlusJakartaSans_500Medium',
-    color:colors.background === '#000000' ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
+    color:isDark ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
   },
   availBadge: {
     flexDirection:'row', alignItems:'center', gap:4,
@@ -495,10 +495,10 @@ export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({
 const getVenueStyles = (colors: any) => StyleSheet.create({
   card: {
     width:140, height:100, marginRight:12, borderRadius:16,
-    backgroundColor: colors.background === '#000000' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor: colors.background === '#000000' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
     overflow:'hidden',
-    shadowColor: colors.background === '#000000' ? '#8b5cf6' : '#6d28d9', 
+    shadowColor: isDark ? '#8b5cf6' : '#6d28d9', 
     shadowOffset:{width:0, height:8},
     shadowOpacity:0.16, shadowRadius:20, elevation:6,
   },
@@ -518,7 +518,7 @@ const getVenueStyles = (colors: any) => StyleSheet.create({
   },
   type: {
     fontSize:10, fontFamily:'PlusJakartaSans_500Medium',
-    color:colors.background === '#000000' ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)',
+    color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)',
   },
   sep: {
     height:1, backgroundColor:'rgba(124,58,237,0.08)',
@@ -527,16 +527,16 @@ const getVenueStyles = (colors: any) => StyleSheet.create({
   meta: { flexDirection:'row', alignItems:'center', gap:4 },
   cap: {
     fontSize:9, fontFamily:'PlusJakartaSans_500Medium',
-    color:colors.background === '#000000' ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
+    color:isDark ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
   },
   thumb: {
     position:'absolute', bottom:8, right:8,
     width:32, height:32, borderRadius:16,
-    borderWidth:2, borderColor:colors.background === '#000000' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.8)',
+    borderWidth:2, borderColor:isDark ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.8)',
   },
   ctaBadge: {
     position:'absolute', bottom:6, right:6,
-    backgroundColor: colors.background === '#000000' ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)',
+    backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)',
     borderRadius:8, paddingHorizontal:6, paddingVertical:3,
     flexDirection:'row', alignItems:'center', gap:3,
   },

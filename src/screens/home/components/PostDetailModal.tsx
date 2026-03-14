@@ -441,7 +441,7 @@ export default function PostDetailModal({ visible, post, isDark, focusComments =
 
 const st = StyleSheet.create({
   root:     { flex: 1, backgroundColor: '#fff' },
-  rootDark: { backgroundColor: '#000' },
+  rootDark: { backgroundColor: '#0a0618' },
 
   header: {
     flexDirection: 'row',
@@ -470,7 +470,7 @@ const st = StyleSheet.create({
   },
   tabItem:          { paddingVertical: 6, paddingHorizontal: 16, marginHorizontal: 4, borderRadius: 16 },
   tabItemActive:    { backgroundColor: '#f3f4f6' },
-  tabItemActiveDark:{ backgroundColor: '#1a1a1a' },
+  tabItemActiveDark:{ backgroundColor: 'rgba(139,92,246,0.15)' },
   tabText:          { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#666' },
   tabTextDark:      { color: '#888' },
   tabTextActive:    { color: '#111' },
@@ -522,7 +522,7 @@ const st = StyleSheet.create({
     padding: 12,
     backgroundColor: '#fff',
   },
-  composerWrapperDark: { backgroundColor: '#000', borderTopColor: '#222' },
+  composerWrapperDark: { backgroundColor: '#0a0618', borderTopColor: 'rgba(139,92,246,0.18)' },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -532,7 +532,7 @@ const st = StyleSheet.create({
     paddingRight: 6,
     paddingVertical: 6,
   },
-  inputContainerDark: { backgroundColor: '#111' },
+  inputContainerDark: { backgroundColor: 'rgba(255,255,255,0.07)' },
   input:     { flex: 1, fontSize: 15, fontFamily: 'PlusJakartaSans_400Regular', color: '#111', maxHeight: 80, paddingVertical: 4 },
   inputDark: { color: '#fff' },
   sendBtn:     { backgroundColor: '#7c3aed', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, minWidth: 90, alignItems: 'center' },

@@ -183,8 +183,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   tabBarDark: {
-    backgroundColor: '#000000',
-    borderTopColor: '#374151',
+    backgroundColor: '#0a0618',
+    borderTopColor: 'rgba(139,92,246,0.18)',
   },
   tabItem: {
     flex: 1,

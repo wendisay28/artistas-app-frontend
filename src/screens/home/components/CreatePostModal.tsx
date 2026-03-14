@@ -60,7 +60,7 @@ export const CreatePostModal: React.FC<Props> = ({ visible, onClose }) => {
     onClose();
   };
 
-  const bg  = isDark ? '#0a0a0a' : '#fff';
+  const bg  = isDark ? '#0a0618' : '#fff';
   const fg  = isDark ? '#fff'    : '#111';
   const sub = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.38)';
   const border = isDark ? '#222' : '#f0f0f0';
