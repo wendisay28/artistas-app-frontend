@@ -608,7 +608,8 @@ const styles = StyleSheet.create({
   btnHireFullText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
 
   // ── Seguir (visitante) — botón secundario pequeño en actionRow ───
-  // ⚠️ NO cambiar a morado — color intencional: igual al de la bio
+  // ⚠️ DISEÑO INTENCIONAL: color = bio description (NO morado, NO verde)
+  // No cambiar estos valores — ver decisión de diseño en memoria del proyecto
   btnFollowSmall: {
     height: 36, paddingHorizontal: 14, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center', gap: 5,
