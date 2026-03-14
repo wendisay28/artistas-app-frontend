@@ -216,8 +216,8 @@ const grid = StyleSheet.create({
 // ── EventCard — Glassmorphism con imagen real ─────────────────────────────────
 
 export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({ item, onPress }) => {
-  const { colors } = useThemeStore();
-  const styles = getEventStyles(colors);
+  const { colors, isDark } = useThemeStore();
+  const styles = getEventStyles(colors, isDark);
   
   return (
     <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
@@ -272,7 +272,7 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
   );
 };
 
-const getEventStyles = (colors: any) => StyleSheet.create({
+const getEventStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   card: {
     width:185, marginRight:12, borderRadius:20,
     backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
@@ -313,8 +313,8 @@ const getEventStyles = (colors: any) => StyleSheet.create({
 export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; photoIndex?: number }> = ({
   item, onPress, photoIndex = 0,
 }) => {
-  const { colors } = useThemeStore();
-  const styles = getArtistStyles(colors);
+  const { colors, isDark } = useThemeStore();
+  const styles = getArtistStyles(colors, isDark);
   const photoUri = item.avatarUri ?? ARTIST_PHOTOS[photoIndex % ARTIST_PHOTOS.length];
 
   return (
@@ -370,7 +370,7 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
   );
 };
 
-const getArtistStyles = (colors: any) => StyleSheet.create({
+const getArtistStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   card: {
     width:148, marginRight:12, borderRadius:20,
     backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
@@ -447,8 +447,8 @@ const getArtistStyles = (colors: any) => StyleSheet.create({
 // ── VenueCard — Glassmorphism con miniatura de imagen ────────────────────────
 
 export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({ item, onPress }) => {
-  const { colors } = useThemeStore();
-  const styles = getVenueStyles(colors);
+  const { colors, isDark } = useThemeStore();
+  const styles = getVenueStyles(colors, isDark);
   
   return (
     <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
@@ -492,7 +492,7 @@ export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({
   );
 };
 
-const getVenueStyles = (colors: any) => StyleSheet.create({
+const getVenueStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   card: {
     width:140, height:100, marginRight:12, borderRadius:16,
     backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
