@@ -10,6 +10,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeStore } from '../../../store/themeStore';
 import type { Event, Venue, GalleryItem } from '../../../types/explore';
 
 // ── Tipos exportados ──────────────────────────────────────────────────────────
@@ -108,7 +109,7 @@ export const EventGridCard: React.FC<{ item: Event; onPress?: () => void }> = ({
     <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
       <GlassHighlight />
       <View style={grid.imageWrap}>
-        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
         <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
       </View>
@@ -143,7 +144,7 @@ export const VenueGridCard: React.FC<{ item: Venue; onPress?: () => void }> = ({
     <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
       <GlassHighlight />
       <View style={grid.imageWrap}>
-        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
         <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
       </View>
@@ -178,7 +179,7 @@ export const GalleryGridCard: React.FC<{ item: GalleryItem; onPress?: () => void
     <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
       <GlassHighlight />
       <View style={grid.imageWrap}>
-        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
         <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
       </View>
       <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
@@ -214,65 +215,71 @@ const grid = StyleSheet.create({
 
 // ── EventCard — Glassmorphism con imagen real ─────────────────────────────────
 
-export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({ item, onPress }) => (
-  <TouchableOpacity activeOpacity={0.86} style={ev.card} onPress={onPress}>
-    <GlassHighlight />
+export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({ item, onPress }) => {
+  const { colors } = useThemeStore();
+  const styles = getEventStyles(colors);
+  
+  return (
+    <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
+      <GlassHighlight />
 
-    {/* Imagen real con overlay */}
-    <View style={ev.imgWrap}>
-      <ImageBackground
-        source={{ uri: getEventImage(item) }}
-        style={ev.img}
-        imageStyle={{ borderTopLeftRadius:18, borderTopRightRadius:18 }}
-        contentFit="cover"
-      >
-        {/* Overlay gradiente suave */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)']}
-          start={{ x:0, y:0 }} end={{ x:0, y:1 }}
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Imagen real con overlay */}
+      <View style={styles.imgWrap}>
+        <ImageBackground
+          source={{ uri: getEventImage(item) }}
+          style={styles.img}
+          imageStyle={{ borderTopLeftRadius:18, borderTopRightRadius:18 }}
+          resizeMode="cover"
+        >
+          {/* Overlay gradiente suave */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)']}
+            start={{ x:0, y:0 }} end={{ x:0, y:1 }}
+            style={StyleSheet.absoluteFill}
+          />
 
-        {/* Badge de categoría — glass pill */}
-        <View style={ev.catBadge}>
-          <BlurView intensity={30} tint="dark" style={ev.catBlur}>
-            <View style={ev.catDot} />
-            <Text style={ev.catText}>{item.category.toUpperCase()}</Text>
-          </BlurView>
+          {/* Badge de categoría — glass pill */}
+          <View style={styles.catBadge}>
+            <BlurView intensity={30} tint="dark" style={styles.catBlur}>
+              <View style={styles.catDot} />
+              <Text style={styles.catText}>{item.category.toUpperCase()}</Text>
+            </BlurView>
+          </View>
+        </ImageBackground>
+      </View>
+
+      {/* Info inferior — glass */}
+      <BlurView intensity={colors.background === '#000000' ? 30 : 55} tint={colors.background === '#000000' ? 'dark' : 'light'} style={styles.info}>
+        <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+
+        <View style={styles.metaRow}>
+          <Ionicons name="calendar-outline" size={10} color={colors.primary} />
+          <Text style={styles.meta}>{item.date}</Text>
         </View>
-      </ImageBackground>
-    </View>
+        <View style={styles.metaRow}>
+          <Ionicons name="location-outline" size={10} color={colors.primary} />
+          <Text style={styles.meta} numberOfLines={1}>{item.venue}</Text>
+        </View>
 
-    {/* Info inferior — glass */}
-    <BlurView intensity={55} tint="light" style={ev.info}>
-      <Text style={ev.title} numberOfLines={2}>{item.title}</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>{item.price}</Text>
+          <LinearGradient colors={['#7c3aed','#2563eb']} style={styles.arrowBtn}>
+            <Ionicons name="arrow-forward" size={10} color="#fff" />
+          </LinearGradient>
+        </View>
+      </BlurView>
+    </TouchableOpacity>
+  );
+};
 
-      <View style={ev.metaRow}>
-        <Ionicons name="calendar-outline" size={10} color="rgba(109,40,217,0.5)" />
-        <Text style={ev.meta}>{item.date}</Text>
-      </View>
-      <View style={ev.metaRow}>
-        <Ionicons name="location-outline" size={10} color="rgba(109,40,217,0.5)" />
-        <Text style={ev.meta} numberOfLines={1}>{item.venue}</Text>
-      </View>
-
-      <View style={ev.priceRow}>
-        <Text style={ev.price}>{item.price}</Text>
-        <LinearGradient colors={['#7c3aed','#2563eb']} style={ev.arrowBtn}>
-          <Ionicons name="arrow-forward" size={10} color="#fff" />
-        </LinearGradient>
-      </View>
-    </BlurView>
-  </TouchableOpacity>
-);
-
-const ev = StyleSheet.create({
+const getEventStyles = (colors: any) => StyleSheet.create({
   card: {
     width:185, marginRight:12, borderRadius:20,
-    backgroundColor:'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor:'rgba(255,255,255,0.92)',
+    backgroundColor: colors.background === '#000000' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: colors.background === '#000000' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
     overflow:'hidden',
-    shadowColor:'#6d28d9', shadowOffset:{width:0, height:8},
+    shadowColor: colors.background === '#000000' ? '#8b5cf6' : '#6d28d9', 
+    shadowOffset:{width:0, height:8},
     shadowOpacity:0.16, shadowRadius:20, elevation:6,
   },
   imgWrap: { height:140 },
@@ -293,15 +300,12 @@ const ev = StyleSheet.create({
 
   // Info
   info:  { padding:12, gap:4 },
-  title: { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:'#1e1b4b', lineHeight:18, marginBottom:3 },
+  title: { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:colors.text, lineHeight:18, marginBottom:3 },
   metaRow: { flexDirection:'row', alignItems:'center', gap:4 },
-  meta:    { fontSize:10.5, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.5)', flex:1 },
+  meta:    { fontSize:10.5, fontFamily:'PlusJakartaSans_500Medium', color:colors.background === '#000000' ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', flex:1 },
   priceRow:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginTop:6 },
-  price:   { fontSize:12.5, fontFamily:'PlusJakartaSans_700Bold', color:'#7c3aed' },
-  arrowBtn:{
-    width:22, height:22, borderRadius:11,
-    alignItems:'center', justifyContent:'center',
-  },
+  price:   { fontSize:14, fontFamily:'PlusJakartaSans_800ExtraBold', color:colors.text },
+  arrowBtn:{ width:28, height:28, borderRadius:14, alignItems:'center', justifyContent:'center' },
 });
 
 // ── ArtistCard — Glassmorphism con foto real ──────────────────────────────────
@@ -309,54 +313,56 @@ const ev = StyleSheet.create({
 export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; photoIndex?: number }> = ({
   item, onPress, photoIndex = 0,
 }) => {
+  const { colors } = useThemeStore();
+  const styles = getArtistStyles(colors);
   const photoUri = item.avatarUri ?? ARTIST_PHOTOS[photoIndex % ARTIST_PHOTOS.length];
 
   return (
-    <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
+    <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
       <GlassHighlight />
 
       {/* Avatar con foto */}
-      <View style={ar.avatarWrap}>
+      <View style={styles.avatarWrap}>
         {photoUri ? (
           <RNImage
             source={{ uri: photoUri }}
-            style={ar.avatar}
-            contentFit="cover"
+            style={styles.avatar}
+            resizeMode="cover"
           />
         ) : (
-          <LinearGradient colors={item.gradients} style={ar.avatar}>
-            <Text style={ar.initials}>{item.initials}</Text>
+          <LinearGradient colors={item.gradients} style={styles.avatar}>
+            <Text style={styles.initials}>{item.initials}</Text>
           </LinearGradient>
         )}
 
         {/* Anillo de disponibilidad */}
-        <View style={[ar.ring, { borderColor: item.available ? '#16a34a' : '#d97706' }]} />
+        <View style={[styles.ring, { borderColor: item.available ? '#16a34a' : '#d97706' }]} />
 
         {/* Dot de estado */}
-        <View style={[ar.dot, { backgroundColor: item.available ? '#16a34a' : '#d97706' }]} />
+        <View style={[styles.dot, { backgroundColor: item.available ? '#16a34a' : '#d97706' }]} />
       </View>
 
       {/* Nombre y disciplina */}
-      <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
-      <Text style={ar.discipline} numberOfLines={1}>{item.discipline}</Text>
+      <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+      <Text style={styles.discipline} numberOfLines={1}>{item.discipline}</Text>
 
       {/* Separador glass */}
-      <View style={ar.divider} />
+      <View style={styles.divider} />
 
       {/* Rating + obras */}
-      <View style={ar.statsRow}>
-        <View style={ar.stat}>
+      <View style={styles.statsRow}>
+        <View style={styles.stat}>
           <Ionicons name="star" size={10} color="#f59e0b" />
-          <Text style={ar.statVal}>{item.rating}</Text>
+          <Text style={styles.statVal}>{item.rating}</Text>
         </View>
-        <View style={ar.statDot} />
-        <Text style={ar.works}>{item.works} obras</Text>
+        <View style={styles.statDot} />
+        <Text style={styles.works}>{item.works} obras</Text>
       </View>
 
-      {/* Badge disponibilidad */}
-      <View style={[ar.availBadge, { backgroundColor: item.available ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
-        <View style={[ar.availDot, { backgroundColor: item.available ? '#16a34a' : '#d97706' }]} />
-        <Text style={[ar.availText, { color: item.available ? '#15803d' : '#b45309' }]}>
+      {/* Badge de disponibilidad */}
+      <View style={[styles.availBadge, { backgroundColor: item.available ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
+        <View style={[styles.availDot, { backgroundColor: item.available ? '#16a34a' : '#d97706' }]} />
+        <Text style={[styles.availText, { color: item.available ? '#15803d' : '#b45309' }]}>
           {item.available ? 'Disponible' : 'Ocupado'}
         </Text>
       </View>
@@ -364,6 +370,183 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
   );
 };
 
+const getArtistStyles = (colors: any) => StyleSheet.create({
+  card: {
+    width:148, marginRight:12, borderRadius:20,
+    backgroundColor: colors.background === '#000000' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: colors.background === '#000000' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    overflow:'hidden',
+    shadowColor: colors.background === '#000000' ? '#8b5cf6' : '#6d28d9', 
+    shadowOffset:{width:0, height:8},
+    shadowOpacity:0.16, shadowRadius:20, elevation:6,
+  },
+  avatarWrap: {
+    alignSelf:'center', marginTop:8,
+    width:64, height:64, borderRadius:32,
+    position:'relative',
+  },
+  avatar: {
+    width:64, height:64, borderRadius:32,
+    alignItems:'center', justifyContent:'center',
+  },
+  initials: {
+    fontSize:22, fontFamily:'PlusJakartaSans_800ExtraBold',
+    color:'#fff', textTransform:'uppercase',
+  },
+  ring: {
+    position:'absolute', top:-2, left:-2, right:-2, bottom:-2,
+    borderRadius:34, borderWidth:2,
+  },
+  dot: {
+    position:'absolute', bottom:2, right:2,
+    width:12, height:12, borderRadius:6,
+    borderWidth:2, borderColor:'#fff',
+  },
+  name: {
+    fontSize:13, fontFamily:'PlusJakartaSans_700Bold',
+    color:colors.text, textAlign:'center', marginTop:8,
+  },
+  discipline: {
+    fontSize:11, fontFamily:'PlusJakartaSans_500Medium',
+    color:colors.background === '#000000' ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', 
+    textAlign:'center', marginTop:2,
+  },
+  divider: {
+    height:1, backgroundColor:'rgba(124,58,237,0.08)',
+    marginHorizontal:12, marginVertical:8,
+  },
+  statsRow: {
+    flexDirection:'row', alignItems:'center', justifyContent:'center',
+    gap:8, paddingHorizontal:12,
+  },
+  stat: { flexDirection:'row', alignItems:'center', gap:3 },
+  statVal: {
+    fontSize:11, fontFamily:'PlusJakartaSans_600SemiBold',
+    color:colors.text,
+  },
+  statDot: {
+    width:3, height:3, borderRadius:2,
+    backgroundColor:'rgba(124,58,237,0.3)',
+  },
+  works: {
+    fontSize:10, fontFamily:'PlusJakartaSans_500Medium',
+    color:colors.background === '#000000' ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
+  },
+  availBadge: {
+    flexDirection:'row', alignItems:'center', gap:4,
+    paddingHorizontal:8, paddingVertical:4,
+    borderRadius:12, marginTop:8, alignSelf:'center',
+  },
+  availDot: { width:4, height:4, borderRadius:2 },
+  availText: {
+    fontSize:9, fontFamily:'PlusJakartaSans_600SemiBold',
+    textTransform:'uppercase', letterSpacing:0.3,
+  },
+});
+
+// ── VenueCard — Glassmorphism con miniatura de imagen ────────────────────────
+
+export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({ item, onPress }) => {
+  const { colors } = useThemeStore();
+  const styles = getVenueStyles(colors);
+  
+  return (
+    <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
+      <GlassHighlight />
+
+      {/* Icono + nombre */}
+      <View style={styles.iconWrap}>
+        <LinearGradient colors={item.gradients} style={styles.icon}>
+          <Ionicons name={item.icon} size={20} color="#fff" />
+        </LinearGradient>
+      </View>
+
+      <View style={styles.info}>
+        <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.type} numberOfLines={1}>{item.type}</Text>
+
+        <View style={styles.sep} />
+        <View style={styles.meta}>
+          <Ionicons name="people-outline" size={10} color={colors.primary} />
+          <Text style={styles.cap}>{item.capacity}</Text>
+        </View>
+        <View style={styles.meta}>
+          <Ionicons name="location-outline" size={10} color={colors.primary} />
+          <Text style={styles.cap}>{item.city}</Text>
+        </View>
+      </View>
+
+      {/* Miniatura de imagen circular */}
+      <Image
+        source={{ uri: getVenueImage(item) }}
+        style={styles.thumb}
+        resizeMode="cover"
+      />
+
+      {/* CTA badge — reemplaza el chevron */}
+      <View style={styles.ctaBadge}>
+        <Text style={styles.ctaText}>Ver</Text>
+        <Ionicons name="arrow-forward" size={10} color="#7c3aed" />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+const getVenueStyles = (colors: any) => StyleSheet.create({
+  card: {
+    width:140, height:100, marginRight:12, borderRadius:16,
+    backgroundColor: colors.background === '#000000' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: colors.background === '#000000' ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    overflow:'hidden',
+    shadowColor: colors.background === '#000000' ? '#8b5cf6' : '#6d28d9', 
+    shadowOffset:{width:0, height:8},
+    shadowOpacity:0.16, shadowRadius:20, elevation:6,
+  },
+  iconWrap: {
+    position:'absolute', top:12, left:12,
+    width:36, height:36, borderRadius:18,
+    zIndex:2,
+  },
+  icon: {
+    width:36, height:36, borderRadius:18,
+    alignItems:'center', justifyContent:'center',
+  },
+  info: { flex:1, paddingTop:12, paddingLeft:54, paddingRight:12, gap:2 },
+  name: {
+    fontSize:13, fontFamily:'PlusJakartaSans_700Bold',
+    color:colors.text,
+  },
+  type: {
+    fontSize:10, fontFamily:'PlusJakartaSans_500Medium',
+    color:colors.background === '#000000' ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)',
+  },
+  sep: {
+    height:1, backgroundColor:'rgba(124,58,237,0.08)',
+    marginVertical:4,
+  },
+  meta: { flexDirection:'row', alignItems:'center', gap:4 },
+  cap: {
+    fontSize:9, fontFamily:'PlusJakartaSans_500Medium',
+    color:colors.background === '#000000' ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
+  },
+  thumb: {
+    position:'absolute', bottom:8, right:8,
+    width:32, height:32, borderRadius:16,
+    borderWidth:2, borderColor:colors.background === '#000000' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.8)',
+  },
+  ctaBadge: {
+    position:'absolute', bottom:6, right:6,
+    backgroundColor: colors.background === '#000000' ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)',
+    borderRadius:8, paddingHorizontal:6, paddingVertical:3,
+    flexDirection:'row', alignItems:'center', gap:3,
+  },
+  ctaText: {
+    fontSize:8, fontFamily:'PlusJakartaSans_600SemiBold',
+    color:colors.primary,
+  },
+});
+
+// Estilos compartidos para componentes Grid
 const ar = StyleSheet.create({
   card: {
     width:130, alignItems:'center', marginRight:12, borderRadius:22,
@@ -374,149 +557,47 @@ const ar = StyleSheet.create({
     shadowOpacity:0.14, shadowRadius:18, elevation:5,
     overflow:'hidden',
   },
-
-  // Avatar
-  avatarWrap: { position:'relative', marginBottom:10 },
-  avatar: {
-    width:64, height:64, borderRadius:32,
-    alignItems:'center', justifyContent:'center',
-  },
-  ring: {
-    position:'absolute', top:-3, left:-3,
-    width:70, height:70, borderRadius:35,
-    borderWidth:2, borderColor:'#16a34a',
-    opacity:0.6,
-  },
   dot: {
     position:'absolute', bottom:1, right:1,
     width:12, height:12, borderRadius:6,
     borderWidth:2, borderColor:'#fff',
   },
-  initials: { fontSize:20, fontFamily:'PlusJakartaSans_800ExtraBold', color:'#fff' },
-
-  // Texto
-  name:       { fontSize:12, fontFamily:'PlusJakartaSans_700Bold', color:'#1e1b4b', textAlign:'center', marginBottom:2 },
-  discipline: { fontSize:10.5, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.5)', textAlign:'center' },
-
-  // Separador
+  name: {
+    fontSize:12, fontFamily:'PlusJakartaSans_700Bold',
+    color:'#1e1b4b', textAlign:'center', marginBottom:2,
+  },
+  discipline: {
+    fontSize:10.5, fontFamily:'PlusJakartaSans_400Regular',
+    color:'rgba(109,40,217,0.5)', textAlign:'center', marginBottom:2,
+  },
   divider: {
     width:'80%', height:1, marginVertical:8,
     backgroundColor:'rgba(124,58,237,0.1)',
   },
-
-  // Stats
-  statsRow: { flexDirection:'row', alignItems:'center', gap:5, marginBottom:8 },
-  stat:     { flexDirection:'row', alignItems:'center', gap:3 },
-  statVal:  { fontSize:10.5, fontFamily:'PlusJakartaSans_700Bold', color:'#1e1b4b' },
-  statDot:  { width:3, height:3, borderRadius:1.5, backgroundColor:'rgba(124,58,237,0.25)' },
-  works:    { fontSize:10, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.45)' },
-
-  // Badge disponibilidad
+  statsRow: { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8 },
+  stat: { flexDirection:'row', alignItems:'center', gap:3 },
+  statVal: {
+    fontSize:11, fontFamily:'PlusJakartaSans_600SemiBold',
+    color:'#1e1b4b',
+  },
+  statDot: {
+    width:3, height:3, borderRadius:2,
+    backgroundColor:'rgba(124,58,237,0.3)',
+  },
+  works: {
+    fontSize:10, fontFamily:'PlusJakartaSans_400Regular',
+    color:'rgba(109,40,217,0.4)',
+  },
   availBadge: {
     flexDirection:'row', alignItems:'center', gap:4,
-    paddingHorizontal:9, paddingVertical:3, borderRadius:20,
+    paddingHorizontal:8, paddingVertical:4,
+    borderRadius:12, marginTop:8, alignSelf:'center',
   },
-  availDot:  { width:5, height:5, borderRadius:3 },
-  availText: { fontSize:10, fontFamily:'PlusJakartaSans_600SemiBold' },
+  availDot: { width:4, height:4, borderRadius:2 },
+  availText: {
+    fontSize:9, fontFamily:'PlusJakartaSans_600SemiBold',
+    textTransform:'uppercase', letterSpacing:0.3,
+  },
 });
 
-// ── VenueCard — Glassmorphism con miniatura de imagen ────────────────────────
-
-export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({ item, onPress }) => (
-  <TouchableOpacity activeOpacity={0.86} style={ve.card} onPress={onPress}>
-    <GlassHighlight />
-
-    {/* Acento izquierdo en gradiente */}
-    <LinearGradient
-      colors={['#7c3aed','#2563eb']}
-      start={{x:0,y:0}} end={{x:0,y:1}}
-      style={ve.accent}
-    />
-
-    {/* Ícono en gradiente */}
-    <LinearGradient
-      colors={item.gradients}
-      start={{x:0,y:0}} end={{x:1,y:1}}
-      style={ve.iconWrap}
-    >
-      <Ionicons name={item.icon as any} size={22} color="#fff" />
-    </LinearGradient>
-
-    {/* Info central */}
-    <View style={ve.info}>
-      <Text style={ve.name} numberOfLines={1}>{item.name}</Text>
-      <Text style={ve.type}>{item.type}</Text>
-      <View style={ve.metaRow}>
-        <Ionicons name="people-outline" size={10} color="rgba(109,40,217,0.4)" />
-        <Text style={ve.cap}>{item.capacity}</Text>
-        <View style={ve.sep} />
-        <Ionicons name="location-outline" size={10} color="rgba(109,40,217,0.4)" />
-        <Text style={ve.cap}>{item.city}</Text>
-      </View>
-    </View>
-
-    {/* Miniatura de imagen circular */}
-    <Image
-      source={{ uri: getVenueImage(item) }}
-      style={ve.thumb}
-      contentFit="cover"
-    />
-
-    {/* CTA badge — reemplaza el chevron */}
-    <View style={ve.ctaBadge}>
-      <Text style={ve.ctaText}>Ver</Text>
-      <Ionicons name="arrow-forward" size={10} color="#7c3aed" />
-    </View>
-  </TouchableOpacity>
-);
-
-const ve = StyleSheet.create({
-  card: {
-    flexDirection:'row', alignItems:'center', gap:12,
-    marginBottom:10, marginHorizontal:16, borderRadius:20,
-    padding:13, paddingLeft:10,
-    backgroundColor:'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor:'rgba(255,255,255,0.92)',
-    overflow:'hidden',
-    shadowColor:'#6d28d9', shadowOffset:{width:0, height:6},
-    shadowOpacity:0.14, shadowRadius:16, elevation:4,
-  },
-
-  // Acento izquierdo
-  accent: {
-    position:'absolute', left:0, top:0, bottom:0, width:4,
-    borderTopLeftRadius:20, borderBottomLeftRadius:20,
-  },
-
-  // Ícono
-  iconWrap: {
-    width:50, height:50, borderRadius:15,
-    alignItems:'center', justifyContent:'center',
-    marginLeft:6,
-    shadowColor:'#6d28d9', shadowOffset:{width:0,height:3},
-    shadowOpacity:0.2, shadowRadius:8, elevation:3,
-  },
-
-  // Info
-  info:    { flex:1 },
-  name:    { fontSize:13.5, fontFamily:'PlusJakartaSans_700Bold', color:'#1e1b4b', marginBottom:2 },
-  type:    { fontSize:11, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.45)', marginBottom:4 },
-  metaRow: { flexDirection:'row', alignItems:'center', gap:4 },
-  cap:     { fontSize:10.5, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.4)' },
-  sep:     { width:3, height:3, borderRadius:1.5, backgroundColor:'rgba(124,58,237,0.2)' },
-
-  // Miniatura circular
-  thumb: {
-    width:44, height:44, borderRadius:22,
-    borderWidth:2, borderColor:'rgba(255,255,255,0.9)',
-  },
-
-  // CTA badge
-  ctaBadge: {
-    flexDirection:'row', alignItems:'center', gap:3,
-    paddingHorizontal:8, paddingVertical:4, borderRadius:20,
-    borderWidth:1, borderColor:'rgba(124,58,237,0.2)',
-    backgroundColor:'rgba(124,58,237,0.06)',
-  },
-  ctaText: { fontSize:10.5, fontFamily:'PlusJakartaSans_600SemiBold', color:'#7c3aed' },
-});
+export default EventCard;

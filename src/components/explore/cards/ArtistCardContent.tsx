@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { colors } from '../../../constants/colors';
 import type { Artist, ArtistCategorySelection } from '../../../types/explore';
 import { portfolioService } from '../../../services/api/portfolio';
@@ -26,6 +27,9 @@ import { artistsService } from '../../../services/api/artists';
 import { servicesService, type Service } from '../../../services/api/services';
 import { useProfileStore } from '../../../store/profileStore';
 import { useFavoritesStore } from '../../../store/favoritesStore';
+import VideoUploadModal, { type VideoUploadResult } from '../shared/VideoUploadModal';
+
+type MediaItem = { type: 'image'; uri: string } | { type: 'video'; uri: string; startTime: number };
 
 
 interface ArtistCardContentProps {
@@ -37,12 +41,15 @@ interface ArtistCardContentProps {
 
 // ── Disponibilidad (misma lógica que ProfileIdentity) ──────────────────────
 
-const AVAILABILITY = {
-  available: { label: 'Disponible', bg: 'rgba(16,185,129,0.08)', color: '#16a34a' },
-  busy:      { label: 'Ocupado', bg: 'rgba(245,158,11,0.08)', color: '#d97706' },
-  'bajo-pedido': { label: 'Bajo pedido', bg: 'rgba(139,92,246,0.08)', color: '#8b5cf6' },
-} as const;
-type AvailabilityKey = keyof typeof AVAILABILITY;
+const AVAILABILITY_OPTS = [
+  { label: 'Disponible',    color: '#16a34a', bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.22)',   dot: '#16a34a', pulse: true  },
+  { label: 'Ocupado',       color: '#d97706', bg: 'rgba(217,119,6,0.08)',   border: 'rgba(217,119,6,0.22)',   dot: '#d97706', pulse: false },
+  { label: 'Bajo pedido',   color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.22)', dot: '#7c3aed', pulse: false },
+] as const;
+
+function getAvailOpt(label?: string) {
+  return AVAILABILITY_OPTS.find(o => o.label === label) ?? AVAILABILITY_OPTS[0];
+}
 
 const getArtistSpecialty = (artist: Artist): string => {
   // Prioridad 1: Usar specialty si está definido (viene del onboarding/perfil)
@@ -148,6 +155,8 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
   const [services, setServices] = useState<Service[]>([]);
   const [servicesLoaded, setServicesLoaded] = useState(false);
   const [showHireModal, setShowHireModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [cardVideo, setCardVideo] = useState<{ uri: string; startTime: number } | null>(null);
   const heartScale = useRef(new Animated.Value(1)).current;
   const [portfolioImages, setPortfolioImages] = useState<string[]>([]);
   const [, setSchedule] = useState<string>(artist.schedule || '');
@@ -155,9 +164,24 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
   const { addFavorite, removeFavorite, isFavorited } = useFavoritesStore();
   const isSaved = isFavorited(artist.id);
 
-  // Lógica de disponibilidad igual que ProfileIdentity
-  const availKey = (artist.availability as AvailabilityKey) ?? 'available';
-  const avail = AVAILABILITY[availKey] ?? AVAILABILITY.available;
+  // Player de video — activo solo cuando hay video; '' no carga nada
+  const videoPlayer = useVideoPlayer(cardVideo?.uri ?? '', (p) => {
+    p.loop = true;
+  });
+
+  // Lógica de disponibilidad compatible con ambos flujos (perfil y exploración)
+  const availLabel = artist.info?.find(i => i.label === 'Disponibilidad')?.value || 
+                     artist.availability || 
+                     'Disponible';
+  const avail = getAvailOpt(availLabel);
+
+  // Debug: mostrar qué disponibilidad está llegando
+  console.log('[ArtistCardContent] Disponibilidad:', {
+    info: artist.info?.find(i => i.label === 'Disponibilidad')?.value,
+    availability: artist.availability,
+    finalLabel: availLabel,
+    artistName: artist.name
+  });
 
   useEffect(() => {
     const userId = artist.userId || artist.id;
@@ -216,8 +240,29 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
     ? artist.gallery
     : portfolioImages;
 
-  // Solo fotos de portafolio — el avatar nunca se incluye en el carrusel
-  const images = galleryUrls.filter(Boolean).slice(0, 5);
+  // Carrusel de medios: video (si existe) al frente, luego fotos
+  const baseImages = galleryUrls.filter(Boolean).slice(0, 5);
+  const media: MediaItem[] = [
+    ...(cardVideo ? [{ type: 'video' as const, uri: cardVideo.uri, startTime: cardVideo.startTime }] : []),
+    ...baseImages.map(uri => ({ type: 'image' as const, uri })),
+  ];
+  const images = baseImages; // mantener alias para compatibilidad con lógica antigua
+
+  // Reproducir/pausar video según el slide activo
+  useEffect(() => {
+    if (!cardVideo) return;
+    const current = media[imgIdx];
+    try {
+      if (current?.type === 'video') {
+        videoPlayer.currentTime = current.startTime;
+        videoPlayer.play();
+      } else {
+        videoPlayer.pause();
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imgIdx, cardVideo]);
+
   const distLabel = distanceKm !== undefined
     ? (distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`)
     : '3 km'; // Valor temporal para prueba
@@ -236,40 +281,57 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
     <View style={styles.outerWrapper}>
       <View style={styles.container}>
 
-        {/* ══════════ IMAGEN 70% ══════════ */}
+        {/* ══════════ IMAGEN / VIDEO 70% ══════════ */}
         <View style={styles.imageSection}>
-        {images.length > 0 ? (
-          <Image
-            source={{ uri: images[imgIdx] }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={250}
-            placeholder="https://via.placeholder.com/400x300/f3f0ff/7c3aed?text=Cargando..."
-            placeholderContentFit="cover"
-            cachePolicy="memory-disk"
-            recyclingKey={artist.id}
-            priority="high"
-          />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.noImagePlaceholder]}>
-            <Ionicons name="image-outline" size={40} color="rgba(124,58,237,0.2)" />
-          </View>
-        )}
+        {(() => {
+          const current = media[imgIdx];
+          if (current?.type === 'video') {
+            return (
+              <VideoView
+                player={videoPlayer}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            );
+          }
+          if (media.length > 0 || images.length > 0) {
+            const uri = current?.uri ?? images[imgIdx];
+            return uri ? (
+              <Image
+                source={{ uri }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={250}
+                placeholder="https://via.placeholder.com/400x300/f3f0ff/7c3aed?text=Cargando..."
+                placeholderContentFit="cover"
+                cachePolicy="memory-disk"
+                recyclingKey={artist.id}
+                priority="high"
+              />
+            ) : null;
+          }
+          return (
+            <View style={[StyleSheet.absoluteFill, styles.noImagePlaceholder]}>
+              <Ionicons name="image-outline" size={40} color="rgba(124,58,237,0.2)" />
+            </View>
+          );
+        })()}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.20)']}
           style={styles.imageGradient}
         />
 
         {/* Zonas de toque izq/der para pasar imagen */}
-        {images.length > 1 && (
+        {media.length > 1 && (
           <>
             <Pressable
               style={styles.navZoneLeft}
-              onPress={() => setImgIdx(i => (i - 1 + images.length) % images.length)}
+              onPress={() => setImgIdx(i => (i - 1 + media.length) % media.length)}
             />
             <Pressable
               style={styles.navZoneRight}
-              onPress={() => setImgIdx(i => (i + 1) % images.length)}
+              onPress={() => setImgIdx(i => (i + 1) % media.length)}
             />
           </>
         )}
@@ -300,15 +362,21 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
           );
         })()}
 
-        {/* Dots de navegación — solo si hay más de 1 imagen */}
-        {images.length > 1 && (
+        {/* Dots de navegación — solo si hay más de 1 ítem */}
+        {media.length > 1 && (
           <View style={styles.thumbsRow}>
-            {images.map((_, i) => (
+            {media.map((item, i) => (
               <Pressable
                 key={i}
                 onPress={() => setImgIdx(i)}
                 style={[styles.dot, i === imgIdx && styles.dotActive]}
-              />
+              >
+                {item.type === 'video' && (
+                  <View style={{ alignSelf: 'center', marginTop: 1 }}>
+                    <Ionicons name="videocam" size={5} color="#fff" />
+                  </View>
+                )}
+              </Pressable>
             ))}
           </View>
         )}
@@ -362,6 +430,21 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
             }}
           >
             <Ionicons name="share-social-outline" size={20} color="#fff" />
+          </Pressable>
+
+          {/* Subir video */}
+          <Pressable
+            style={[styles.sideBtn, cardVideo ? styles.sideBtnVideo : undefined]}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowVideoModal(true);
+            }}
+          >
+            <Ionicons
+              name={cardVideo ? 'videocam' : 'videocam-outline'}
+              size={20}
+              color="#fff"
+            />
           </Pressable>
         </View>
 
@@ -461,6 +544,16 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
       visible={showHireModal}
       artist={artist}
       onClose={() => setShowHireModal(false)}
+    />
+
+    {/* Video Upload Modal */}
+    <VideoUploadModal
+      visible={showVideoModal}
+      onClose={() => setShowVideoModal(false)}
+      onUploaded={(result: VideoUploadResult) => {
+        setCardVideo(result);
+        setImgIdx(0); // ir al primer slide (el video)
+      }}
     />
     </>
   );
@@ -603,6 +696,10 @@ const styles = StyleSheet.create({
   sideBtnSaved: {
     backgroundColor: 'rgba(167,139,250,0.22)',
     borderColor: 'rgba(167,139,250,0.45)',
+  },
+  sideBtnVideo: {
+    backgroundColor: 'rgba(124,58,237,0.45)',
+    borderColor: 'rgba(124,58,237,0.7)',
   },
 
   // especialidad con botón cápsula en parte inferior izquierda

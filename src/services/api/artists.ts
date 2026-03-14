@@ -216,6 +216,38 @@ export const artistsService = {
       workExperience: backendArtist.workExperience || [],
       education: backendArtist.education || [],
       schedule: backendArtist.schedule || userFields.schedule || backendArtist.userSchedule || backendArtist.metadata?.responseTime || undefined,
+      // Info adicional para compatibilidad con el perfil
+      info: (() => {
+        const infoArray: { label: string; icon: string; value: string }[] = [];
+        
+        // Experiencia
+        if (experienceStr) {
+          infoArray.push({ label: 'Experiencia', icon: 'briefcase-outline', value: experienceStr });
+        }
+        
+        // Estilo
+        if (backendArtist.style || backendArtist.roleId) {
+          infoArray.push({ label: 'Estilo', icon: 'color-palette-outline', value: backendArtist.style || backendArtist.roleId || '' });
+        }
+        
+        // Disponibilidad - mapear desde diferentes fuentes
+        const availability = backendArtist.availability || 
+                           (backendArtist.isAvailable ? 'Disponible' : 'Ocupado') ||
+                           backendArtist.metadata?.artistAvailability ||
+                           'Disponible';
+        infoArray.push({ label: 'Disponibilidad', icon: 'calendar-outline', value: availability });
+        
+        // Tiempo de respuesta
+        if (backendArtist.responseTime || userFields.responseTime || backendArtist.metadata?.responseTime) {
+          infoArray.push({ 
+            label: 'Horario', 
+            icon: 'time-outline', 
+            value: backendArtist.responseTime || userFields.responseTime || backendArtist.metadata?.responseTime || '~2 horas' 
+          });
+        }
+        
+        return infoArray;
+      })(),
     };
   },
 

@@ -242,7 +242,10 @@ export const TopBar: React.FC<TopBarProps> = ({
         >
           <Ionicons name="notifications-outline" size={24} color={colors.text} />
           {notificationCount > 0 && (
-            <View style={styles.badge}>
+            <View style={[styles.badge, { 
+              backgroundColor: isDark ? '#dc2626' : '#ef4444',
+              borderColor: isDark ? 'rgba(255,255,255,0.9)' : '#fff',
+            }]}>
               <Text style={styles.badgeText}>
                 {notificationCount > 9 ? '9+' : notificationCount}
               </Text>
@@ -277,13 +280,17 @@ export const TopBar: React.FC<TopBarProps> = ({
 
   return (
     <>
-      <View style={[styles.container, { paddingTop: topInset + 8 }]}>
+      <View style={[styles.container, { 
+        paddingTop: topInset + 8,
+        backgroundColor: isDark ? '#000' : '#fff',
+        borderBottomColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+      }]}>
 
         {/* ── LEFT: Logo o Título ── */}
         <View style={styles.leftSection}>
           {!title ? (
             <View style={styles.logoRow}>
-              <Text style={styles.logoBusca}>Busc</Text>
+              <Text style={[styles.logoBusca, { color: isDark ? '#fff' : '#111827' }]}>Busc</Text>
               <LinearGradient
                 colors={['#7c3aed', '#2563eb']}
                 start={{ x: 0, y: 0 }}
@@ -295,11 +302,11 @@ export const TopBar: React.FC<TopBarProps> = ({
             </View>
           ) : usernameMode ? (
             <View style={styles.usernameRow}>
-              <Text style={styles.usernameTitle} numberOfLines={1}>{title}</Text>
+              <Text style={[styles.usernameTitle, { color: colors.text }]} numberOfLines={1}>{title}</Text>
               <Ionicons name="chevron-down" size={15} color={colors.text} />
             </View>
           ) : (
-            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
           )}
         </View>
 
@@ -309,14 +316,14 @@ export const TopBar: React.FC<TopBarProps> = ({
             onPress={onLocationPress}
             style={({ pressed }) => [styles.locationCenter, pressed && { opacity: 0.65 }]}
           >
-            <Text style={styles.locationLabel}>Ubicación</Text>
+            <Text style={[styles.locationLabel, { color: isDark ? 'rgba(255,255,255,0.7)' : '#9ca3af' }]}>Ubicación</Text>
             <View style={styles.locationCityRow}>
               {locationLoading ? (
                 <Ionicons name="location" size={11} color="#7c3aed" />
               ) : (
                 <Ionicons name="location" size={11} color="#7c3aed" />
               )}
-              <Text style={styles.locationCity} numberOfLines={1}>
+              <Text style={[styles.locationCity, { color: isDark ? '#fff' : '#1e1b4b' }]} numberOfLines={1}>
                 {city.split(',')[0]}
               </Text>
               <Ionicons name="chevron-down" size={11} color="#7c3aed" />

@@ -12,6 +12,18 @@ export const EVENT_CATEGORIES: { id: string; label: string; icon: string; }[] = 
   { id: 'fotografia', label: 'Foto',   icon: 'camera' },
 ];
 
+// Disciplinas de artistas para los pills de categoría en Home
+export const ARTIST_PILL_CATEGORIES: { id: string; label: string; icon: string; }[] = [
+  { id: 'todos',           label: 'Todos',        icon: 'apps' },
+  { id: 'artes-visuales',  label: 'Visuales',     icon: 'color-palette' },
+  { id: 'artes-escenicas', label: 'Escénicas',    icon: 'body' },
+  { id: 'musica',          label: 'Música',       icon: 'musical-notes' },
+  { id: 'audiovisual',     label: 'Audiovisual',  icon: 'film' },
+  { id: 'diseno',          label: 'Diseño',       icon: 'brush' },
+  { id: 'comunicacion',    label: 'Comunicación', icon: 'megaphone' },
+  { id: 'cultura-turismo', label: 'Cultura',      icon: 'earth' },
+];
+
 export const MOCK_EVENTS: EventItem[] = [
   {
     id: '1', title: 'Noche de Jazz en vivo', category: 'Música',

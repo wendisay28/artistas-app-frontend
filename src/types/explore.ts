@@ -95,6 +95,8 @@ export interface Artist extends BaseCard {
   workExperience?: ArtistWorkExperience[];
   education?: ArtistEducation[];
   schedule?: string;
+  // Info adicional del perfil (compatibilidad con ProfileIdentity)
+  info?: { label: string; icon: string; value: string }[];
 }
 
 // ── Event ────────────────────────────────────────────────────────────────────

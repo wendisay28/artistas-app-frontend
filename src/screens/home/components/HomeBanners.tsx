@@ -9,6 +9,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useThemeStore } from '../../../store/themeStore';
+import { useAuthStore } from '../../../store/authStore';
+import { useProfileStore } from '../../../store/profileStore';
 
 const { width } = Dimensions.get('window');
 const CARD_W = width - 32;
@@ -71,6 +74,7 @@ const FadeIn: React.FC<{ delay?: number; children: React.ReactNode }> = ({ delay
 type ProfileBannerProps = { pct: number; onPress: () => void };
 
 const ProfileBanner: React.FC<ProfileBannerProps> = ({ pct, onPress }) => {
+  const { isDark } = useThemeStore();
   const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -94,6 +98,45 @@ const ProfileBanner: React.FC<ProfileBannerProps> = ({ pct, onPress }) => {
     pct < 75 ? ['#7c3aed', '#2563eb'] :
                ['#059669', '#0891b2'];
 
+  /* ── Vista OSCURA ─────────────────────────────────────────────────────────
+     Misma estructura que la clara, solo cambian fondos, colores de texto y blur.
+     Los estilos pb.* (modo claro) NO se tocan.
+  ──────────────────────────────────────────────────────────────────────────── */
+  if (isDark) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={pbd.container}>
+        <View style={pb.inner}>
+          {/* Ícono — mismo gradiente morado, se ve igual de bien en oscuro */}
+          <LinearGradient colors={['#7c3aed', '#4f46e5']} style={pb.icon}>
+            <Ionicons name="person" size={16} color="#fff" />
+          </LinearGradient>
+
+          {/* Centro */}
+          <View style={pb.center}>
+            <View style={pb.topRow}>
+              <Text style={pbd.title}>Completa tu perfil</Text>
+              <Text style={pbd.pct}>{pct}%</Text>
+            </View>
+            <View style={pbd.track}>
+              <Animated.View style={[pb.fill, { width: barWidth }]}>
+                <LinearGradient
+                  colors={barColors}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              </Animated.View>
+            </View>
+            <Text style={pbd.hint}>{getMessage()}</Text>
+          </View>
+
+          {/* Flecha */}
+          <Ionicons name="chevron-forward" size={15} color="rgba(167,139,250,0.55)" />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  /* ── Vista CLARA — sin cambios ─────────────────────────────────────────── */
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={pb.container}>
       <BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} />
@@ -216,6 +259,12 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
   banners           = DEFAULT_BANNERS,
   onBannerPress     = () => {},
 }) => {
+  const { user } = useAuthStore();
+  const { artistData } = useProfileStore();
+  const { isDark } = useThemeStore();
+  // Prioridad: nombre del perfil del artista → displayName de auth → vacío
+  const rawName = artistData?.name || user?.displayName || '';
+  const firstName = rawName.split(' ')[0] ?? '';
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef   = useRef<ScrollView>(null);
   const autoplayRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -263,6 +312,15 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
         </FadeIn>
       )}
 
+      {firstName ? (
+        <FadeIn delay={80}>
+          <View style={gr.row}>
+            <Text style={[gr.hola, isDark && gr.holaDark]}>Hola, </Text>
+            <Text style={[gr.nombre, isDark && gr.nombreDark]}>{firstName}</Text>
+          </View>
+        </FadeIn>
+      ) : null}
+
       <FadeIn delay={150}>
         <View>
           <ScrollView
@@ -307,16 +365,26 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
                   <Ionicons name={cat.icon} size={14} color="#fff" />
                   <Text style={cp.labelActive}>{cat.label}</Text>
                 </LinearGradient>
+              ) : isDark ? (
+                <View style={cp.pillInactiveDark}>
+                  <Ionicons name={cat.icon} size={14} color="#a78bfa" />
+                  <Text style={cp.labelDark}>{cat.label}</Text>
+                </View>
               ) : (
-                <BlurView intensity={50} tint="light" style={cp.pillInactive}>
-                  <Ionicons name={cat.icon} size={14} color="#7c3aed" />
-                  <Text style={cp.label}>{cat.label}</Text>
-                </BlurView>
+                <View style={cp.pillShadow}>
+                  <BlurView intensity={50} tint="light" style={cp.pillInactive}>
+                    <Ionicons name={cat.icon} size={14} color="#7c3aed" />
+                    <Text style={cp.label}>{cat.label}</Text>
+                  </BlurView>
+                </View>
               )}
             </TouchableOpacity>
           ))}
         </ScrollView>
       </FadeIn>
+
+      {/* Divisor casi invisible — separa pills de la sección de eventos */}
+      <View style={[div.line, isDark && div.lineDark]} />
 
     </View>
   );
@@ -325,6 +393,21 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
 export default HomeBanners;
 
 // ── Estilos ───────────────────────────────────────────────────────────────────
+
+// Estilos exclusivos para el modo oscuro del ProfileBanner.
+// Los estilos compartidos (inner, icon, center, topRow, fill) los hereda de pb.
+const pbd = StyleSheet.create({
+  container: {
+    marginHorizontal: 16, marginBottom: 14,
+    borderRadius: 16, overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 1, borderColor: '#3a3a3a',
+  },
+  title: { fontSize: 12.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: -0.1 },
+  pct:   { fontSize: 12.5, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#a78bfa' },
+  track: { height: 4, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10, overflow: 'hidden' },
+  hint:  { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.45)' },
+});
 
 const pb = StyleSheet.create({
   container: {
@@ -377,11 +460,16 @@ const hc = StyleSheet.create({
 });
 
 const cp = StyleSheet.create({
-  scroll:       { paddingHorizontal: 16, gap: 10, paddingVertical: 10 },
-  pillActive:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, elevation: 4, shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
-  pillInactive: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(255,255,255,0.5)' },
-  label:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(109,40,217,0.65)' },
-  labelActive:  { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
+  scroll:           { paddingHorizontal: 16, gap: 10, paddingVertical: 10 },
+  pillActive:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, elevation: 4, shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
+  // Vista clara — wrapper con sombra morada (fuera del overflow:hidden del BlurView)
+  pillShadow:       { borderRadius: 50, shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 3 },
+  pillInactive:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.75)', backgroundColor: 'rgba(255,255,255,0.5)' },
+  label:            { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#000' },
+  // Vista oscura
+  pillInactiveDark: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, backgroundColor: '#000', borderWidth: 1, borderColor: '#3a3a3a' },
+  labelDark:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
+  labelActive:      { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 });
 
 const cr = StyleSheet.create({
@@ -391,3 +479,22 @@ const cr = StyleSheet.create({
 });
 
 const s = StyleSheet.create({ container: { paddingTop: 10 } });
+
+const div = StyleSheet.create({
+  line:     { marginHorizontal: 20, height: 1, backgroundColor: 'rgba(0,0,0,0.06)', marginTop: 2, marginBottom: 4 },
+  lineDark: { backgroundColor: 'rgba(255,255,255,0.06)' },
+});
+
+const gr = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    paddingTop: 2,
+  },
+  hola:      { fontSize: 22, fontFamily: 'PlusJakartaSans_400Regular', color: '#1e1b4b' },
+  holaDark:  { color: 'rgba(255,255,255,0.6)' },
+  nombre:    { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#1e1b4b' },
+  nombreDark:{ color: '#fff' },
+});

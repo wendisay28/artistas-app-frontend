@@ -1,12 +1,13 @@
 // src/navigation/MainTabNavigator.tsx
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import { useTabBarStore } from '../store/tabBarStore';
 
 import FavoritesScreen from '../screens/favorites/index';
 import ContractsScreen from '../screens/contracts/index';
@@ -28,7 +29,7 @@ export type MainTabParams = {
   AvailabilityStack: undefined;
 };
 
-const Tab = createBottomTabNavigator<MainTabParams>() as any;
+const Tab = createBottomTabNavigator<MainTabParams>();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -43,9 +44,9 @@ interface TabItem {
 // Solo las 5 tabs visibles
 const TAB_CONFIG: TabItem[] = [
   { name: 'Home',      label: 'Inicio',   iconOutline: 'home-outline',        iconFilled: 'home',        component: HomeScreen },
-  { name: 'Favorites', label: 'Favoritos',iconOutline: 'heart-outline',       iconFilled: 'heart',       component: FavoritesScreen },
   { name: 'Contract',  label: 'Contratar',iconOutline: 'add-circle-outline',  iconFilled: 'add-circle',  component: ContractsScreen },
   { name: 'Explorer',  label: 'Explorar', iconOutline: 'compass-outline',     iconFilled: 'compass',     component: ExploreScreen },
+  { name: 'Favorites', label: 'Favoritos',iconOutline: 'heart-outline',       iconFilled: 'heart',       component: FavoritesScreen },
   { name: 'Profile',   label: 'Perfil',   iconOutline: 'person-outline',      iconFilled: 'person',      component: ProfileScreen },
 ];
 
@@ -56,12 +57,28 @@ const INACTIVE_COLOR = '#9ca3af';
 const VISIBLE_TAB_NAMES = new Set(TAB_CONFIG.map(t => t.name));
 
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
-  const insets = useSafeAreaInsets();
+  const insets  = useSafeAreaInsets();
+  const { visible } = useTabBarStore();
+  const translateY   = useRef(new Animated.Value(0)).current;
+  const tabBarHeight = useRef(0);
+
+  useEffect(() => {
+    Animated.spring(translateY, {
+      toValue: visible ? 0 : tabBarHeight.current || 80,
+      useNativeDriver: true,
+      bounciness: 0,
+      speed: 22,
+    }).start();
+  }, [visible]);
 
   // Solo renderizar las tabs visibles (ignorar StripeSetup, Wallet, etc.)
   const visibleRoutes = state.routes.filter(r => VISIBLE_TAB_NAMES.has(r.name as any));
 
   return (
+    <Animated.View
+      style={{ transform: [{ translateY }] }}
+      onLayout={e => { tabBarHeight.current = e.nativeEvent.layout.height; }}
+    >
     <View style={[styles.tabBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
       {visibleRoutes.map((route) => {
         const tabConfig = TAB_CONFIG.find(t => t.name === route.name)!;
@@ -110,6 +127,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
         );
       })}
     </View>
+    </Animated.View>
   );
 }
 

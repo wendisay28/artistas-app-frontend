@@ -4,7 +4,7 @@
 // - Título, meta, descripción, tags, anuncio, CTA
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,9 +18,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { colors } from '../../../constants/colors';
 import type { GalleryItem } from '../../../types/explore';
 import { useFavoritesStore } from '../../../store/favoritesStore';
+import VideoUploadModal, { type VideoUploadResult } from '../shared/VideoUploadModal';
+
+type MediaItem = { type: 'image'; uri: string } | { type: 'video'; uri: string; startTime: number };
 
 interface GalleryCardContentProps {
   item: GalleryItem;
@@ -65,11 +69,31 @@ const formatCOP = (price: number) =>
 export default function GalleryCardContent({ item, distanceKm }: GalleryCardContentProps) {
   const [liked, setLiked] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [cardVideo, setCardVideo] = useState<{ uri: string; startTime: number } | null>(null);
   const { addFavorite, removeFavorite, isFavorited } = useFavoritesStore();
   const isSaved = isFavorited(item.id);
   const heartScale = useRef(new Animated.Value(1)).current;
 
-  const images = [item.image, ...(item.gallery || [])].slice(0, 3);
+  const videoPlayer = useVideoPlayer(cardVideo?.uri ?? '', (p) => { p.loop = true; });
+
+  const baseImages = [item.image, ...(item.gallery || [])].slice(0, 3);
+  const media: MediaItem[] = [
+    ...(cardVideo ? [{ type: 'video' as const, uri: cardVideo.uri, startTime: cardVideo.startTime }] : []),
+    ...baseImages.map(uri => ({ type: 'image' as const, uri })),
+  ];
+  const images = baseImages;
+
+  useEffect(() => {
+    if (!cardVideo) return;
+    const current = media[imgIdx];
+    try {
+      if (current?.type === 'video') { videoPlayer.currentTime = current.startTime; videoPlayer.play(); }
+      else { videoPlayer.pause(); }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imgIdx, cardVideo]);
+
   const cat = getCategoryMeta(item);
   const isForSale = item.forSale;
 
@@ -92,16 +116,19 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
   };
 
   return (
+    <>
     <View style={styles.container}>
 
-      {/* ══════════ IMAGEN 66% ══════════ */}
+      {/* ══════════ IMAGEN / VIDEO 66% ══════════ */}
       <View style={styles.imageSection}>
-        <Image
-          source={{ uri: images[imgIdx] }}
-          style={StyleSheet.absoluteFill}
-          contentFit="cover"
-          transition={250}
-        />
+        {(() => {
+          const current = media[imgIdx];
+          if (current?.type === 'video') {
+            return <VideoView player={videoPlayer} style={StyleSheet.absoluteFill} contentFit="cover" nativeControls={false} />;
+          }
+          const uri = current?.uri ?? images[imgIdx];
+          return uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={250} /> : null;
+        })()}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.20)']}
           style={styles.imageGradient}
@@ -126,14 +153,16 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
         )}
 
         {/* Dots centro abajo */}
-        {images.length > 1 && (
+        {media.length > 1 && (
           <View style={styles.dotsRow}>
-            {images.map((_, i) => (
-              <Pressable
-                key={i}
-                onPress={() => setImgIdx(i)}
-                style={[styles.dot, i === imgIdx && styles.dotActive]}
-              />
+            {media.map((med, i) => (
+              <Pressable key={i} onPress={() => setImgIdx(i)} style={[styles.dot, i === imgIdx && styles.dotActive]}>
+                {med.type === 'video' && (
+                  <View style={{ alignSelf: 'center', marginTop: 1 }}>
+                    <Ionicons name="videocam" size={5} color="#fff" />
+                  </View>
+                )}
+              </Pressable>
             ))}
           </View>
         )}
@@ -141,16 +170,8 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
         {/* Acciones verticales derecha */}
         <View style={styles.sideActions}>
           <Pressable onPress={handleLike}>
-            <Animated.View style={[
-              styles.sideBtn,
-              liked && styles.sideBtnLiked,
-              { transform: [{ scale: heartScale }] },
-            ]}>
-              <Ionicons
-                name={liked ? 'heart' : 'heart-outline'}
-                size={20}
-                color='#fff'
-              />
+            <Animated.View style={[styles.sideBtn, liked && styles.sideBtnLiked, { transform: [{ scale: heartScale }] }]}>
+              <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color='#fff' />
             </Animated.View>
           </Pressable>
           <Pressable
@@ -160,17 +181,23 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
               isSaved ? removeFavorite(item.id) : addFavorite(item);
             }}
           >
-            <Ionicons
-              name={isSaved ? 'bookmark' : 'bookmark-outline'}
-              size={20}
-              color='#fff'
-            />
+            <Ionicons name={isSaved ? 'bookmark' : 'bookmark-outline'} size={20} color='#fff' />
           </Pressable>
           <Pressable
             style={({ pressed }) => [styles.sideBtn, pressed && { opacity: 0.7 }]}
             onPress={() => Share.share({ title: item.name, message: `${item.name} — ${item.location ?? ''}\n${item.bio ?? ''}` })}
           >
             <Ionicons name="share-social-outline" size={19} color="#fff" />
+          </Pressable>
+          {/* Subir video */}
+          <Pressable
+            style={[styles.sideBtn, cardVideo ? styles.sideBtnVideo : undefined]}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowVideoModal(true);
+            }}
+          >
+            <Ionicons name={cardVideo ? 'videocam' : 'videocam-outline'} size={20} color="#fff" />
           </Pressable>
         </View>
       </View>
@@ -261,6 +288,16 @@ export default function GalleryCardContent({ item, distanceKm }: GalleryCardCont
 
       </View>
     </View>
+
+    <VideoUploadModal
+      visible={showVideoModal}
+      onClose={() => setShowVideoModal(false)}
+      onUploaded={(result: VideoUploadResult) => {
+        setCardVideo(result);
+        setImgIdx(0);
+      }}
+    />
+    </>
   );
 }
         // ── Styles ────────────────────────────────────────────────────────────────────
@@ -364,6 +401,10 @@ const styles = StyleSheet.create({
   sideBtnSaved: {
     backgroundColor: 'rgba(167,139,250,0.22)',
     borderColor: 'rgba(167,139,250,0.45)',
+  },
+  sideBtnVideo: {
+    backgroundColor: 'rgba(124,58,237,0.45)',
+    borderColor: 'rgba(124,58,237,0.7)',
   },
 
   // ── panel blanco ──────────────────────────────────────────────────────────────────
