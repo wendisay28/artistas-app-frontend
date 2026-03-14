@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ArtistCardContent.tsx — Versión adaptada de EventCardContent
+// ArtistCardContent.tsx — Versión adaptada con BlurView (Glassmorphism real)
 // - Imagen 60% + Panel 40% con misma estructura
 // - Título, meta, descripción, tags, anuncio, CTA
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,6 +20,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { BlurView } from 'expo-blur'; // ← Importación añadida
 import { colors } from '../../../constants/colors';
 import type { Artist, ArtistCategorySelection } from '../../../types/explore';
 import { portfolioService } from '../../../services/api/portfolio';
@@ -28,9 +29,9 @@ import { servicesService, type Service } from '../../../services/api/services';
 import { useProfileStore } from '../../../store/profileStore';
 import { useFavoritesStore } from '../../../store/favoritesStore';
 import VideoUploadModal, { type VideoUploadResult } from '../shared/VideoUploadModal';
+import { useThemeStore } from '../../../store/themeStore';
 
 type MediaItem = { type: 'image'; uri: string } | { type: 'video'; uri: string; startTime: number };
-
 
 interface ArtistCardContentProps {
   artist: Artist;
@@ -39,7 +40,7 @@ interface ArtistCardContentProps {
   onFollow?: () => void;
 }
 
-// ── Disponibilidad (misma lógica que ProfileIdentity) ──────────────────────
+// ── Disponibilidad ───────────────────────────────────────────────────────────
 
 const AVAILABILITY_OPTS = [
   { label: 'Disponible',    color: '#16a34a', bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.22)',   dot: '#16a34a', pulse: true  },
@@ -50,47 +51,6 @@ const AVAILABILITY_OPTS = [
 function getAvailOpt(label?: string) {
   return AVAILABILITY_OPTS.find(o => o.label === label) ?? AVAILABILITY_OPTS[0];
 }
-
-const getArtistSpecialty = (artist: Artist): string => {
-  // Prioridad 1: Usar specialty si está definido (viene del onboarding/perfil)
-  if (artist.specialty && artist.specialty.trim() !== '') {
-    return artist.specialty;
-  }
-  
-  // Prioridad 2: Usar la categoría y estilo del artista
-  if (artist.category && artist.style) {
-    const categoryStr = typeof artist.category === 'object' ? artist.category.categoryId : artist.category;
-    return `${categoryStr} - ${artist.style}`;
-  }
-  
-  // Prioridad 3: Usar solo la categoría
-  if (artist.category) {
-    return typeof artist.category === 'object' ? artist.category.categoryId : artist.category;
-  }
-  
-  // Prioridad 4: Usar solo el estilo
-  if (artist.style) {
-    return artist.style;
-  }
-  
-  // Valor por defecto
-  return 'Artista Visual';
-};
-
-const getCategoryMeta = (category?: string | ArtistCategorySelection): { icon: any; label: string } => {
-  if (!category) return { icon: 'person-outline', label: 'Artista' };
-  
-  // Extraer el string de categoría si es un objeto
-  const categoryStr = typeof category === 'object' ? category.categoryId : category;
-  const cat = categoryStr.toLowerCase();
-  
-  if (cat.includes('fotógrafo') || cat.includes('fotografía')) return { icon: 'camera-outline', label: 'Fotografía' };
-  if (cat.includes('músico') || cat.includes('música')) return { icon: 'musical-notes-outline', label: 'Música' };
-  if (cat.includes('artista') || cat.includes('arte')) return { icon: 'color-palette-outline', label: 'Arte' };
-  if (cat.includes('diseñador')) return { icon: 'brush-outline', label: 'Diseño' };
-  if (cat.includes('video') || cat.includes('audiovisual')) return { icon: 'videocam-outline', label: 'Video' };
-  return { icon: 'person-outline', label: categoryStr };
-};
 
 const getTagIcon = (tag: string): string => {
   const t = tag.toLowerCase();
@@ -115,7 +75,6 @@ const getLowestPrice = (services: Service[]): number | null => {
     .map((s: any) => {
       const raw = s.price ?? s.pricePerHour ?? s.price_per_hour ??
         s.pricePerSession ?? s.price_per_session ?? s.basePrice ?? s.base_price;
-      // Postgres numeric llega como string — convertir
       const n = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
       return isNaN(n) || n <= 0 ? null : n;
     })
@@ -126,30 +85,10 @@ const getLowestPrice = (services: Service[]): number | null => {
 const formatCOP = (price: number) =>
   `$${price.toLocaleString('es-CO', { maximumFractionDigits: 0 })}`;
 
-// Extrae del schedule completo solo el horario del día de hoy
-// Formato esperado: "Lun 9:00am-6:00pm, Sáb 10:00am-5:00pm, ..."
-const getTodaySchedule = (scheduleStr: string): string => {
-  if (!scheduleStr) return '';
-  const DAY_ABBREVS: Record<number, string[]> = {
-    0: ['Dom'],
-    1: ['Lun'],
-    2: ['Mar'],
-    3: ['Mié', 'Mie'],
-    4: ['Jue'],
-    5: ['Vie'],
-    6: ['Sáb', 'Sab'],
-  };
-  const todayAbbrevs = DAY_ABBREVS[new Date().getDay()] || [];
-  for (const part of scheduleStr.split(',')) {
-    const trimmed = part.trim();
-    if (todayAbbrevs.some(a => trimmed.startsWith(a))) return trimmed;
-  }
-  return '';
-};
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ArtistCardContent({ artist, distanceKm, isFollowing = false, onFollow }: ArtistCardContentProps) {
+  const { isDark } = useThemeStore();
   const [liked, setLiked] = useState(false);
   const [imgIdx, setImgIdx] = useState(0);
   const [services, setServices] = useState<Service[]>([]);
@@ -164,36 +103,24 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
   const { addFavorite, removeFavorite, isFavorited } = useFavoritesStore();
   const isSaved = isFavorited(artist.id);
 
-  // Player de video — activo solo cuando hay video; '' no carga nada
   const videoPlayer = useVideoPlayer(cardVideo?.uri ?? '', (p) => {
     p.loop = true;
   });
 
-  // Lógica de disponibilidad compatible con ambos flujos (perfil y exploración)
   const availLabel = artist.info?.find(i => i.label === 'Disponibilidad')?.value || 
                      artist.availability || 
                      'Disponible';
   const avail = getAvailOpt(availLabel);
 
-  // Debug: mostrar qué disponibilidad está llegando
-  console.log('[ArtistCardContent] Disponibilidad:', {
-    info: artist.info?.find(i => i.label === 'Disponibilidad')?.value,
-    availability: artist.availability,
-    finalLabel: availLabel,
-    artistName: artist.name
-  });
-
   useEffect(() => {
     const userId = artist.userId || artist.id;
     if (!userId) return;
 
-    // Fotos de portafolio — usar destacadas primero, si no hay todas las del portafolio
     if (!artist.gallery || artist.gallery.length === 0) {
       portfolioService.getUserFeatured(String(userId))
         .then(featured => {
           const urls = (featured ?? []).map((p) => p.imageUrl).filter(Boolean) as string[];
           if (urls.length > 0) { setPortfolioImages(urls); return; }
-          // Fallback: todas las fotos del portafolio
           return portfolioService.getUserPortfolio(String(userId)).then(res => {
             const all = (res?.photos ?? []).map((p) => p.imageUrl).filter(Boolean) as string[];
             if (all.length > 0) setPortfolioImages(all);
@@ -202,16 +129,11 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
         .catch(() => {});
     }
 
-    // Horario — cargar siempre si no hay schedule válido
     if (!artist.schedule || artist.schedule.trim() === '') {
-      
-      // Primero intentar usar datos locales del profileStore
       if (artistData?.schedule && artistData.schedule.trim() !== '') {
         setSchedule(artistData.schedule);
         return;
       }
-      
-      // Si no hay datos locales, intentar API
       artistsService.getArtistById(String(userId))
         .then((data: any) => {
           const s = data?.schedule || data?.user?.schedule || data?.artist?.schedule || '';
@@ -225,7 +147,6 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
     }
   }, [artist.id, artist.userId, artist.schedule, artistData]);
 
-  // Cargar servicios del artista para mostrar precio más bajo
   useEffect(() => {
     const userId = artist.userId || artist.id;
     if (!userId) return;
@@ -240,15 +161,13 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
     ? artist.gallery
     : portfolioImages;
 
-  // Carrusel de medios: video (si existe) al frente, luego fotos
   const baseImages = galleryUrls.filter(Boolean).slice(0, 5);
   const media: MediaItem[] = [
     ...(cardVideo ? [{ type: 'video' as const, uri: cardVideo.uri, startTime: cardVideo.startTime }] : []),
     ...baseImages.map(uri => ({ type: 'image' as const, uri })),
   ];
-  const images = baseImages; // mantener alias para compatibilidad con lógica antigua
+  const images = baseImages;
 
-  // Reproducir/pausar video según el slide activo
   useEffect(() => {
     if (!cardVideo) return;
     const current = media[imgIdx];
@@ -260,13 +179,11 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
         videoPlayer.pause();
       }
     } catch {}
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [imgIdx, cardVideo]);
 
   const distLabel = distanceKm !== undefined
     ? (distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`)
-    : '3 km'; // Valor temporal para prueba
-
+    : '3 km';
 
   const handleContact = () => {
     if (Platform.OS !== 'web')
@@ -278,8 +195,14 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
 
   return (
     <>
-    <View style={styles.outerWrapper}>
-      <View style={styles.container}>
+    <View style={[styles.outerWrapper, isDark && styles.outerWrapperDark]}>
+      {/* ══════════ CONTENEDOR BLUR (GLASSMORPHISM) ══════════ */}
+      <BlurView 
+        intensity={isDark ? 55 : 60} 
+        tint={isDark ? 'systemChromeMaterialDark' : 'light'}
+        renderToHardwareTextureAndroid={true} // Optimización clave para Android
+        style={[styles.container, isDark && styles.containerDark]}
+      >
 
         {/* ══════════ IMAGEN / VIDEO 70% ══════════ */}
         <View style={styles.imageSection}>
@@ -318,7 +241,11 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
           );
         })()}
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.20)']}
+          colors={isDark
+            ? ['transparent', 'rgba(10,6,24,0.4)', 'rgba(10,6,24,0.85)', '#0a0618']
+            : ['transparent', 'transparent']
+          }
+          locations={isDark ? [0, 0.4, 0.7, 1] : [0, 1]}
           style={styles.imageGradient}
         />
 
@@ -335,7 +262,6 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
             />
           </>
         )}
-
 
         {/* Precio top-right */}
         {(servicesLoaded && lowestPrice) ? (
@@ -355,14 +281,14 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
           if (!roleId) return null;
           const label = roleId.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
           return (
-            <View style={styles.categoryChip}>
-              <Ionicons name="ribbon-outline" size={9} color="#1f2937" />
-              <Text style={styles.categoryText}>{label}</Text>
+            <View style={[styles.categoryChip, isDark && styles.categoryChipDark]}>
+              <Ionicons name="ribbon-outline" size={9} color={isDark ? '#fff' : '#1f2937'} />
+              <Text style={[styles.categoryText, isDark && styles.categoryTextDark]}>{label}</Text>
             </View>
           );
         })()}
 
-        {/* Dots de navegación — solo si hay más de 1 ítem */}
+        {/* Dots de navegación */}
         {media.length > 1 && (
           <View style={styles.thumbsRow}>
             {media.map((item, i) => (
@@ -383,7 +309,6 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
 
         {/* ── Acciones verticales derecha ── */}
         <View style={styles.sideActions}>
-          {/* Me gusta */}
           <Pressable
             style={[styles.sideBtn, liked && styles.sideBtnLiked]}
             onPress={() => {
@@ -404,7 +329,6 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
             </Animated.View>
           </Pressable>
 
-          {/* Guardar en favoritos */}
           <Pressable
             style={[styles.sideBtn, isSaved && styles.sideBtnSaved]}
             onPress={() => {
@@ -419,7 +343,6 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
             />
           </Pressable>
 
-          {/* Compartir */}
           <Pressable
             style={styles.sideBtn}
             onPress={() => {
@@ -432,7 +355,6 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
             <Ionicons name="share-social-outline" size={20} color="#fff" />
           </Pressable>
 
-          {/* Subir video */}
           <Pressable
             style={[styles.sideBtn, cardVideo ? styles.sideBtnVideo : undefined]}
             onPress={() => {
@@ -447,99 +369,119 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
             />
           </Pressable>
         </View>
-
-      </View>
-
-      {/* ══════════ PANEL BLANCO 40% ══════════ */}
-      <View style={styles.panel}>
-
-        {/* Bloque de texto — sin flex:1, ocupa solo su contenido */}
-        <View style={styles.topBlock}>
-
-          {/* Nombre + verificado + seguir */}
-          <View style={styles.titleRow}>
-            <Text style={styles.name} numberOfLines={1}>{artist.name}</Text>
-            {artist.verified === true && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark" size={9} color="#fff" />
-              </View>
-            )}
-            <Pressable
-              onPress={onFollow}
-              style={[styles.followBtn, isFollowing && styles.followBtnActive]}
-            >
-              <Ionicons
-                name={isFollowing ? 'checkmark' : 'person-add-outline'}
-                size={11}
-                color={isFollowing ? '#fff' : '#7c3aed'}
-              />
-              <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
-                {isFollowing ? 'Siguiendo' : 'Seguir'}
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* Meta — rating | disponibilidad | ciudad */}
-          <View style={styles.metaRow}>
-            <Ionicons name="star" size={11} color="#fbbf24" />
-            <Text style={styles.metaRating}>{artist.rating ?? '5.0'}</Text>
-
-            <Text style={styles.metaSep}>·</Text>
-
-            <Text style={[styles.metaAvail, { color: avail.color }]}>{avail.label}</Text>
-
-            <Text style={styles.metaSep}>·</Text>
-
-            <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
-            <Text style={styles.metaCity} numberOfLines={1}>
-              {artist.location || 'Colombia'}{distLabel ? `, ${distLabel}` : ''}
-            </Text>
-          </View>
-
-          {/* Bio del header — mejor espaciado y presentación */}
-          {artist.bio && (
-            <Text style={styles.description} numberOfLines={3}>
-              {artist.bio}
-            </Text>
-          )}
-
-          {/* Tags — mejor diseño y espaciado */}
-          {artist.tags && artist.tags.length > 0 && (
-            <View style={styles.tagsRow}>
-              {artist.tags.slice(0, 3).map((tag, i) => (
-                <View key={i} style={styles.tag}>
-                  <Ionicons name={getTagIcon(tag) as any} size={10} color="#7c3aed" />
-                  <Text style={styles.tagText}>{tag}</Text>
-                </View>
-              ))}
-            </View>
-          )}
         </View>
 
-        {/* Línea divisoria */}
-        <View style={styles.divider} />
+        {/* ══════════ PANEL BLANCO 40% ══════════ */}
+        <View style={[styles.panel, isDark && styles.panelDark]}>
 
-        {/* CTA */}
-        <Pressable
-          onPress={handleContact}
-          style={({ pressed }) => [
-            styles.cta,
-            styles.ctaActive,
-            pressed && { opacity: 0.88, transform: [{ scale: 0.985 }] },
-          ]}
-        >
-          <View style={styles.ctaRight}>
-            <Ionicons name="briefcase-outline" size={14} color="#fff" />
-            <Text style={styles.ctaLabel}>Contratar ahora</Text>
-            <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
+          <View style={styles.topBlock}>
+            {/* Nombre + verificado + seguir */}
+            <View style={styles.titleRow}>
+              <Text style={[styles.name, isDark && styles.nameDark]} numberOfLines={1}>{artist.name}</Text>
+              {artist.verified === true && (
+                <View style={styles.verifiedBadge}>
+                  <Ionicons name="checkmark" size={9} color="#fff" />
+                </View>
+              )}
+              <Pressable
+                onPress={onFollow}
+                style={[styles.followBtn, isFollowing && styles.followBtnActive]}
+              >
+                <Ionicons
+                  name={isFollowing ? 'checkmark' : 'person-add-outline'}
+                  size={11}
+                  color={isFollowing ? '#fff' : '#7c3aed'}
+                />
+                <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
+                  {isFollowing ? 'Siguiendo' : 'Seguir'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {/* Meta — rating | disponibilidad | ciudad */}
+            <View style={styles.metaRow}>
+              <Ionicons name="star" size={11} color="#fbbf24" />
+              <Text style={[styles.metaRating, isDark && styles.textDark]}>{artist.rating ?? '5.0'}</Text>
+
+              <Text style={styles.metaSep}>·</Text>
+
+              <Text style={[styles.metaAvail, { color: avail.color }]}>{avail.label}</Text>
+
+              <Text style={styles.metaSep}>·</Text>
+
+              <Ionicons name="location-outline" size={11} color={isDark ? '#9ca3af' : colors.textSecondary} />
+              <Text style={[styles.metaCity, isDark && styles.textSubDark]} numberOfLines={1}>
+                {artist.location || 'Colombia'}{distLabel ? `, ${distLabel}` : ''}
+              </Text>
+            </View>
+
+            {/* Bio del header */}
+            {artist.bio && (
+              <Text style={[styles.description, isDark && styles.textSubDark]} numberOfLines={3}>
+                {artist.bio}
+              </Text>
+            )}
+
+            {/* Tags */}
+            {artist.tags && artist.tags.length > 0 && (
+              <View style={styles.tagsRow}>
+                {artist.tags.slice(0, 3).map((tag, i) => (
+                  <View key={i} style={[styles.tag, isDark && styles.tagDark]}>
+                    <Ionicons name={getTagIcon(tag) as any} size={10} color={isDark ? '#a78bfa' : '#7c3aed'} />
+                    <Text style={[styles.tagText, isDark && styles.tagTextDark]}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
-        </Pressable>
 
-      </View>
-    </View>
+          {/* Línea divisoria */}
+          {isDark ? (
+            <LinearGradient
+              colors={['transparent', 'rgba(139,92,246,0.25)', 'transparent']}
+              locations={[0, 0.5, 1]}
+              style={[styles.divider, styles.dividerDark]}
+            />
+          ) : (
+            <View style={[styles.divider, isDark && styles.dividerDark]} />
+          )}
+
+          {/* CTA */}
+          <Pressable
+            onPress={handleContact}
+            style={({ pressed }) => [{ opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}
+          >
+            {/* ⚠️ NO cambiar a morado — diseño intencional:
+                · Oscuro → glassmorphism transparente (ctaDark)
+                · Claro  → gradiente primario (ctaActive) */}
+            {isDark ? (
+              <View style={[styles.cta, styles.ctaDark]}>
+                <View style={styles.ctaRight}>
+                  <Ionicons name="briefcase-outline" size={14} color="#fff" />
+                  <Text style={styles.ctaLabel}>Contratar ahora</Text>
+                  <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
+                </View>
+              </View>
+            ) : (
+              <LinearGradient
+                colors={['#7c3aed', '#6d28d9']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={[styles.cta, styles.ctaActive]}
+              >
+                <View style={styles.ctaRight}>
+                  <Ionicons name="briefcase-outline" size={14} color="#fff" />
+                  <Text style={styles.ctaLabel}>Contratar ahora</Text>
+                  <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
+                </View>
+              </LinearGradient>
+            )}
+          </Pressable>
+
+        </View>
+      </BlurView>
     </View>
 
-    {/* Hire Modal — fuera del card para no quedar clippeado */}
+    {/* Hire Modal */}
     <HireModal
       visible={showHireModal}
       artist={artist}
@@ -552,7 +494,7 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
       onClose={() => setShowVideoModal(false)}
       onUploaded={(result: VideoUploadResult) => {
         setCardVideo(result);
-        setImgIdx(0); // ir al primer slide (el video)
+        setImgIdx(0);
       }}
     />
     </>
@@ -562,32 +504,38 @@ export default function ArtistCardContent({ artist, distanceKm, isFollowing = fa
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Contenedor externo con fondo para forzar visibilidad de sombra
   outerWrapper: {
     borderRadius: 24,
-    padding: 4, // Espacio para mostrar la sombra
-    backgroundColor: 'rgba(139, 92, 246, 0.05)', // Fondo morado muy suave
-    // Mantener el tamaño original
-    flex: 1, // Ocupar todo el espacio disponible
-    minHeight: 280, // Altura mínima para mantener tamaño original
+    padding: 2,
+    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+    flex: 1,
+    minHeight: 280,
+  },
+  outerWrapperDark: {
+    backgroundColor: 'rgba(124, 58, 237, 0.06)',
   },
 
   container: {
     flex: 1,
-    borderRadius: 32, // ← EXACTAMENTE igual que el modal
+    borderRadius: 32,
     overflow: 'hidden',
-    // EXACTAMENTE igual que glassCard del modal
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.95)',
-    shadowColor: '#a78bfa',
-    shadowOffset: { width: 0, height: 12 },  // ← EXACTAMENTE igual que el modal
-    shadowOpacity: 0.3,                      // ← EXACTAMENTE igual que el modal
-    shadowRadius: 20,                        // ← EXACTAMENTE igual que el modal
-    elevation: 10,                           // ← EXACTAMENTE igual que el modal
+    // Reducimos la opacidad para que el BlurView haga el trabajo
+    backgroundColor: 'rgba(255,255,255,0.4)', 
+    shadowColor: '#7c3aed',
+    shadowOpacity: 0.14,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  containerDark: {
+    backgroundColor: '#0a0618',
+    borderColor: 'rgba(139, 92, 246, 0.45)',
+    shadowColor: '#6d28d9',
+    shadowOpacity: 0.35,
+    shadowRadius: 28,
+    elevation: 14,
   },
 
-  // zonas de navegación izq/der
   navZoneLeft: {
     position: 'absolute',
     top: 0, bottom: 0, left: 0,
@@ -601,23 +549,21 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
 
-  // imagen
   imageSection: {
     height: '66%',
-    backgroundColor: '#e5e7eb',
+    backgroundColor: 'transparent',
   },
   noImagePlaceholder: {
-    backgroundColor: '#f3f0ff',
+    backgroundColor: 'rgba(243, 240, 255, 0.5)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   imageGradient: {
     position: 'absolute',
     bottom: 0, left: 0, right: 0,
-    height: '45%',
+    height: '30%',
   },
 
-  // rating
   ratingPill: {
     position: 'absolute',
     top: 12, left: 12,
@@ -634,7 +580,6 @@ const styles = StyleSheet.create({
   ratingText:  { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fbbf24' },
   reviewsText: { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.55)' },
 
-  // categoría top-left
   categoryChip: {
     position: 'absolute',
     top: 10, left: 10,
@@ -646,13 +591,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
+  categoryChipDark: {
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
   categoryText: {
     fontSize: 9,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#1f2937',
   },
+  categoryTextDark: {
+    color: 'rgba(255,255,255,0.95)',
+  },
 
-  // dots de navegación
   thumbsRow: {
     position: 'absolute',
     bottom: 14,
@@ -673,7 +625,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
 
-  // acciones verticales derecha
   sideActions: {
     position: 'absolute',
     right: 12,
@@ -702,43 +653,24 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(124,58,237,0.7)',
   },
 
-  // especialidad con botón cápsula en parte inferior izquierda
-  specialtyContainer: {
-    position: 'absolute',
-    bottom: 36, left: 12,
-    alignItems: 'flex-start',
-  },
-  specialtyButton: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  specialtyButtonText: {
-    fontSize: 11,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#1f2937',
-  },
-
-  // ── panel blanco ──────────────────────────────────────────────────────────
   panel: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 8,
     flexDirection: 'column',
     justifyContent: 'flex-start',
   },
+  panelDark: {
+    backgroundColor: '#0a0618',
+  },
 
   topBlock: {
     flex: 1,
-    gap: 6, // Reducido de 8 a 6 para compensar bio más larga
+    gap: 6,
   },
 
-  // título — grande y visible
   name: {
     fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
@@ -747,8 +679,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
     flexShrink: 1,
   },
+  nameDark: {
+    color: '#ffffff',
+  },
 
-  // fila para título y verificación
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -756,7 +690,6 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
 
-  // badge verificado (círculo violeta con check)
   verifiedBadge: {
     width: 16, height: 16, borderRadius: 8,
     backgroundColor: '#7c3aed',
@@ -764,7 +697,6 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  // botón seguir inline
   followBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     borderWidth: 1, borderColor: '#7c3aed',
@@ -782,24 +714,6 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 
-  verificationText: {
-    fontSize: 9,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-  },
-  verifiedText: {
-    color: '#10b981',  // Verde brillante para contraste
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  unverifiedText: {
-    color: '#ef4444',  // Rojo brillante para contraste
-    textShadowColor: 'rgba(255, 255, 255, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-
-  // meta — elementos separados con mejor espaciado
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -827,51 +741,64 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     flexShrink: 1,
   },
+  
+  textDark: {
+    color: '#f3f4f6',
+  },
+  textSubDark: {
+    color: '#9ca3af',
+  },
 
-  // descripción — mejor espaciado y legibilidad
   description: {
     fontSize: 12,
     fontFamily: 'PlusJakartaSans_400Regular',
     color: '#6b7280',
     lineHeight: 15,
-    marginTop: 1, // Subido 2 pixels más (de 3 a 1)
-    marginBottom: 3, // Reducido de 4 a 3 para tags
+    marginTop: 1,
+    marginBottom: 3,
   },
 
-  // tags — mejor diseño y espaciado consistente
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6, // Aumentado para mejor separación
-    marginTop: 2, // Reducido de 4 a 2 para acercar más a la bio
+    gap: 6,
+    marginTop: 2,
   },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(124,58,237,0.08)', // Ligeramente más visible
+    backgroundColor: 'rgba(0,0,0,0.04)',
     borderWidth: 1,
-    borderColor: 'rgba(124,58,237,0.2)', // Más definido
-    borderRadius: 20, // Redondeado más elegante
+    borderColor: 'rgba(0,0,0,0.10)',
+    borderRadius: 20,
     paddingHorizontal: 10,
-    paddingVertical: 4, // Ligeramente más alto
+    paddingVertical: 4,
+  },
+  tagDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   tagText: {
     fontSize: 9,
     fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: '#7c3aed',
+    color: '#374151',
     letterSpacing: 0.2,
   },
+  tagTextDark: {
+    color: '#d1d5db',
+  },
 
-  // línea divisoria — separa contenido del CTA sin espacio muerto
   divider: {
     height: 1,
     backgroundColor: '#f0f0f0',
     marginTop: 8,
     marginBottom: 6,
   },
+  dividerDark: {
+    backgroundColor: 'transparent',
+  },
 
-  // CTA
   cta: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -879,9 +806,18 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
   },
-  ctaActive: { backgroundColor: colors.primary, borderColor: colors.primary + '55' },
+  ctaActive: { 
+    shadowColor: '#7c3aed',
+    shadowOpacity: 0.35,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  ctaDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
 
-  // precio en imagen top-right
   pricePill: {
     position: 'absolute',
     top: 10, right: 10,
@@ -911,4 +847,4 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   ctaLabel: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
-});;
+});

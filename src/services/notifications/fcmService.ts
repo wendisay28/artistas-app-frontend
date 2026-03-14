@@ -1,25 +1,31 @@
 // src/services/notifications/fcmService.ts
 // Registro de token FCM y manejo de notificaciones push.
-// Requiere configurar google-services.json (Android) y APNs (iOS) en producción.
+// Las notificaciones remotas requieren un development build (no funcionan en Expo Go desde SDK 53).
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { saveFcmToken } from '../supabase/chat';
 
-// Configuración de cómo se muestran las notificaciones cuando la app está en primer plano
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Expo Go no soporta push notifications remotas desde SDK 53
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Solo configurar el handler si NO estamos en Expo Go
+if (!isExpoGo) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }),
+  });
+}
 
 /** Solicita permisos y registra el token FCM del usuario */
 export async function registerForPushNotifications(userId: string): Promise<string | null> {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web' || isExpoGo) return null;
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
@@ -34,7 +40,6 @@ export async function registerForPushNotifications(userId: string): Promise<stri
     return null;
   }
 
-  // Canal de Android
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('chat', {
       name: 'Chat',
@@ -45,11 +50,8 @@ export async function registerForPushNotifications(userId: string): Promise<stri
   }
 
   try {
-    // Obtener token nativo del dispositivo (FCM en Android, APNs en iOS)
     const token = await Notifications.getDevicePushTokenAsync();
     const fcmToken = token.data as string;
-
-    // Guardar en Supabase para que el backend pueda notificar a este usuario
     await saveFcmToken(userId, fcmToken);
     return fcmToken;
   } catch (error) {
@@ -63,11 +65,12 @@ export function setupNotificationListeners(
   onNotification?: (notification: Notifications.Notification) => void,
   onResponse?: (response: Notifications.NotificationResponse) => void
 ) {
+  if (isExpoGo) return () => {};
+
   const notifSub = Notifications.addNotificationReceivedListener((notification) => {
     onNotification?.(notification);
   });
 
-  // Cuando el usuario toca la notificación
   const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
     onResponse?.(response);
   });

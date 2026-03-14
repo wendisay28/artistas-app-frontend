@@ -63,4 +63,17 @@ export const API_ENDPOINTS = {
     LIST: '/events',
     DETAIL: (id: string) => `/events/${id}`,
   },
+  POSTS: {
+    LIST:   '/posts',
+    DETAIL: (id: string) => `/posts/${id}`,
+    CREATE: '/posts',
+    LIKE:   (id: string) => `/posts/${id}/like`,
+    DELETE: (id: string) => `/posts/${id}`,
+  },
+  COMMENTS: {
+    LIST:   (postId: string) => `/posts/${postId}/comments`,
+    CREATE: (postId: string) => `/posts/${postId}/comments`,
+    LIKE:   (id: string) => `/comments/${id}/like`,
+    DELETE: (id: string) => `/comments/${id}`,
+  },
 };

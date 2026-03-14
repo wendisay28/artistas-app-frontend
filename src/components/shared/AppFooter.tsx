@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, Pressable, Animated, Easing } from 'react-nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useThemeStore } from '../../store/themeStore';
 
 // ── Dot decorativo animado ─────────────────────────────────────────────────────
 
@@ -45,19 +46,20 @@ const PulseDot: React.FC<{ delay?: number }> = ({ delay = 0 }) => {
 
 export const AppFooter: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeStore();
   return (
   <View style={s.container}>
     {/* Separador superior con gradiente */}
     <LinearGradient
-      colors={['transparent', 'rgba(167,139,250,0.18)', 'transparent']}
+      colors={['transparent', isDark ? 'rgba(139,92,246,0.25)' : 'rgba(167,139,250,0.18)', 'transparent']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={s.divider}
     />
 
-    {/* Fondo suave tipo onboarding */}
+    {/* Fondo */}
     <LinearGradient
-      colors={['#f8f6ff', '#f0edff', '#eef2ff']}
+      colors={isDark ? ['#0a0618', '#080412', '#060310'] : ['#f8f6ff', '#f0edff', '#eef2ff']}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[s.bg, { paddingBottom: insets.bottom + 28 }]}
@@ -67,7 +69,7 @@ export const AppFooter: React.FC = () => {
 
       {/* Logo */}
       <View style={s.logoRow}>
-        <Text style={s.logoBusc}>Busc</Text>
+        <Text style={[s.logoBusc, isDark && s.logoBuscDark]}>Busc</Text>
         <LinearGradient
           colors={['#7c3aed', '#2563eb']}
           start={{ x: 0, y: 0 }}
@@ -79,38 +81,31 @@ export const AppFooter: React.FC = () => {
       </View>
 
       {/* Tagline */}
-      <Text style={s.tagline}>Conectando artistas con el mundo</Text>
+      <Text style={[s.tagline, isDark && s.taglineDark]}>Conectando artistas con el mundo</Text>
 
       {/* Estado — indicador de actividad */}
-      <View style={s.statusRow}>
+      <View style={[s.statusRow, isDark && s.statusRowDark]}>
         <PulseDot delay={0} />
-        <Text style={s.statusText}>Plataforma activa</Text>
-        <View style={s.statusDivider} />
-        <Ionicons name="shield-checkmark-outline" size={11} color="rgba(124,58,237,0.5)" />
-        <Text style={s.statusText}>Datos seguros</Text>
+        <Text style={[s.statusText, isDark && s.statusTextDark]}>Plataforma activa</Text>
+        <View style={[s.statusDivider, isDark && s.statusDividerDark]} />
+        <Ionicons name="shield-checkmark-outline" size={11} color={isDark ? 'rgba(167,139,250,0.6)' : 'rgba(124,58,237,0.5)'} />
+        <Text style={[s.statusText, isDark && s.statusTextDark]}>Datos seguros</Text>
       </View>
 
       {/* Links */}
       <View style={s.linksRow}>
-        <Pressable style={({ pressed }) => [s.linkBtn, pressed && s.linkBtnPressed]}>
-          <Text style={s.link}>Términos</Text>
-        </Pressable>
-        <View style={s.dot} />
-        <Pressable style={({ pressed }) => [s.linkBtn, pressed && s.linkBtnPressed]}>
-          <Text style={s.link}>Privacidad</Text>
-        </Pressable>
-        <View style={s.dot} />
-        <Pressable style={({ pressed }) => [s.linkBtn, pressed && s.linkBtnPressed]}>
-          <Text style={s.link}>Ayuda</Text>
-        </Pressable>
-        <View style={s.dot} />
-        <Pressable style={({ pressed }) => [s.linkBtn, pressed && s.linkBtnPressed]}>
-          <Text style={s.link}>Contacto</Text>
-        </Pressable>
+        {(['Términos', 'Privacidad', 'Ayuda', 'Contacto'] as const).map((label, i, arr) => (
+          <React.Fragment key={label}>
+            <Pressable style={({ pressed }) => [s.linkBtn, pressed && s.linkBtnPressed]}>
+              <Text style={[s.link, isDark && s.linkDark]}>{label}</Text>
+            </Pressable>
+            {i < arr.length - 1 && <View style={[s.dot, isDark && s.dotDark]} />}
+          </React.Fragment>
+        ))}
       </View>
 
       {/* Copyright */}
-      <Text style={s.copyright}>© 2026 BuscArt · Todos los derechos reservados</Text>
+      <Text style={[s.copyright, isDark && s.copyrightDark]}>© 2026 BuscArt · Todos los derechos reservados</Text>
     </LinearGradient>
   </View>
   );
@@ -156,6 +151,9 @@ const s = StyleSheet.create({
     color: '#1e1b4b',
     letterSpacing: -0.5,
   },
+  logoBuscDark: {
+    color: '#ffffff',
+  },
   logoArtBg: {
     borderRadius: 7,
     paddingHorizontal: 5,
@@ -177,6 +175,9 @@ const s = StyleSheet.create({
     marginBottom: 14,
     letterSpacing: 0.1,
   },
+  taglineDark: {
+    color: 'rgba(167,139,250,0.55)',
+  },
 
   // Estado
   statusRow: {
@@ -191,6 +192,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 5,
   },
+  statusRowDark: {
+    backgroundColor: 'rgba(139,92,246,0.1)',
+    borderColor: 'rgba(139,92,246,0.22)',
+  },
   pulseDot: {
     width: 5,
     height: 5,
@@ -204,11 +209,17 @@ const s = StyleSheet.create({
     color: 'rgba(109,40,217,0.55)',
     letterSpacing: 0.2,
   },
+  statusTextDark: {
+    color: 'rgba(167,139,250,0.7)',
+  },
   statusDivider: {
     width: 1,
     height: 10,
     backgroundColor: 'rgba(124,58,237,0.18)',
     marginHorizontal: 2,
+  },
+  statusDividerDark: {
+    backgroundColor: 'rgba(139,92,246,0.3)',
   },
 
   // Links
@@ -226,6 +237,9 @@ const s = StyleSheet.create({
     borderRadius: 1.5,
     backgroundColor: 'rgba(124,58,237,0.25)',
   },
+  dotDark: {
+    backgroundColor: 'rgba(167,139,250,0.35)',
+  },
   linkBtn: {
     paddingVertical: 2,
     paddingHorizontal: 1,
@@ -239,6 +253,9 @@ const s = StyleSheet.create({
     color: '#7c3aed',
     letterSpacing: 0.1,
   },
+  linkDark: {
+    color: '#a78bfa',
+  },
 
   // Copyright
   copyright: {
@@ -247,5 +264,8 @@ const s = StyleSheet.create({
     color: 'rgba(109,40,217,0.32)',
     textAlign: 'center',
     letterSpacing: 0.1,
+  },
+  copyrightDark: {
+    color: 'rgba(167,139,250,0.3)',
   },
 });

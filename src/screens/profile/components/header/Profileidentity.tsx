@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Spacing } from '../../../../theme/spacing';
 import { Artist } from '../types';
+import { useThemeStore } from '../../../../store/themeStore';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -50,55 +51,6 @@ const getTagIcon = (tag: string): string => {
 };
 
 
-// ── Disponibilidad ────────────────────────────────────────────────────────────
-
-const AVAILABILITY_OPTS = [
-  { label: 'Disponible',    color: '#16a34a', bg: 'rgba(22,163,74,0.08)',   border: 'rgba(22,163,74,0.22)',   dot: '#16a34a', pulse: true  },
-  { label: 'Ocupado',       color: '#d97706', bg: 'rgba(217,119,6,0.08)',   border: 'rgba(217,119,6,0.22)',   dot: '#d97706', pulse: false },
-  { label: 'Bajo pedido',   color: '#7c3aed', bg: 'rgba(124,58,237,0.08)', border: 'rgba(124,58,237,0.22)', dot: '#7c3aed', pulse: false },
-] as const;
-
-type AvailabilityLabel = typeof AVAILABILITY_OPTS[number]['label'];
-
-function getAvailOpt(label?: string) {
-  return AVAILABILITY_OPTS.find(o => o.label === label) ?? AVAILABILITY_OPTS[0];
-}
-
-export function cycleAvailability(current: string): AvailabilityLabel {
-  const idx = AVAILABILITY_OPTS.findIndex(o => o.label === current);
-  return AVAILABILITY_OPTS[(idx + 1) % AVAILABILITY_OPTS.length].label;
-}
-
-// ── Dot con pulso ─────────────────────────────────────────────────────────────
-
-const PulsingDot: React.FC<{ color: string; animate?: boolean }> = ({ color, animate = true }) => {
-  const pulse   = useRef(new Animated.Value(1)).current;
-  const opacity = useRef(new Animated.Value(0.55)).current;
-
-  useEffect(() => {
-    if (!animate) return;
-    Animated.loop(
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(pulse,   { toValue: 2.2, duration: 950, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulse,   { toValue: 1,   duration: 950, easing: Easing.in(Easing.ease),  useNativeDriver: true }),
-        ]),
-        Animated.sequence([
-          Animated.timing(opacity, { toValue: 0,    duration: 950, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0.55, duration: 950, easing: Easing.in(Easing.ease),  useNativeDriver: true }),
-        ]),
-      ])
-    ).start();
-  }, [animate]);
-
-  return (
-    <View style={{ width: 6, height: 6, alignItems: 'center', justifyContent: 'center' }}>
-      {animate && <Animated.View style={{ position: 'absolute', width: 6, height: 6, borderRadius: 3, backgroundColor: color, transform: [{ scale: pulse }], opacity }} />}
-      <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: color }} />
-    </View>
-  );
-};
-
 // ── Avatar Placeholder ────────────────────────────────────────────────────────
 
 const AvatarPlaceholder: React.FC<{ initials?: string }> = ({ initials }) => (
@@ -123,7 +75,6 @@ export type ProfileIdentityProps = {
   onMore?:               () => void;
   onEditAvatar?:         () => void;
   onEditProfile?:        () => void;
-  onToggleAvailability?: () => void;
   onShare?:              () => void;
   onViewAsClient?:       () => void;
 };
@@ -137,10 +88,10 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
   onMore,
   onEditAvatar,
   onEditProfile,
-  onToggleAvailability,
   onShare,
   onViewAsClient,
 }) => {
+  const { isDark } = useThemeStore();
   const [followed, setFollowed] = useState(false);
   const followScale = useRef(new Animated.Value(1)).current;
 
@@ -160,9 +111,6 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
   const isAvatarUrl = typeof artist.avatar === 'string'
     && (artist.avatar.startsWith('http') || artist.avatar.startsWith('file://'));
   const isOwner     = artist.isOwner ?? false;
-
-  const availLabel = artist.info?.find(i => i.label === 'Disponibilidad')?.value;
-  const avail      = getAvailOpt(availLabel);
 
   // Bio corta para el header (máx ~130 chars)
   const shortBio = artist.bio ? truncateBio(artist.bio.trim(), 130) : null;
@@ -190,7 +138,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
   const rating    = Array.isArray(artist.stats) && artist.stats[1] ? artist.stats[1].value ?? '5.0' : '5.0'; // Rating
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isDark && styles.rootDark]}>
 
       {/* ══ AVATAR + ACCIÓN ══════════════════════════════════════════════ */}
       <View style={styles.avatarZone}>
@@ -202,7 +150,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={styles.avatarRing}
           >
-            <View style={styles.avatarInner}>
+            <View style={[styles.avatarInner, isDark && styles.avatarInnerDark]}>
               {isAvatarUrl
                 ? <Image source={{ uri: artist.avatar as string }} style={styles.avatar} contentFit="cover" />
                 : <AvatarPlaceholder initials={initials} />
@@ -216,13 +164,6 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             </View>
           </LinearGradient>
 
-          {artist.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.verifiedGrad}>
-                <Ionicons name="checkmark" size={8} color="#fff" />
-              </LinearGradient>
-            </View>
-          )}
         </View>
 
         {/* Botones derecha */}
@@ -233,16 +174,22 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
 
           {isOwner ? (
             <TouchableOpacity style={styles.btnEdit} onPress={onEditProfile} activeOpacity={0.85}>
-              <Ionicons name="create-outline" size={14} color="#6d28d9" />
+              <Ionicons name="create-outline" size={14} color="#7c3aed" />
               <Text style={styles.btnEditText}>Editar</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => { Haptics.impactAsync(); onHire?.(); }} activeOpacity={0.85}>
-              <LinearGradient colors={['#7c3aed', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnHire}>
-                <Ionicons name="briefcase-outline" size={14} color="#fff" />
-                <Text style={styles.btnHireText}>Contratar</Text>
-              </LinearGradient>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: followScale }] }}>
+              <TouchableOpacity
+                style={followed ? styles.btnFollowSmallActive : styles.btnFollowSmall}
+                onPress={handleFollow}
+                activeOpacity={0.85}
+              >
+                <Ionicons name={followed ? 'checkmark-circle' : 'person-add-outline'} size={13} color="rgba(30,27,75,0.65)" />
+                <Text style={followed ? styles.btnFollowSmallTextActive : styles.btnFollowSmallText}>
+                  {followed ? 'Siguiendo' : 'Seguir'}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
           )}
         </View>
       </View>
@@ -252,7 +199,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
 
         {/* Nombre grande + badge verificado */}
         <View style={styles.nameRow}>
-          <Text style={styles.artistName} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
+          <Text style={[styles.artistName, isDark && styles.artistNameDark]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82}>
             {artist.name}
           </Text>
         </View>
@@ -267,7 +214,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
 
       </View>
 
-      {/* ══ META ROW: ubicación · disponibilidad ════════════════════════════ */}
+      {/* ══ META ROW: ubicación ═════════════════════════════════════════════════ */}
       <View style={styles.metaRow}>
 
         {/* Ubicación con barrio */}
@@ -277,17 +224,6 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             <Text style={styles.cityText}>{artist.location}</Text>
           </View>
         ) : null}
-
-        {/* Disponibilidad */}
-        <TouchableOpacity
-          style={[styles.availPill, { backgroundColor: avail.bg, borderColor: avail.border }]}
-          onPress={isOwner ? onToggleAvailability : undefined}
-          activeOpacity={isOwner ? 0.75 : 1}
-        >
-          <PulsingDot color={avail.dot} animate={avail.pulse} />
-          <Text style={[styles.availText, { color: avail.color }]}>{avail.label}</Text>
-          {isOwner && <View style={{ opacity: 0.6 }}><Ionicons name="chevron-forward" size={7} color={avail.color} /></View>}
-        </TouchableOpacity>
 
         {artist?.userType === 'company' && (
           <View style={styles.companyBadge}>
@@ -299,7 +235,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
 
       {/* ══ BIO CORTA ════════════════════════════════════════════════════ */}
       {shortBio ? (
-        <Text style={styles.bio}>{shortBio}</Text>
+        <Text style={[styles.bio, isDark && styles.bioDark]}>{shortBio}</Text>
       ) : isOwner ? (
         <TouchableOpacity onPress={onEditProfile} activeOpacity={0.7} style={styles.bioPlaceholder}>
           <Ionicons name="add-circle-outline" size={13} color="rgba(124,58,237,0.4)" />
@@ -311,9 +247,9 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
       {tags.length > 0 ? (
         <View style={styles.tagsRow}>
           {tags.map((tag: any, i: number) => (
-            <View key={i} style={styles.tag}>
-              <Ionicons name={getTagIcon(tag.label) as any} size={11} color="#7c3aed" />
-              <Text style={styles.tagText}>{tag.label}</Text>
+            <View key={i} style={[styles.tag, isDark && styles.tagDark]}>
+              <Ionicons name={getTagIcon(tag.label) as any} size={9} color={isDark ? '#a78bfa' : '#666'} />
+              <Text style={[styles.tagText, isDark && styles.tagTextDark]}>{tag.label}</Text>
             </View>
           ))}
         </View>
@@ -325,54 +261,68 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
         </View>
       ) : null}
 
-      {/* Botón Seguir — solo visitante */}
+      {/* Botón Contratar — solo visitante, full-width protagonista */}
+      {/* ⚠️ NO cambiar a morado — diseño intencional:
+          · Oscuro → glassmorphism transparente
+          · Claro  → gradiente primario */}
       {!isOwner && (
-        <Animated.View style={{ transform: [{ scale: followScale }], marginTop: 4 }}>
-          <TouchableOpacity
-            style={followed ? styles.btnFollowActive : styles.btnFollow}
-            onPress={handleFollow}
-            activeOpacity={0.85}
-          >
-            <Ionicons name={followed ? 'checkmark-circle' : 'person-add-outline'} size={14} color={followed ? '#7c3aed' : '#fff'} />
-            <Text style={followed ? styles.btnFollowTextActive : styles.btnFollowText}>
-              {followed ? 'Siguiendo' : 'Seguir'}
-            </Text>
-          </TouchableOpacity>
-        </Animated.View>
+        <TouchableOpacity
+          onPress={() => { Haptics.impactAsync(); onHire?.(); }}
+          activeOpacity={0.85}
+          style={styles.btnHireWrap}
+        >
+          {isDark ? (
+            <View style={styles.btnHireFullDark}>
+              <Ionicons name="briefcase-outline" size={16} color="#fff" />
+              <Text style={styles.btnHireFullText}>Contratar ahora</Text>
+              <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.75)" />
+            </View>
+          ) : (
+            <LinearGradient
+              colors={['#7c3aed', '#6d28d9']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.btnHireFull}
+            >
+              <Ionicons name="briefcase-outline" size={16} color="#fff" />
+              <Text style={styles.btnHireFullText}>Contratar ahora</Text>
+              <Ionicons name="arrow-forward" size={14} color="rgba(255,255,255,0.7)" />
+            </LinearGradient>
+          )}
+        </TouchableOpacity>
       )}
 
       {/* ══ STATS ════════════════════════════════════════════════════════ */}
       <View style={styles.statsRow}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{followers}</Text>
-          <Text style={styles.statLabel}>seguidores</Text>
+          <Text style={[styles.statValue, isDark && styles.statValueDark]}>{followers}</Text>
+          <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>seguidores</Text>
         </View>
         <View style={styles.statSep} />
         <View style={styles.statItem}>
           <View style={styles.statValueRow}>
-            <Text style={styles.statValue}>{rating}</Text>
+            <Text style={[styles.statValue, isDark && styles.statValueDark]}>{rating}</Text>
             <Ionicons name="star" size={9} color="#f59e0b" />
           </View>
-          <Text style={styles.statLabel}>valoración</Text>
+          <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>valoración</Text>
         </View>
         <View style={styles.statSep} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{views}</Text>
-          <Text style={styles.statLabel}>visitas</Text>
+          <Text style={[styles.statValue, isDark && styles.statValueDark]}>{views}</Text>
+          <Text style={[styles.statLabel, isDark && styles.statLabelDark]}>visitas</Text>
         </View>
       </View>
 
       {/* ══ STRIP OWNER ══════════════════════════════════════════════════ */}
       {isOwner && (
-        <View style={styles.ownerStrip}>
+        <View style={[styles.ownerStrip, isDark && styles.ownerStripDark]}>
           <TouchableOpacity style={styles.stripBtn} onPress={onShare} activeOpacity={0.7}>
             <Ionicons name="share-outline" size={14} color="#7c3aed" />
-            <Text style={styles.stripBtnText}>Compartir perfil</Text>
+            <Text style={[styles.stripBtnText, isDark && styles.stripBtnTextDark]}>Compartir perfil</Text>
           </TouchableOpacity>
           <View style={styles.stripDivider} />
           <TouchableOpacity style={styles.stripBtn} onPress={onViewAsClient} activeOpacity={0.7}>
             <Ionicons name="eye-outline" size={14} color="#7c3aed" />
-            <Text style={styles.stripBtnText}>Ver como cliente</Text>
+            <Text style={[styles.stripBtnText, isDark && styles.stripBtnTextDark]}>Ver como cliente</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -380,7 +330,7 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
       {/* ══ BANNER: no verificado ════════════════════════════════════════ */}
       {isOwner && !artist.isVerified && (
         <TouchableOpacity
-          style={styles.verifyBanner}
+          style={[styles.verifyBanner, isDark && styles.verifyBannerDark]}
           onPress={onEditProfile}
           activeOpacity={0.85}
         >
@@ -388,8 +338,10 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
             <Ionicons name="alert-circle" size={18} color="#d97706" />
           </View>
           <View style={styles.verifyBannerText}>
-            <Text style={styles.verifyBannerTitle}>Perfil no visible públicamente</Text>
-            <Text style={styles.verifyBannerSub}>
+            <Text style={[styles.verifyBannerTitle, isDark && styles.verifyBannerTitleDark]}>
+              Perfil no visible públicamente
+            </Text>
+            <Text style={[styles.verifyBannerSub, isDark && styles.verifyBannerSubDark]}>
               Completa el 100% del Portal del Autor para ser verificado y aparecer en explorar.
             </Text>
           </View>
@@ -449,6 +401,10 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     borderColor: '#fff',
   },
+  avatarInnerDark: {
+    borderColor: '#fff',
+    borderWidth: 2.5,
+  },
   avatar: { width: '100%', height: '100%' },
   verifiedBadge: {
     position: 'absolute', bottom: 0, right: 0,
@@ -474,13 +430,21 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
+  btnMoreDark: {
+    backgroundColor: 'rgba(167,139,250,0.12)',
+    borderColor: 'rgba(167,139,250,0.25)',
+  },
   btnEdit: {
     height: 36, paddingHorizontal: 14, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: 'rgba(124,58,237,0.07)',
     borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.2)',
   },
-  btnEditText: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#6d28d9' },
+  btnEditDark: {
+    backgroundColor: 'rgba(167,139,250,0.12)',
+    borderColor: 'rgba(167,139,250,0.25)',
+  },
+  btnEditText: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
   btnHire: {
     height: 36, paddingHorizontal: 16, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -507,6 +471,9 @@ const styles = StyleSheet.create({
     color: '#1e1b4b',
     letterSpacing: -0.5,
     flexShrink: 1,
+  },
+  artistNameDark: {
+    color: '#ffffff',
   },
   availSmall: {
     fontSize: 11,
@@ -536,12 +503,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginBottom: 3,
   },
-  availPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    borderRadius: 16, paddingHorizontal: 7, paddingVertical: 3,
-    borderWidth: 1,
-  },
-  availText: { fontSize: 9.5, fontFamily: 'PlusJakartaSans_600SemiBold' },
 
   // Nuevos estilos sin cajas (background/border)
   scheduleRow: {
@@ -570,6 +531,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     marginBottom: 4, // Reducido de 8 a 4
   },
+  bioDark: {
+    color: '#9ca3af',
+  },
   bioPlaceholder: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     marginHorizontal: Spacing.lg, marginBottom: 6, // Reducido de 12 a 6
@@ -591,12 +555,19 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   tag: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(124,58,237,0.07)',
-    borderWidth: 1, borderColor: 'rgba(124,58,237,0.18)',
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 16, paddingHorizontal: 8, paddingVertical: 3,
   },
-  tagText: { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
+  tagDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(255,255,255,0.18)',
+  },
+  tagText: { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#666' },
+  tagTextDark: {
+    color: '#d1d5db',
+  },
 
   tagsSkeletonRow: { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.lg, marginBottom: 16 },
   tagSkeleton: {
@@ -605,24 +576,66 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(124,58,237,0.08)',
   },
 
-  // ── Seguir (visitante) ───────────────────────────────────────────
-  btnFollow: {
-    marginHorizontal: Spacing.lg, height: 38, borderRadius: 14,
-    backgroundColor: '#7c3aed',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+  // ── Contratar (visitante) — botón protagonista full-width ────────
+  btnHireWrap: {
+    marginHorizontal: Spacing.lg,
+    marginTop: 4,
     marginBottom: 12,
   },
-  btnFollowActive: {
-    marginHorizontal: Spacing.lg, height: 38, borderRadius: 14,
-    backgroundColor: 'rgba(124,58,237,0.07)',
-    borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.22)',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  btnFollowWrap: {
+    marginHorizontal: Spacing.lg,
+    marginTop: 4,
     marginBottom: 12,
   },
+  btnHireFull: {
+    height: 44, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 12, elevation: 6,
+  },
+  btnHireFullDark: {
+    height: 44, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
+  },
+  btnFollowFullDark: {
+    height: 44, borderRadius: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)',
+  },
+  btnHireFullText: { fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff', letterSpacing: 0.1 },
+
+  // ── Seguir (visitante) — botón secundario pequeño en actionRow ───
+  // ⚠️ NO cambiar a morado — color intencional: igual al de la bio
+  btnFollowSmall: {
+    height: 36, paddingHorizontal: 14, borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(30,27,75,0.05)',
+    borderWidth: 1.5, borderColor: 'rgba(30,27,75,0.18)',
+  },
+  btnFollowSmallActive: {
+    height: 36, paddingHorizontal: 14, borderRadius: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(30,27,75,0.08)',
+    borderWidth: 1.5, borderColor: 'rgba(30,27,75,0.35)',
+  },
+  btnFollowSmallText:       { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(30,27,75,0.65)' },
+  btnFollowSmallTextActive: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: 'rgba(30,27,75,0.65)' },
+
+  // ── (legacy — ya no se usan pero se conservan por si acaso) ──────
+  btnFollow:           { marginHorizontal: Spacing.lg, height: 38, borderRadius: 14, backgroundColor: '#7c3aed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12 },
+  btnFollowActive:     { marginHorizontal: Spacing.lg, height: 38, borderRadius: 14, backgroundColor: 'rgba(124,58,237,0.07)', borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.22)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12 },
   btnFollowText:       { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
   btnFollowTextActive: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#7c3aed' },
+  btnFollroleText: {
+    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: '#7c3aed',
+    opacity: 0.85,
+  },
+  roleTextDark: { color: '#a78bfa' },
 
   // ── Stats ────────────────────────────────────────────────────────
   statsRow: {
@@ -640,12 +653,21 @@ const styles = StyleSheet.create({
     fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1e1b4b', letterSpacing: -0.3,
   },
+  statValueDark: {
+    color: 'rgba(255,255,255,0.65)',
+  },
   statLabel: {
     fontSize: 9.5, fontFamily: 'PlusJakartaSans_400Regular',
-    color: 'rgba(109,40,217,0.45)', marginTop: 1,
+    color: 'rgba(30,27,75,0.65)', marginTop: 1,
+  },
+  statLabelDark: {
+    color: '#9ca3af',
   },
   statSep: {
     width: 1, height: 22, backgroundColor: 'rgba(167,139,250,0.2)',
+  },
+  statSepDark: {
+    backgroundColor: 'rgba(167,139,250,0.4)',
   },
 
   // ── Owner strip ──────────────────────────────────────────────────
@@ -653,6 +675,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: 'rgba(167,139,250,0.1)',
+  },
+  ownerStripDark: {
+    borderTopColor: 'rgba(167,139,250,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.03)',
   },
   stripBtn: {
     flex: 1, flexDirection: 'row',
@@ -663,6 +689,7 @@ const styles = StyleSheet.create({
     fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#7c3aed',
   },
+  stripBtnTextDark: { color: '#a78bfa' },
   stripDivider: { width: 1, backgroundColor: 'rgba(167,139,250,0.15)', marginVertical: 8 },
 
   // ── Banner no verificado ─────────────────────────────────────────
@@ -680,6 +707,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(217,119,6,0.25)',
     borderRadius: 14,
   },
+  verifyBannerDark: {
+    backgroundColor: 'rgba(217,119,6,0.10)',
+    borderColor: 'rgba(217,119,6,0.30)',
+  },
   verifyBannerIcon: {
     width: 34, height: 34, borderRadius: 10,
     backgroundColor: 'rgba(217,119,6,0.12)',
@@ -692,10 +723,17 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#92400e',
   },
+  verifyBannerTitleDark: { color: '#fbbf24' },
   verifyBannerSub: {
     fontSize: 11,
     fontFamily: 'PlusJakartaSans_400Regular',
     color: '#b45309',
     lineHeight: 15,
+  },
+  verifyBannerSubDark: { color: '#f59e0b' },
+
+  // ── Dark mode ─────────────────────────────────────────────────────
+  rootDark: {
+    backgroundColor: '#0a0618', // mismo que el card
   },
 });

@@ -17,12 +17,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../constants/colors';
 import type { ExploreCard, SwipeDirection } from '../../../types/explore';
+import { useThemeStore } from '../../../store/themeStore';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export const CARD_WIDTH  = Math.min(SCREEN_WIDTH - 32, 420);
+export const CARD_WIDTH  = Math.min(SCREEN_WIDTH - 16, 480);
 export const CARD_HEIGHT = SCREEN_HEIGHT * 0.72;
 
 const SWIPE_THRESHOLD = 80; // Reducido de 120px para swipe más sensible
@@ -46,6 +47,7 @@ export default function SwipeCard({
   onDismiss,
   children,
 }: SwipeCardProps) {
+  const { isDark } = useThemeStore();
   const swipeX = useRef(new RNAnimated.Value(0)).current;
   const touchStartX = useRef(0);
 
@@ -165,6 +167,7 @@ export default function SwipeCard({
     <RNAnimated.View
       style={[
         styles.card,
+        isDark ? styles.cardDark : styles.cardLight,
         {
           zIndex,
           transform: [
@@ -203,12 +206,23 @@ const styles = StyleSheet.create({
     height: CARD_HEIGHT,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: colors.background,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
     shadowRadius: 24,
     elevation: 10,
+  },
+
+  cardLight: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: 'rgba(139,92,246,0.25)',
+  },
+  cardDark: {
+    backgroundColor: '#0b0b0f',
+    borderWidth: 1,
+    borderColor: 'rgba(139,92,246,0.35)',
+    shadowOpacity: 0.35,
   },
 
   badge: {

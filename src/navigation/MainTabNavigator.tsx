@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import type { NavigatorScreenParams } from '@react-navigation/native';
 import { useTabBarStore } from '../store/tabBarStore';
+import { useThemeStore } from '../store/themeStore';
 
 import FavoritesScreen from '../screens/favorites/index';
 import ContractsScreen from '../screens/contracts/index';
@@ -29,7 +30,7 @@ export type MainTabParams = {
   AvailabilityStack: undefined;
 };
 
-const Tab = createBottomTabNavigator<MainTabParams>();
+const Tab = createBottomTabNavigator();
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -59,6 +60,7 @@ const VISIBLE_TAB_NAMES = new Set(TAB_CONFIG.map(t => t.name));
 function CustomTabBar({ state, navigation }: BottomTabBarProps) {
   const insets  = useSafeAreaInsets();
   const { visible } = useTabBarStore();
+  const { isDark } = useThemeStore();
   const translateY   = useRef(new Animated.Value(0)).current;
   const tabBarHeight = useRef(0);
 
@@ -76,10 +78,16 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 
   return (
     <Animated.View
-      style={{ transform: [{ translateY }] }}
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        transform: [{ translateY }],
+      }}
       onLayout={e => { tabBarHeight.current = e.nativeEvent.layout.height; }}
     >
-    <View style={[styles.tabBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
+    <View style={[styles.tabBar, isDark && styles.tabBarDark, { paddingBottom: insets.bottom > 0 ? insets.bottom : 10 }]}>
       {visibleRoutes.map((route) => {
         const tabConfig = TAB_CONFIG.find(t => t.name === route.name)!;
         const focused = state.routes[state.index].name === route.name;
@@ -118,7 +126,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
             )}
             <Text style={[
               styles.tabLabel,
-              { color: focused ? ACTIVE_COLOR : INACTIVE_COLOR },
+              { color: focused ? ACTIVE_COLOR : (isDark ? '#6b7280' : INACTIVE_COLOR) },
               focused && styles.tabLabelActive,
             ]}>
               {tabConfig.label}
@@ -132,7 +140,7 @@ function CustomTabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 export const MainTabNavigator = () => (
-  <Tab.Navigator
+  <Tab.Navigator<MainTabParams>
     tabBar={(props) => <CustomTabBar {...props} />}
     screenOptions={{ headerShown: false }}
   >
@@ -173,6 +181,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f3e8ff',
     paddingTop: 8,
+  },
+  tabBarDark: {
+    backgroundColor: '#000000',
+    borderTopColor: '#374151',
   },
   tabItem: {
     flex: 1,

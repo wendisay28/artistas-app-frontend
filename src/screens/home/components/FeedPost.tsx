@@ -5,10 +5,12 @@ import React, { useState } from 'react';
 import {
   View, Text, Image, TouchableOpacity,
   StyleSheet, Dimensions,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FeedPost as FeedPostType } from '../data/feedData';
+import { postsService } from '../../../services/api/posts';
 
 const { width } = Dimensions.get('window');
 const IMG_W = width - 32 - 48 - 12; // ancho disponible después del avatar+gap
@@ -64,9 +66,23 @@ interface Props {
   post: FeedPostType;
   isLast?: boolean;
   isDark?: boolean;
+  onOpenDetail?: (post: FeedPostType) => void;
+  onOpenImages?: (post: FeedPostType, initialIndex?: number) => void;
+  onComment?: (post: FeedPostType) => void;
+  onSave?: (post: FeedPostType) => void;
+  onShare?: (post: FeedPostType) => void;
 }
 
-export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false }) => {
+export const FeedPost: React.FC<Props> = ({
+  post,
+  isLast = false,
+  isDark = false,
+  onOpenDetail,
+  onOpenImages,
+  onComment,
+  onSave,
+  onShare,
+}) => {
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
   const [inspired, setInspired] = useState(false);
@@ -82,9 +98,11 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
     ? post.content
     : post.content.slice(0, TRUNCATE) + '…';
 
-  const handleLike = () => {
-    setLiked(p => !p);
-    setLikeCount(p => liked ? p - 1 : p + 1);
+  const handleLike = async () => {
+    const next = !liked;
+    setLiked(next);
+    setLikeCount(p => next ? p + 1 : p - 1);
+    try { await postsService.toggleLike(post.id); } catch { /* optimistic — no revert */ }
   };
 
   const handleInspire = () => {
@@ -92,7 +110,19 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
     setInsCount(p => inspired ? p - 1 : p + 1);
   };
 
-  const c = isDark ? dark : light;
+  const handleShare = async () => {
+    if (onShare) {
+      onShare(post);
+      return;
+    }
+    try {
+      await Share.share({
+        message: `${post.author.name} (@${post.author.username}): ${post.content}`,
+      });
+    } catch {
+      // no-op
+    }
+  };
 
   return (
     <View style={[st.row, isDark && st.rowDark]}>
@@ -137,15 +167,23 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
       <View style={st.right}>
 
         {/* Header */}
-        <View style={st.header}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onOpenDetail?.(post)}
+          style={st.header}
+        >
           <Text style={[st.name, isDark && st.nameDark]} numberOfLines={1}>
             {post.author.name}
           </Text>
-          <Text style={st.meta}>@{post.author.username} · {post.createdAt}</Text>
-        </View>
+          <Text style={[st.meta, isDark && st.metaDark]}>@{post.author.username} · {post.createdAt}</Text>
+        </TouchableOpacity>
 
         {/* Texto */}
-        <TouchableOpacity activeOpacity={0.85} onPress={() => isLong && setExpanded(p => !p)}>
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => onOpenDetail?.(post)}
+          onLongPress={() => isLong && setExpanded(p => !p)}
+        >
           <Text style={[st.body, isDark && st.bodyDark]}>
             {displayText}
             {isLong && !expanded && (
@@ -156,9 +194,19 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
 
         {/* Imágenes */}
         {post.images && post.images.length > 0 && (
-          <View style={st.imagesWrap}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => {
+              if (onOpenImages) {
+                onOpenImages(post, 0);
+                return;
+              }
+              onOpenDetail?.(post);
+            }}
+            style={st.imagesWrap}
+          >
             <PostImages images={post.images} />
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Acciones */}
@@ -176,7 +224,7 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={st.action} activeOpacity={0.7}>
+          <TouchableOpacity style={st.action} activeOpacity={0.7} onPress={() => onComment?.(post)}>
             <Ionicons
               name="chatbubble-outline"
               size={17}
@@ -202,7 +250,7 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={st.action} activeOpacity={0.7}>
+          <TouchableOpacity style={st.action} activeOpacity={0.7} onPress={() => onSave?.(post)}>
             <Ionicons
               name="bookmark-outline"
               size={17}
@@ -210,7 +258,7 @@ export const FeedPost: React.FC<Props> = ({ post, isLast = false, isDark = false
             />
           </TouchableOpacity>
 
-          <TouchableOpacity style={st.action} activeOpacity={0.7}>
+          <TouchableOpacity style={st.action} activeOpacity={0.7} onPress={handleShare}>
             <Ionicons
               name="share-social-outline"
               size={17}
@@ -330,6 +378,9 @@ const st = StyleSheet.create({
     color: 'rgba(0,0,0,0.4)',
     marginTop: 1,
   },
+  metaDark: {
+    color: 'rgba(255,255,255,0.55)',
+  },
   body: {
     fontSize: 14,
     fontFamily: 'PlusJakartaSans_400Regular',
@@ -392,6 +443,3 @@ const st = StyleSheet.create({
   },
 });
 
-// placeholder — no se usan, solo para evitar error de referencia
-const light = {};
-const dark  = {};

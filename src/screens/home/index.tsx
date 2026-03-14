@@ -29,6 +29,7 @@ import { useProximityLogic } from './hooks/useProximityLogic';
 import { useProfileCompletion } from './hooks/Useprofilecompletion';
 import { useHomeData } from './hooks/useHomeData';
 import { useThemeStore } from '../../store/themeStore';
+import { useTabBarStore } from '../../store/tabBarStore';
 
 import HomeBanners from './components/HomeBanners';
 import SectionHeader from './components/SectionHeader';
@@ -37,6 +38,9 @@ import {
   EventItem, ArtistItem, VenueItem,
 } from './components/ContentCards';
 import { FeedPost, FeedDivider } from './components/FeedPost';
+import PostDetailModal from './components/PostDetailModal';
+import SaveToCollectionModal from './components/SaveToCollectionModal';
+import ImageViewerModal from './components/ImageViewerModal';
 
 import {
   ARTIST_PILL_CATEGORIES,
@@ -180,7 +184,21 @@ const FeedWithCarousels: React.FC<{
   dataLoading: boolean;
   colors: any;
   isDark: boolean;
-}> = ({ posts, events, artists, currentCity, dataLoading, colors, isDark }) => {
+  onOpenDetail?: (post: any, focusComments?: boolean) => void;
+  onOpenSave?: (post: any) => void;
+  onOpenImages?: (post: any, initialIndex?: number) => void;
+}> = ({
+  posts,
+  events,
+  artists,
+  currentCity,
+  dataLoading,
+  colors,
+  isDark,
+  onOpenDetail,
+  onOpenSave,
+  onOpenImages,
+}) => {
   // Los carruseles que se van a intercalar, en orden
   const carousels = [
     <EventsCarousel key="events" events={events} city={currentCity} loading={dataLoading} colors={colors} />,
@@ -201,7 +219,16 @@ const FeedWithCarousels: React.FC<{
       const globalIdx = i + j;
       const isLast    = globalIdx === posts.length - 1;
       blocks.push(
-        <FeedPost key={post.id} post={post} isLast={isLast} isDark={isDark} />
+        <FeedPost
+          key={post.id}
+          post={post}
+          isLast={isLast}
+          isDark={isDark}
+          onOpenDetail={(p) => onOpenDetail?.(p, false)}
+          onOpenImages={(p, initialIndex) => onOpenImages?.(p, initialIndex)}
+          onComment={(p) => onOpenDetail?.(p, true)}
+          onSave={(p) => onOpenSave?.(p)}
+        />
       );
       if (!isLast) {
         blocks.push(<FeedDivider key={`div-${post.id}`} isDark={isDark} />);
@@ -238,6 +265,18 @@ function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const { colors, toggleTheme } = useThemeStore();
+  const { show: showTabBar, hide: hideTabBar } = useTabBarStore();
+  const lastScrollY = useRef(0);
+
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [detailPost, setDetailPost] = useState<any>(null);
+  const [detailFocusComments, setDetailFocusComments] = useState(false);
+
+  const [saveVisible, setSaveVisible] = useState(false);
+
+  const [imagesVisible, setImagesVisible] = useState(false);
+  const [imagesList, setImagesList] = useState<string[]>([]);
+  const [imagesIndex, setImagesIndex] = useState(0);
 
   const [activeCategory, setActiveCategory] = useState('todos');
   const [portalVisible,  setPortalVisible]  = useState(false);
@@ -300,6 +339,14 @@ function HomeScreen() {
         contentContainerStyle={{ paddingBottom: (insets.bottom || 10) + 80 }}
         showsVerticalScrollIndicator={false}
         overScrollMode="never"
+        scrollEventThrottle={16}
+        onScroll={({ nativeEvent }) => {
+          const currentY = nativeEvent.contentOffset.y;
+          if (currentY <= 10) { showTabBar(); }
+          else if (currentY > lastScrollY.current + 8) { hideTabBar(); }
+          else if (currentY < lastScrollY.current - 8) { showTabBar(); }
+          lastScrollY.current = currentY;
+        }}
       >
         {/* Banners — desaparece cuando profilePct === 100 */}
         <AnimatedSection delay={0}>
@@ -326,6 +373,20 @@ function HomeScreen() {
             dataLoading={dataLoading}
             colors={colors}
             isDark={colors.background === '#000000'}
+            onOpenDetail={(post, focusComments) => {
+              setDetailPost(post);
+              setDetailFocusComments(!!focusComments);
+              setDetailVisible(true);
+            }}
+            onOpenSave={(post) => {
+              setSaveVisible(true);
+            }}
+            onOpenImages={(post, initialIndex) => {
+              const imgs = post?.images ?? [];
+              setImagesList(imgs);
+              setImagesIndex(initialIndex ?? 0);
+              setImagesVisible(true);
+            }}
           />
         </AnimatedSection>
 
@@ -355,6 +416,40 @@ function HomeScreen() {
         onClose={() => setLocationModal(false)}
       />
 
+      <PostDetailModal
+        visible={detailVisible}
+        post={detailPost}
+        focusComments={detailFocusComments}
+        isDark={colors.background === '#000000'}
+        onClose={() => {
+          setDetailVisible(false);
+          setDetailPost(null);
+          setDetailFocusComments(false);
+        }}
+      />
+
+      <SaveToCollectionModal
+        visible={saveVisible}
+        isDark={colors.background === '#000000'}
+        onClose={() => {
+          setSaveVisible(false);
+        }}
+        onSaved={() => {
+          // placeholder: aquí luego se conecta a API/colecciones
+        }}
+      />
+
+      <ImageViewerModal
+        visible={imagesVisible}
+        images={imagesList}
+        initialIndex={imagesIndex}
+        onClose={() => {
+          setImagesVisible(false);
+          setImagesList([]);
+          setImagesIndex(0);
+        }}
+      />
+
       {/* ── FAB compose — crear post ──────────────────────────────────────── */}
       <View style={[getStyles(colors).fabCompose, { bottom: insets.bottom + 90 }]}>
         <Pressable
@@ -368,22 +463,6 @@ function HomeScreen() {
         </Pressable>
       </View>
 
-      {/* ── FAB tema ──────────────────────────────────────────────────────── */}
-      <View style={[getStyles(colors).fabTheme, { bottom: insets.bottom + 24 }]}>
-        <Pressable
-          onPress={toggleTheme}
-          style={({ pressed }) => [
-            getStyles(colors).fabThemeInner,
-            pressed && { opacity: 0.8 },
-          ]}
-        >
-          <Ionicons
-            name={colors.background === '#000000' ? 'sunny' : 'moon'}
-            size={18}
-            color={colors.text}
-          />
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -427,28 +506,6 @@ const getStyles = (colors: any) => StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fabTheme: {
-    position: 'absolute',
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabThemeInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
