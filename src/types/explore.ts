@@ -132,6 +132,7 @@ export interface GalleryItem extends BaseCard {
   type: 'gallery';
   artistName: string;
   medium: string;             // e.g. "Óleo sobre lienzo"
+  category?: string;          // Categoría de la galería
   dimensions: string;         // e.g. "80 x 100 cm"
   year: number;
   forSale: boolean;

@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../../constants/colors';
 
-import type { ApplicantCardProps } from '../../../types/hiring';
+import { ApplicantCardProps } from '../../../../types/hiring';
 
 export default function ApplicantCard({
   applicant,

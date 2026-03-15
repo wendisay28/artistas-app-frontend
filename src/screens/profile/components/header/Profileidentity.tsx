@@ -184,7 +184,22 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
                 onPress={handleFollow}
                 activeOpacity={0.85}
               >
-                <Ionicons name={followed ? 'checkmark-circle' : 'person-add-outline'} size={13} color="rgba(30,27,75,0.65)" />
+                {followed ? (
+                  <LinearGradient
+                    colors={['#9333ea', '#2563eb']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.btnFollowSmallGradient}
+                  />
+                ) : (
+                  <LinearGradient
+                    colors={['#9333ea', '#2563eb']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.btnFollowSmallGradient}
+                  />
+                )}
+                <Ionicons name={followed ? 'checkmark-circle' : 'person-add-outline'} size={13} color="#fff" />
                 <Text style={followed ? styles.btnFollowSmallTextActive : styles.btnFollowSmallText}>
                   {followed ? 'Siguiendo' : 'Seguir'}
                 </Text>
@@ -613,17 +628,26 @@ const styles = StyleSheet.create({
   btnFollowSmall: {
     height: 36, paddingHorizontal: 14, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(30,27,75,0.05)',
+    backgroundColor: 'transparent',
     borderWidth: 1.5, borderColor: 'rgba(30,27,75,0.18)',
   },
   btnFollowSmallActive: {
     height: 36, paddingHorizontal: 14, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(30,27,75,0.08)',
+    backgroundColor: 'transparent',
     borderWidth: 1.5, borderColor: 'rgba(30,27,75,0.35)',
   },
-  btnFollowSmallText:       { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: 'rgba(30,27,75,0.65)' },
-  btnFollowSmallTextActive: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: 'rgba(30,27,75,0.65)' },
+  btnFollowSmallGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 10.5, // borderRadius: 12 - borderWidth
+    overflow: 'hidden',
+  },
+  btnFollowSmallText:       { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
+  btnFollowSmallTextActive: { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 
   // ── (legacy — ya no se usan pero se conservan por si acaso) ──────
   btnFollow:           { marginHorizontal: Spacing.lg, height: 38, borderRadius: 14, backgroundColor: '#7c3aed', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 12 },

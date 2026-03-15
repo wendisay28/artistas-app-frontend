@@ -273,6 +273,7 @@ function HomeScreen() {
   const [detailFocusComments, setDetailFocusComments] = useState(false);
 
   const [saveVisible, setSaveVisible] = useState(false);
+  const [savePost, setSavePost] = useState<any>(null);
 
   const [imagesVisible, setImagesVisible] = useState(false);
   const [imagesList, setImagesList] = useState<string[]>([]);
@@ -379,6 +380,7 @@ function HomeScreen() {
               setDetailVisible(true);
             }}
             onOpenSave={(post) => {
+              setSavePost(post);
               setSaveVisible(true);
             }}
             onOpenImages={(post, initialIndex) => {
@@ -430,12 +432,10 @@ function HomeScreen() {
 
       <SaveToCollectionModal
         visible={saveVisible}
-        isDark={isDark}
+        post={savePost}
         onClose={() => {
           setSaveVisible(false);
-        }}
-        onSaved={() => {
-          // placeholder: aquí luego se conecta a API/colecciones
+          setSavePost(null);
         }}
       />
 

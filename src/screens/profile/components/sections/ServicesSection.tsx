@@ -7,6 +7,7 @@ import { uploadToServer } from '../../../../hooks/useProfileImageUpload';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { Image as ExpoImage } from 'expo-image';
 
 // Servicios y Tipos (Ajusta las rutas según tu proyecto)
 import { Service as APIService, servicesService } from '../../../../services/api/services';
@@ -66,7 +67,7 @@ const ServiceCard = ({
         {/* IZQUIERDA: VISUAL ESTILO BOOKING */}
         <View style={sc.imageContainer}>
           {service.images?.[0] && !imageError ? (
-            <Image
+            <ExpoImage
               source={{ uri: service.images[0] }}
               style={sc.imagePlaceholder}
               contentFit="cover"

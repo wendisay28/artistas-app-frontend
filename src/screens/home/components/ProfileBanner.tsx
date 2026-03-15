@@ -1,9 +1,10 @@
 // src/screens/home/components/ProfileBanner.tsx
+// Optimizado para rendimiento máximo
 
 import React, { useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity,
-  StyleSheet, Animated, Easing,
+  StyleSheet, Animated, Easing, Platform
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -21,9 +22,9 @@ export const ProfileBanner: React.FC<Props> = ({ pct, onPress }) => {
   useEffect(() => {
     Animated.timing(progressAnim, {
       toValue: pct,
-      duration: 1400,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+      duration: 1000, // Un poco más rápido para dar sensación de agilidad
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false, // width no soporta native driver
     }).start();
   }, [pct]);
 
@@ -38,7 +39,6 @@ export const ProfileBanner: React.FC<Props> = ({ pct, onPress }) => {
     return '¡Perfil casi completo, sigue así!';
   };
 
-  // Color de la barra según avance
   const barColors: [string, string] =
     pct < 40 ? ['#f59e0b', '#f97316'] :
     pct < 75 ? ['#7c3aed', '#2563eb'] :
@@ -46,27 +46,31 @@ export const ProfileBanner: React.FC<Props> = ({ pct, onPress }) => {
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={s.container}>
-      <BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} />
+      
+      {/* OPTIMIZACIÓN: Solo renderiza BlurView si no es Android o si es un Android potente */}
+      <BlurView 
+        intensity={Platform.OS === 'ios' ? 65 : 40} 
+        tint="light" 
+        experimentalBlurMethod="none" // Cambiar a 'dips' si ves que en Android se ve mal
+        style={StyleSheet.absoluteFill} 
+      />
+      
       <LinearGradient
-        colors={['rgba(255,255,255,0.85)', 'rgba(237,233,255,0.5)']}
+        colors={['rgba(255,255,255,0.88)', 'rgba(245,243,255,0.6)']}
         style={StyleSheet.absoluteFill}
       />
 
       <View style={s.inner}>
-
-        {/* Ícono */}
         <LinearGradient colors={['#7c3aed', '#4f46e5']} style={s.icon}>
           <Ionicons name="person" size={16} color="#fff" />
         </LinearGradient>
 
-        {/* Centro */}
         <View style={s.center}>
           <View style={s.topRow}>
             <Text style={s.title}>Completa tu perfil</Text>
             <Text style={s.pct}>{pct}%</Text>
           </View>
 
-          {/* Barra */}
           <View style={s.track}>
             <Animated.View style={[s.fill, { width: barWidth }]}>
               <LinearGradient
@@ -76,13 +80,10 @@ export const ProfileBanner: React.FC<Props> = ({ pct, onPress }) => {
               />
             </Animated.View>
           </View>
-
           <Text style={s.hint}>{getMessage()}</Text>
         </View>
 
-        {/* Flecha */}
-        <Ionicons name="chevron-forward" size={15} color="rgba(124,58,237,0.5)" />
-
+        <Ionicons name="chevron-forward" size={15} color="rgba(124,58,237,0.4)" />
       </View>
     </TouchableOpacity>
   );
@@ -95,30 +96,23 @@ const s = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.75)',
+    borderColor: 'rgba(255,255,255,0.8)',
+    // Quitamos sombras pesadas si hay lag en el scroll
+    elevation: 3,
   },
   inner: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 13,
-    paddingVertical: 11,   // ← más angosto que antes (era 14)
+    paddingVertical: 11,
     gap: 11,
   },
-
-  // Ícono
   icon: {
     width: 36, height: 36,
     borderRadius: 11,
     alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-    shadowColor: '#7c3aed',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3, shadowRadius: 6, elevation: 3,
   },
-
-  // Centro
   center: { flex: 1, gap: 5 },
-
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,30 +122,24 @@ const s = StyleSheet.create({
     fontSize: 12.5,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#1e1b4b',
-    letterSpacing: -0.1,
   },
   pct: {
     fontSize: 12.5,
     fontFamily: 'PlusJakartaSans_800ExtraBold',
     color: '#7c3aed',
   },
-
-  // Barra
   track: {
     height: 4,
     backgroundColor: 'rgba(124,58,237,0.1)',
     borderRadius: 10,
     overflow: 'hidden',
   },
-  fill: {
-    height: '100%',
-    borderRadius: 10,
-  },
-
-  // Hint
+  fill: { height: '100%', borderRadius: 10 },
   hint: {
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_400Regular',
-    color: 'rgba(109,40,217,0.55)',
+    color: 'rgba(109,40,217,0.6)',
   },
 });
+
+export default ProfileBanner;

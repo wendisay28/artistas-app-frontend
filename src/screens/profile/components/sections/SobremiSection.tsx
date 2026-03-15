@@ -14,6 +14,7 @@ import { GalleryItem, FeaturedItem } from '../../../../services/api/portfolio';
 import ReviewCard from '../../../../components/explore/shared/ReviewCard';
 import InfoPair from '../../../../components/explore/shared/InfoPair';
 import GalleryModal from '../../../../components/explore/shared/GalleryModal';
+import { useThemeStore } from '../../../../store/themeStore';
 // Mapeo JS día semana → prefijo del horario guardado
 const TODAY_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date().getDay()];
 const getTodaySchedule = (scheduleStr: string): string => {
@@ -89,12 +90,15 @@ const CardHeader: React.FC<{
   title: string;
   isOwner?: boolean;
   onEdit?: () => void;
-}> = ({ title, isOwner, onEdit }) => (
-  <View style={ch.row}>
-    <Text style={ch.title}>{title}</Text>
-    {isOwner && onEdit && <EditButton onPress={onEdit} />}
-  </View>
-);
+}> = ({ title, isOwner, onEdit }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={ch.row}>
+      <Text style={[ch.title, isDark && ch.titleDark]}>{title}</Text>
+      {isOwner && onEdit && <EditButton onPress={onEdit} />}
+    </View>
+  );
+};
 
 const ch = StyleSheet.create({
   row: {
@@ -105,15 +109,19 @@ const ch = StyleSheet.create({
     flex: 1,
     fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
   },
+  titleDark: { color: '#f5f3ff' },
 });
 
 // ── Glass Card base ───────────────────────────────────────────────────────────
 
-const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style }) => (
-  <View style={[gc.card, style]}>
-    {children}
-  </View>
-);
+const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[gc.card, isDark && gc.cardDark, style]}>
+      {children}
+    </View>
+  );
+};
 
 const gc = StyleSheet.create({
   card: {
@@ -128,6 +136,10 @@ const gc = StyleSheet.create({
     shadowRadius: 16,
     elevation: 3,
   },
+  cardDark: {
+    backgroundColor: 'rgba(10,6,24,0.95)',
+    borderColor: 'rgba(167,139,250,0.3)',
+  },
 });
 
 // ── SectionEmpty — empty state con preview punteado morado ───────────────────
@@ -137,21 +149,24 @@ const SectionEmpty: React.FC<{
   title: string;
   subtitle: string;
   preview: React.ReactNode;
-}> = ({ icon, title, subtitle, preview }) => (
-  <View style={ep.container}>
-    <View style={ep.iconWrap}>
-      <Ionicons name={icon} size={28} color="rgba(124,58,237,0.3)" />
+}> = ({ icon, title, subtitle, preview }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[ep.container, isDark && ep.containerDark]}>
+      <View style={ep.iconWrap}>
+        <Ionicons name={icon} size={28} color="rgba(124,58,237,0.3)" />
+      </View>
+      <Text style={[ep.title, isDark && ep.titleDark]}>{title}</Text>
+      <Text style={[ep.subtitle, isDark && ep.subtitleDark]}>{subtitle}</Text>
+      <View style={ep.sep}>
+        <View style={ep.sepLine} />
+        <Text style={ep.sepText}>vista previa</Text>
+        <View style={ep.sepLine} />
+      </View>
+      {preview}
     </View>
-    <Text style={ep.title}>{title}</Text>
-    <Text style={ep.subtitle}>{subtitle}</Text>
-    <View style={ep.sep}>
-      <View style={ep.sepLine} />
-      <Text style={ep.sepText}>Así se verá</Text>
-      <View style={ep.sepLine} />
-    </View>
-    <View style={{ width: '100%', opacity: 0.45 }}>{preview}</View>
-  </View>
-);
+  );
+};
 
 const ep = StyleSheet.create({
   container: {
@@ -160,16 +175,22 @@ const ep = StyleSheet.create({
     borderRadius: 14, borderStyle: 'dashed',
     backgroundColor: 'rgba(245,243,255,0.4)',
   },
+  containerDark: {
+    backgroundColor: 'rgba(167,139,250,0.05)',
+    borderColor: 'rgba(167,139,250,0.15)',
+  },
   iconWrap: {
     width: 52, height: 52, borderRadius: 14,
     backgroundColor: 'rgba(124,58,237,0.07)',
     alignItems: 'center', justifyContent: 'center', marginBottom: 2,
   },
   title: { fontSize: 13.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b' },
+  titleDark: { color: '#e5e7eb' },
   subtitle: {
     fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(124,58,237,0.4)', textAlign: 'center', lineHeight: 17,
   },
+  subtitleDark: { color: 'rgba(167,139,250,0.6)' },
   sep: { flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%', marginTop: 4 },
   sepLine: { flex: 1, height: 1, backgroundColor: 'rgba(124,58,237,0.1)' },
   sepText: {
@@ -183,6 +204,7 @@ const SocialRow: React.FC<{
   artist: Artist;
   onEditSocialLinks?: () => void;
 }> = ({ artist, onEditSocialLinks }) => {
+  const { isDark } = useThemeStore();
   const socials = buildSocials(artist);
   return (
     <GlassCard>
@@ -218,11 +240,11 @@ const SocialRow: React.FC<{
                   <Ionicons name={item.icon} size={20} color="#fff" />
                 </View>
               ) : (
-                <View style={so.iconInactive}>
+                <View style={[so.iconInactive, isDark && so.iconInactiveDark]}>
                   <Ionicons name={item.icon} size={20} color="rgba(124,58,237,0.3)" />
                 </View>
               )}
-              <Text style={[so.label, !active && so.labelInactive]}>{item.label}</Text>
+              <Text style={[so.label, !active && so.labelInactive, isDark && so.labelDark]}>{item.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -257,7 +279,12 @@ const so = StyleSheet.create({
     backgroundColor: 'rgba(124,58,237,0.06)',
     borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.2)',
   },
+  iconInactiveDark: {
+    backgroundColor: 'rgba(167,139,250,0.10)',
+    borderColor: 'rgba(167,139,250,0.20)',
+  },
   label:        { fontSize: 10, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1e1b4b' },
+  labelDark: { color: '#e5e7eb' },
   labelInactive:{ color: 'rgba(124,58,237,0.3)' },
 });
 
@@ -269,24 +296,26 @@ const ExperienceItem: React.FC<{
   period: string;
   description?: string;
   last?: boolean;
-}> = ({ position, company, period, description, last }) => (
-  <View style={[exp.item, !last && exp.itemBorder]}>
-    {/* Dot de timeline */}
-    <View style={exp.dotWrap}>
-      <LinearGradient colors={['#7c3aed', '#2563eb']} style={exp.dot} />
-    </View>
-    <View style={exp.content}>
-      <View style={exp.headerRow}>
-        <Text style={exp.position}>{position}</Text>
-        <View style={exp.periodPill}>
-          <Text style={exp.period}>{period}</Text>
-        </View>
+}> = ({ position, company, period, description, last }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[exp.item, !last && exp.itemBorder]}>
+      <View style={exp.dotWrap}>
+        <View style={[exp.dot, { backgroundColor: '#7c3aed' }]} />
       </View>
-      <Text style={exp.company}>{company}</Text>
-      {description && <Text style={exp.desc}>{description}</Text>}
+      <View style={exp.content}>
+        <View style={exp.headerRow}>
+          <Text style={[exp.position, isDark && exp.positionDark]}>{position}</Text>
+          <View style={[exp.periodPill, isDark && exp.periodPillDark]}>
+            <Text style={exp.period}>{period}</Text>
+          </View>
+        </View>
+        <Text style={[exp.company, isDark && exp.companyDark]}>{company}</Text>
+        {description && <Text style={[exp.desc, isDark && exp.descDark]}>{description}</Text>}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const exp = StyleSheet.create({
   item:       { flexDirection: 'row', gap: 12, paddingBottom: 16 },
@@ -298,20 +327,24 @@ const exp = StyleSheet.create({
   position: {
     flex: 1, fontSize: 14.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
   },
+  positionDark: { color: '#f5f3ff' },
   periodPill: {
     backgroundColor: 'rgba(124,58,237,0.08)',
     borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2,
     marginLeft: 8,
   },
+  periodPillDark: { backgroundColor: 'rgba(167,139,250,0.15)' },
   period: { fontSize: 10.5, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
   company: {
     fontSize: 12.5, fontFamily: 'PlusJakartaSans_600SemiBold',
     color: 'rgba(109,40,217,0.55)', marginBottom: 4,
   },
+  companyDark: { color: '#a78bfa' },
   desc: {
     fontSize: 12.5, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(30,27,75,0.55)', lineHeight: 18,
   },
+  descDark: { color: '#9ca3af' },
 });
 
 // ── Study Item ────────────────────────────────────────────────────────────────
@@ -322,23 +355,26 @@ const StudyItem: React.FC<{
   year: string;
   details?: string;
   last?: boolean;
-}> = ({ degree, institution, year, details, last }) => (
-  <View style={[st.item, !last && st.itemBorder]}>
-    <View style={st.dotWrap}>
-      <LinearGradient colors={['#7c3aed', '#2563eb']} style={st.dot} />
-    </View>
-    <View style={st.content}>
-      <View style={st.headerRow}>
-        <Text style={st.degree}>{degree}</Text>
-        <View style={st.yearPill}>
-          <Text style={st.year}>{year}</Text>
-        </View>
+}> = ({ degree, institution, year, details, last }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[st.item, !last && st.itemBorder]}>
+      <View style={st.dotWrap}>
+        <View style={[st.dot, { backgroundColor: '#2563eb' }]} />
       </View>
-      <Text style={st.institution}>{institution}</Text>
-      {details && <Text style={st.details}>{details}</Text>}
+      <View style={st.content}>
+        <View style={st.headerRow}>
+          <Text style={[st.degree, isDark && st.degreeDark]}>{degree}</Text>
+          <View style={[st.yearPill, isDark && st.yearPillDark]}>
+            <Text style={st.year}>{year}</Text>
+          </View>
+        </View>
+        <Text style={[st.institution, isDark && st.institutionDark]}>{institution}</Text>
+        {details && <Text style={[st.details, isDark && st.detailsDark]}>{details}</Text>}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const st = StyleSheet.create({
   item:       { flexDirection: 'row', gap: 12, paddingBottom: 16 },
@@ -350,19 +386,23 @@ const st = StyleSheet.create({
   degree: {
     flex: 1, fontSize: 14.5, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
   },
+  degreeDark: { color: '#f5f3ff' },
   yearPill: {
     backgroundColor: 'rgba(124,58,237,0.08)',
     borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8,
   },
+  yearPillDark: { backgroundColor: 'rgba(167,139,250,0.15)' },
   year:        { fontSize: 10.5, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
   institution: {
     fontSize: 12.5, fontFamily: 'PlusJakartaSans_600SemiBold',
     color: 'rgba(109,40,217,0.55)', marginBottom: 4,
   },
+  institutionDark: { color: '#a78bfa' },
   details: {
     fontSize: 12.5, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(30,27,75,0.5)', lineHeight: 18, fontStyle: 'italic',
   },
+  detailsDark: { color: '#9ca3af' },
 });
 
 // ── SobreMiSection (principal) ────────────────────────────────────────────────
@@ -373,6 +413,7 @@ export const SobreMiSection: React.FC<Props> = ({
   onEditStudies, onEditCategory, onEditSocialLinks,
   onServicesUpdated, onPortfolioUpdated,
 }) => {
+  const { isDark } = useThemeStore();
   const [inner, setInner]             = useState<InnerTab>('servicios' as InnerTab);
   const [bioExpanded, setBioExpanded] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -400,7 +441,7 @@ export const SobreMiSection: React.FC<Props> = ({
         <CardHeader title="Acerca de mí" isOwner={artist.isOwner} onEdit={onEditBio} />
         {artist.description ? (
           <>
-            <Text style={[s.bioText, { marginTop: -1 }]} numberOfLines={bioExpanded ? undefined : 3}>
+            <Text style={[s.bioText, isDark && s.bioTextDark, { marginTop: -1 }]} numberOfLines={bioExpanded ? undefined : 3}>
               {artist.description}
             </Text>
             <Pressable onPress={() => setBioExpanded(p => !p)} style={s.readMoreBtn}>
@@ -436,7 +477,7 @@ export const SobreMiSection: React.FC<Props> = ({
             />
             {artist.category?.disciplineId ? (
               <>
-                <View style={s.divider} />
+                <View style={[s.divider, isDark && s.dividerDark]} />
                 <InfoPair
                   label="Disciplina"
                   value={getLocalizedDisciplineName(artist.category.categoryId, artist.category.disciplineId)}
@@ -445,16 +486,16 @@ export const SobreMiSection: React.FC<Props> = ({
             ) : null}
             {artist.category?.roleId ? (
               <>
-                <View style={s.divider} />
+                <View style={[s.divider, isDark && s.dividerDark]} />
                 <InfoPair
                   label="Rol"
                   value={getLocalizedRoleName(artist.category.categoryId, artist.category.disciplineId, artist.category.roleId)}
                 />
               </>
             ) : null}
-            <View style={s.divider} />
+            <View style={[s.divider, isDark && s.dividerDark]} />
             <InfoPair label="Especialidad" value={artist.specialty || 'No especificado'} />
-            <View style={s.divider} />
+            <View style={[s.divider, isDark && s.dividerDark]} />
             <InfoPair label="Nicho" value={artist.niche || 'No especificado'} />
           </View>
         ) : (
@@ -481,15 +522,15 @@ export const SobreMiSection: React.FC<Props> = ({
         <CardHeader title="Información profesional" isOwner={artist.isOwner} onEdit={onEditProInfo} />
         <View style={s.infoPairs}>
           <InfoPair label="Experiencia" value={experienceValue} />
-          <View style={s.divider} />
+          <View style={[s.divider, isDark && s.dividerDark]} />
           <InfoPair label="Estilo" value={artStyle} />
-          <View style={s.divider} />
+          <View style={[s.divider, isDark && s.dividerDark]} />
           <InfoPair
             label="Disponibilidad"
             value={availability}
             valueColor={isAvailable ? '#16a34a' : '#d97706'}
           />
-          <View style={s.divider} />
+          <View style={[s.divider, isDark && s.dividerDark]} />
           <InfoPair label="Horario" value={getTodaySchedule(responseTime)} />
         </View>
       </GlassCard>
@@ -570,8 +611,8 @@ export const SobreMiSection: React.FC<Props> = ({
       <SocialRow artist={artist} onEditSocialLinks={onEditSocialLinks} />
 
       {/* 7. TABS — Servicios / Portafolio / Reseñas */}
-      <View style={s.tabsCard}>
-        <View style={s.tabBar}>
+      <View style={[s.tabsCard, isDark && s.tabsCardDark]}>
+        <View style={[s.tabBar, isDark && s.tabBarDark]}>
           {INNER_TABS.map((t) => (
             <Pressable
               key={t.key}
@@ -586,7 +627,7 @@ export const SobreMiSection: React.FC<Props> = ({
                 size={14}
                 color={inner === t.key ? '#7c3aed' : 'rgba(109,40,217,0.35)'}
               />
-              <Text style={[s.tabLabel, inner === t.key && s.tabLabelActive]}>
+              <Text style={[s.tabLabel, inner === t.key && s.tabLabelActive, isDark && s.tabLabelDark]}>
                 {t.label}
               </Text>
               {/* Indicador activo en gradiente */}
@@ -638,7 +679,7 @@ export const SobreMiSection: React.FC<Props> = ({
             ) : (
               <View style={s.emptyReviews}>
                 <Ionicons name="star-outline" size={32} color="rgba(124,58,237,0.2)" />
-                <Text style={s.emptyReviewsText}>No hay reseñas todavía.</Text>
+                <Text style={[s.emptyReviewsText, isDark && s.emptyReviewsTextDark]}>No hay reseñas todavía.</Text>
               </View>
             )
           )}
@@ -659,6 +700,7 @@ const s = StyleSheet.create({
     fontSize: 15, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(30,27,75,0.7)', lineHeight: 22,
   },
+  bioTextDark: { color: '#9ca3af' },
   readMoreBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     marginTop: 10, alignSelf: 'flex-start',
@@ -670,6 +712,7 @@ const s = StyleSheet.create({
   // Info pairs
   infoPairs: { gap: 2 },
   divider:   { height: 1, backgroundColor: 'rgba(167,139,250,0.12)', marginVertical: 8 },
+  dividerDark: { backgroundColor: 'rgba(167,139,250,0.10)' },
 
   // Tabs card
   tabsCard: {
@@ -679,14 +722,21 @@ const s = StyleSheet.create({
     borderColor: 'rgba(167,139,250,0.2)',
     shadowColor: '#6d28d9',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 3,
-    overflow: 'hidden',
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
+    marginTop: 16,
+  },
+  tabsCardDark: {
+    backgroundColor: 'rgba(10,6,24,0.95)',
+    borderColor: 'rgba(167,139,250,0.3)',
   },
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(167,139,250,0.12)',
   },
+  tabBarDark: { borderBottomColor: 'rgba(167,139,250,0.15)' },
   tabItem: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 5,
@@ -698,6 +748,7 @@ const s = StyleSheet.create({
     fontSize: 12, fontFamily: 'PlusJakartaSans_500Medium',
     color: 'rgba(109,40,217,0.35)',
   },
+  tabLabelDark: { color: 'rgba(167,139,250,0.45)' },
   tabLabelActive: {
     fontFamily: 'PlusJakartaSans_700Bold', color: '#7c3aed',
   },
@@ -714,5 +765,6 @@ const s = StyleSheet.create({
     fontSize: 13, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(124,58,237,0.35)',
   },
+  emptyReviewsTextDark: { color: 'rgba(167,139,250,0.45)' },
   reviewsContainer: { gap: 8 },
 });

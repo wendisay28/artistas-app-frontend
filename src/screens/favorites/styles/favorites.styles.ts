@@ -11,33 +11,45 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  // Tabs pill
+  // Tabs pill estilo Explore
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.backgroundSecondary,
-    marginHorizontal: 16,
     borderRadius: 20,
     padding: 3,
-    marginTop: 12,
-    marginBottom: 8,
+    marginHorizontal: 16,
+    height: 38,
+    alignItems: 'center',
+    marginTop: 16,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 18,
+    height: '100%',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 17,
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: 'transparent',
+  },
+  tabActiveGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 17,
+    overflow: 'hidden',
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    fontSize: 10,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    color: 'rgba(0,0,0,0.5)',
+  },
+  tabTextDark: {
+    color: 'rgba(255,255,255,0.4)',
   },
   tabTextActive: {
-    color: colors.white,
+    color: '#FFFFFF',
   },
   // Search + controls row
   searchRow: {
@@ -53,11 +65,12 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
     backgroundColor: colors.white,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    height: 40,
   },
   searchInput: {
     flex: 1,
@@ -85,6 +98,7 @@ export const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.border,
+    height: 40,
     padding: 2,
   },
   viewModeButton: {

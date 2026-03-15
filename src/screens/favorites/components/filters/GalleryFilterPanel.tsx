@@ -11,8 +11,29 @@ import {
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useThemeStore } from '../../../../store/themeStore';
 
 const { width } = Dimensions.get('window');
+
+// Colores por categoría — misma paleta que FeedPost
+const CATEGORY_COLORS: Record<string, [string, string]> = {
+  'paintings':     ['#db2777', '#7c3aed'],
+  'sculptures':    ['#7c3aed', '#2563eb'],
+  'photography':  ['#0891b2', '#7c3aed'],
+  'books':         ['#1e40af', '#0891b2'],
+  'handicrafts':   ['#7c3aed', '#db2777'],
+  'jewelry':      ['#059669', '#0891b2'],
+  'literature':   ['#f59e0b', '#ef4444'],
+  'fantasy':      ['#db2777', '#7c3aed'],
+  'sci_fi':       ['#7c3aed', '#2563eb'],
+  'contemporary': ['#0891b2', '#7c3aed'],
+  'modern':       ['#1e40af', '#0891b2'],
+  'abstract':     ['#7c3aed', '#db2777'],
+  'minimalist':   ['#059669', '#0891b2'],
+  'bestsellers':  ['#f59e0b', '#ef4444'],
+  'new_arrivals': ['#db2777', '#7c3aed'],
+  'featured':     ['#7c3aed', '#2563eb'],
+};
 
 export function GalleryFilterPanel({
   showFilters,
@@ -29,6 +50,7 @@ export function GalleryFilterPanel({
   onClearFilters,
   onClose
 }: any) {
+  const { isDark } = useThemeStore();
 
   if (!showFilters) return null;
 
@@ -37,20 +59,29 @@ export function GalleryFilterPanel({
     return `$ ${val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
   };
 
-  // Componente para secciones de selección (Tipo Chip Grid)
+  // Componente para secciones de selección (Tipo Chip Grid con gradientes)
   const FilterSection = ({ title, options, currentValue, onSelect }: any) => (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={[styles.sectionTitle, isDark && styles.sectionTitleDark]}>{title}</Text>
       <View style={styles.chipGrid}>
         {options.map((opt: any) => {
           const isSelected = currentValue === opt.value;
+          const colors = CATEGORY_COLORS[opt.value] || ['#7c3aed', '#2563eb'];
+          
           return (
             <TouchableOpacity
               key={opt.value}
               onPress={() => onSelect(isSelected ? '' : opt.value)}
-              style={[styles.chip, isSelected && styles.chipSelected]}
+              style={[styles.chip, isDark && styles.chipDark]}
             >
-              <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+              {isSelected && (
+                <LinearGradient
+                  colors={colors}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.chipSelectedGradient}
+                />
+              )}
+              <Text style={[styles.chipText, isDark && styles.chipTextDark, isSelected && styles.chipTextSelected]}>
                 {opt.label}
               </Text>
             </TouchableOpacity>
@@ -216,6 +247,9 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
+  sectionTitleDark: {
+    color: '#f5f3ff',
+  },
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -229,13 +263,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
+  chipDark: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(167,139,250,0.25)',
+  },
   chipSelected: {
     backgroundColor: '#9333ea',
     borderColor: '#9333ea',
   },
+  chipSelectedGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 20,
+  },
   chipText: {
     fontSize: 13,
     color: '#64748b',
+  },
+  chipTextDark: {
+    color: 'rgba(255,255,255,0.7)',
   },
   chipTextSelected: {
     color: 'white',

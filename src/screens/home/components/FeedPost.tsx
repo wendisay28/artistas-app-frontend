@@ -8,12 +8,25 @@ import {
   Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Image as ExpoImage } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FeedPost as FeedPostType } from '../data/feedData';
 import { postsService } from '../../../services/api/posts';
+import { useInspirationStore, type InspirationCategory } from '../../../store/inspirationStore';
 
 const { width } = Dimensions.get('window');
 const IMG_W = width - 32 - 48 - 12; // ancho disponible después del avatar+gap
+
+// Mapeo feed category → InspirationCategory
+const CAT_MAP: Record<string, InspirationCategory> = {
+  'artes-visuales':  'arte',
+  'artes-escenicas': 'teatro',
+  'musica':          'musica',
+  'audiovisual':     'arte',
+  'diseno':          'arte',
+  'comunicacion':    'arte',
+  'cultura-turismo': 'arte',
+};
 
 // Colores por categoría — misma paleta que ARTIST_CATEGORIES
 const CAT_COLORS: Record<string, [string, string]> = {
@@ -43,10 +56,10 @@ const PostImages: React.FC<{ images: string[] }> = ({ images }) => {
 
   if (images.length === 1) {
     return (
-      <Image
+      <ExpoImage
         source={{ uri: images[0] }}
         style={st.imgSingle}
-        resizeMode="cover"
+        contentFit="cover"
       />
     );
   }
@@ -54,7 +67,7 @@ const PostImages: React.FC<{ images: string[] }> = ({ images }) => {
   return (
     <View style={st.imgGrid}>
       {images.slice(0, 2).map((uri, i) => (
-        <Image key={i} source={{ uri }} style={st.imgHalf} resizeMode="cover" />
+        <ExpoImage key={i} source={{ uri }} style={st.imgHalf} contentFit="cover" />
       ))}
     </View>
   );
@@ -83,9 +96,11 @@ export const FeedPost: React.FC<Props> = ({
   onSave,
   onShare,
 }) => {
+  const { isBookmarkedFeedPost, addFromHome, removeByFeedPostId } = useInspirationStore();
+
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes);
-  const [inspired, setInspired] = useState(false);
+  const [inspired, setInspired] = useState(() => isBookmarkedFeedPost(post.id));
   const [insCount, setInsCount] = useState(post.inspirations);
   const [expanded, setExpanded] = useState(false);
 
@@ -106,8 +121,24 @@ export const FeedPost: React.FC<Props> = ({
   };
 
   const handleInspire = () => {
-    setInspired(p => !p);
-    setInsCount(p => inspired ? p - 1 : p + 1);
+    if (inspired) {
+      removeByFeedPostId(post.id);
+      setInspired(false);
+      setInsCount(p => Math.max(0, p - 1));
+    } else {
+      addFromHome({
+        feedPostId:  post.id,
+        image:       post.images?.[0] ?? post.author.avatar ?? '',
+        title:       post.content.slice(0, 80) || post.author.name,
+        author:      post.author.name,
+        artistId:    (post.author as any).id,
+        category:    CAT_MAP[post.author.category] ?? 'arte',
+        tags:        [],
+        description: post.content,
+      });
+      setInspired(true);
+      setInsCount(p => p + 1);
+    }
   };
 
   const handleShare = async () => {
@@ -250,6 +281,7 @@ export const FeedPost: React.FC<Props> = ({
             )}
           </TouchableOpacity>
 
+          
           <TouchableOpacity style={st.action} activeOpacity={0.7} onPress={() => onSave?.(post)}>
             <Ionicons
               name="bookmark-outline"

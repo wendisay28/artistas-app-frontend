@@ -1,5 +1,3 @@
-// src/screens/home/components/HomeBanners.tsx
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
@@ -8,7 +6,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useThemeStore } from '../../../store/themeStore';
 import { useAuthStore } from '../../../store/authStore';
 import { useProfileStore } from '../../../store/profileStore';
@@ -69,7 +66,7 @@ const FadeIn: React.FC<{ delay?: number; children: React.ReactNode }> = ({ delay
   return <Animated.View style={{ opacity, transform: [{ translateY }] }}>{children}</Animated.View>;
 };
 
-// ── ProfileBanner — angosto, sin cuadros de pasos ────────────────────────────
+// ── ProfileBanner ────────────────────────────────────────────────────────────
 
 type ProfileBannerProps = { pct: number; onPress: () => void };
 
@@ -98,20 +95,14 @@ const ProfileBanner: React.FC<ProfileBannerProps> = ({ pct, onPress }) => {
     pct < 75 ? ['#7c3aed', '#2563eb'] :
                ['#059669', '#0891b2'];
 
-  /* ── Vista OSCURA ─────────────────────────────────────────────────────────
-     Misma estructura que la clara, solo cambian fondos, colores de texto y blur.
-     Los estilos pb.* (modo claro) NO se tocan.
-  ──────────────────────────────────────────────────────────────────────────── */
   if (isDark) {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={pbd.container}>
         <View style={pb.inner}>
-          {/* Ícono — mismo gradiente morado, se ve igual de bien en oscuro */}
           <LinearGradient colors={['#7c3aed', '#4f46e5']} style={pb.icon}>
             <Ionicons name="person" size={16} color="#fff" />
           </LinearGradient>
 
-          {/* Centro */}
           <View style={pb.center}>
             <View style={pb.topRow}>
               <Text style={pbd.title}>Completa tu perfil</Text>
@@ -129,28 +120,23 @@ const ProfileBanner: React.FC<ProfileBannerProps> = ({ pct, onPress }) => {
             <Text style={pbd.hint}>{getMessage()}</Text>
           </View>
 
-          {/* Flecha */}
           <Ionicons name="chevron-forward" size={15} color="rgba(167,139,250,0.55)" />
         </View>
       </TouchableOpacity>
     );
   }
 
-  /* ── Vista CLARA — sin cambios ─────────────────────────────────────────── */
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={pb.container}>
-      <BlurView intensity={65} tint="light" style={StyleSheet.absoluteFill} />
       <LinearGradient
-        colors={['rgba(255,255,255,0.85)', 'rgba(237,233,255,0.5)']}
+        colors={['rgba(255,255,255,0.92)', 'rgba(237,233,255,0.75)']}
         style={StyleSheet.absoluteFill}
       />
       <View style={pb.inner}>
-        {/* Ícono */}
         <LinearGradient colors={['#7c3aed', '#4f46e5']} style={pb.icon}>
           <Ionicons name="person" size={16} color="#fff" />
         </LinearGradient>
 
-        {/* Centro */}
         <View style={pb.center}>
           <View style={pb.topRow}>
             <Text style={pb.title}>Completa tu perfil</Text>
@@ -168,7 +154,6 @@ const ProfileBanner: React.FC<ProfileBannerProps> = ({ pct, onPress }) => {
           <Text style={pb.hint}>{getMessage()}</Text>
         </View>
 
-        {/* Flecha */}
         <Ionicons name="chevron-forward" size={15} color="rgba(124,58,237,0.45)" />
       </View>
     </TouchableOpacity>
@@ -188,10 +173,10 @@ const CardContent: React.FC<{ item: BannerItem }> = ({ item }) => (
     <LinearGradient colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.78)']} style={StyleSheet.absoluteFill} />
     <View style={hc.topRow}>
       <View style={hc.tagPill}>
-        <BlurView intensity={35} tint="light" style={hc.tagBlur}>
+        <View style={hc.tagContainer}>
           <View style={[hc.tagDot, { backgroundColor: item.accentColor }]} />
           <Text style={hc.tagText}>{item.tag}</Text>
-        </BlurView>
+        </View>
       </View>
     </View>
     <View style={hc.bottom}>
@@ -204,10 +189,10 @@ const CardContent: React.FC<{ item: BannerItem }> = ({ item }) => (
         <Text style={hc.meta}>{item.meta}</Text>
       </View>
       <View style={hc.ctaPill}>
-        <BlurView intensity={35} tint="light" style={hc.cta}>
+        <View style={hc.cta}>
           <Text style={hc.ctaText}>{item.cta}</Text>
           <Ionicons name="arrow-forward" size={12} color="#fff" />
-        </BlurView>
+        </View>
       </View>
     </View>
   </>
@@ -262,7 +247,6 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
   const { user } = useAuthStore();
   const { artistData } = useProfileStore();
   const { isDark } = useThemeStore();
-  // Prioridad: nombre del perfil del artista → displayName de auth → vacío
   const rawName = artistData?.name || user?.displayName || '';
   const firstName = rawName.split(' ')[0] ?? '';
   const [activeIndex, setActiveIndex] = useState(0);
@@ -305,7 +289,6 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
 
   return (
     <View style={s.container}>
-
       {showProfileBanner && (
         <FadeIn delay={0}>
           <ProfileBanner pct={profilePct} onPress={onProfilePress} />
@@ -372,10 +355,10 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
                 </View>
               ) : (
                 <View style={cp.pillShadow}>
-                  <BlurView intensity={50} tint="light" style={cp.pillInactive}>
+                  <View style={cp.pillInactive}>
                     <Ionicons name={cat.icon} size={14} color="#7c3aed" />
                     <Text style={cp.label}>{cat.label}</Text>
-                  </BlurView>
+                  </View>
                 </View>
               )}
             </TouchableOpacity>
@@ -383,9 +366,7 @@ const HomeBanners: React.FC<HomeBannersProps> = ({
         </ScrollView>
       </FadeIn>
 
-      {/* Divisor casi invisible — separa pills de la sección de eventos */}
       <View style={[div.line, isDark && div.lineDark]} />
-
     </View>
   );
 };
@@ -394,8 +375,6 @@ export default HomeBanners;
 
 // ── Estilos ───────────────────────────────────────────────────────────────────
 
-// Estilos exclusivos para el modo oscuro del ProfileBanner.
-// Los estilos compartidos (inner, icon, center, topRow, fill) los hereda de pb.
 const pbd = StyleSheet.create({
   container: {
     marginHorizontal: 16, marginBottom: 14,
@@ -442,31 +421,29 @@ const hc = StyleSheet.create({
   },
   img:      { flex: 1, justifyContent: 'space-between', padding: 18 },
   imgStyle: { borderRadius: 24 },
-  topRow:   { alignSelf: 'flex-start' },
+  topRow:    { alignSelf: 'flex-start' },
   tagPill:  { borderRadius: 50, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
-  tagBlur:  { paddingHorizontal: 12, paddingVertical: 5, backgroundColor: 'rgba(255,255,255,0.15)', flexDirection: 'row', alignItems: 'center', gap: 5 },
-  tagDot:   { width: 5, height: 5, borderRadius: 3 },
+  tagContainer: { paddingHorizontal: 12, paddingVertical: 5, backgroundColor: 'rgba(255,255,255,0.2)', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tagDot:    { width: 5, height: 5, borderRadius: 3 },
   tagText:  { fontSize: 9, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', letterSpacing: 1.4 },
-  bottom:   { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  info:     { flex: 1, marginRight: 10 },
+  bottom:    { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  info:      { flex: 1, marginRight: 10 },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  dot:      { width: 6, height: 6, borderRadius: 3 },
-  eyebrow:  { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: 'rgba(255,255,255,0.65)', letterSpacing: 1.2 },
-  title:    { fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', lineHeight: 25, letterSpacing: -0.3, marginBottom: 6 },
-  meta:     { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.58)' },
+  dot:       { width: 6, height: 6, borderRadius: 3 },
+  eyebrow:   { fontSize: 9, fontFamily: 'PlusJakartaSans_700Bold', color: 'rgba(255,255,255,0.65)', letterSpacing: 1.2 },
+  title:     { fontSize: 20, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', lineHeight: 25, letterSpacing: -0.3, marginBottom: 6 },
+  meta:      { fontSize: 11, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(255,255,255,0.58)' },
   ctaPill:  { borderRadius: 50, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)' },
-  cta:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.18)' },
+  cta:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, backgroundColor: 'rgba(255,255,255,0.22)' },
   ctaText:  { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 });
 
 const cp = StyleSheet.create({
   scroll:           { paddingHorizontal: 16, gap: 10, paddingVertical: 10 },
   pillActive:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, elevation: 4, shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.25, shadowRadius: 6 },
-  // Vista clara — wrapper con sombra morada (fuera del overflow:hidden del BlurView)
   pillShadow:       { borderRadius: 50, shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 3 },
-  pillInactive:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.75)', backgroundColor: 'rgba(255,255,255,0.5)' },
+  pillInactive:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, borderWidth: 1, borderColor: 'rgba(255,255,255,0.75)', backgroundColor: 'rgba(255,255,255,0.9)' },
   label:            { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#000' },
-  // Vista oscura
   pillInactiveDark: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 8, borderRadius: 50, backgroundColor: '#0a0618', borderWidth: 1, borderColor: 'rgba(139,92,246,0.25)' },
   labelDark:        { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#fff' },
   labelActive:      { fontSize: 13, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },

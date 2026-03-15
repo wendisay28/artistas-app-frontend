@@ -20,6 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParams } from '../../navigation/AuthStack';
 import { GradientButton } from '../../components/ui/GradientButton';
+import { useThemeStore } from '../../store/themeStore';
 
 type Props = NativeStackScreenProps<AuthStackParams, 'ClientHome'>;
 
@@ -96,6 +97,7 @@ export const ClientExploreHome: React.FC<Props> = ({ navigation }) => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const { isDark } = useThemeStore();
 
   const filtered = MOCK_ARTISTS.filter(a =>
     activeCategory === 'all' ||
@@ -110,11 +112,11 @@ export const ClientExploreHome: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={[styles.safe, isDark && styles.safeDark]} edges={['top']}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={isDark ? "#0a0618" : "#fff"} />
 
       {/* Top bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, isDark && styles.topBarDark]}>
         <View style={styles.logoRow}>
           <Text style={styles.logoBusca}>Busc</Text>
           <LinearGradient colors={['#9333ea', '#2563eb']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.logoArtBg}>
@@ -133,23 +135,23 @@ export const ClientExploreHome: React.FC<Props> = ({ navigation }) => {
 
       {/* Search bar */}
       <View style={styles.searchWrap}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color="#9333ea" />
+        <View style={[styles.searchBar, isDark && styles.searchBarDark]}>
+          <Ionicons name="search" size={18} color={isDark ? '#d1d5db' : '#9333ea'} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, isDark && styles.searchInputDark]}
             value={search}
             onChangeText={setSearch}
             placeholder="Buscar fotógrafo, músico, DJ…"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={18} color="#d1d5db" />
+              <Ionicons name="close-circle" size={18} color={isDark ? '#6b7280' : '#d1d5db'} />
             </TouchableOpacity>
           )}
         </View>
-        <TouchableOpacity style={styles.filterBtn}>
-          <Ionicons name="options" size={20} color="#9333ea" />
+        <TouchableOpacity style={[styles.filterBtn, isDark && styles.filterBtnDark]}>
+          <Ionicons name="options" size={20} color={isDark ? '#d1d5db' : '#9333ea'} />
         </TouchableOpacity>
       </View>
 
@@ -473,6 +475,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: 'PlusJakartaSans_500Medium',
     color: '#9ca3af',
+  },
+
+  // Dark theme styles
+  safeDark: {
+    backgroundColor: '#0a0618',
+  },
+  topBarDark: {
+    backgroundColor: '#0a0618',
+    borderColor: 'rgba(139,92,246,0.25)',
+    borderWidth: 1,
+    borderRadius: 20,
+  },
+  searchBarDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  searchInputDark: {
+    color: '#d1d5db',
+  },
+  filterBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
 });
 

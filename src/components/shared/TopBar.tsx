@@ -74,7 +74,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   const user = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
   const { isDark, toggleTheme } = useThemeStore();
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation();
   const [drawerVisible, setDrawerVisible] = useState(false);
   const [portalVisible, setPortalVisible] = useState(false);
   const slideAnim = useRef(new Animated.Value(DRAWER_WIDTH)).current;
@@ -217,7 +217,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.5 }]}
             hitSlop={8}
           >
-            <Ionicons name="add-outline" size={26} color={colors.text} />
+            <Ionicons name="add-outline" size={26} color={isDark ? '#FFFFFF' : colors.text} />
           </Pressable>
           {/* Menú / drawer — hamburger */}
           <Pressable
@@ -225,7 +225,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.5 }]}
             hitSlop={8}
           >
-            <Ionicons name="reorder-three-outline" size={26} color={colors.text} />
+            <Ionicons name="reorder-three-outline" size={26} color={isDark ? '#FFFFFF' : colors.text} />
           </Pressable>
         </>
       );
@@ -240,7 +240,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.5 }]}
           hitSlop={8}
         >
-          <Ionicons name="notifications-outline" size={24} color={colors.text} />
+          <Ionicons name="notifications-outline" size={24} color={isDark ? '#FFFFFF' : colors.text} />
           {notificationCount > 0 && (
             <View style={[styles.badge, { 
               backgroundColor: isDark ? '#dc2626' : '#ef4444',
@@ -302,11 +302,11 @@ export const TopBar: React.FC<TopBarProps> = ({
             </View>
           ) : usernameMode ? (
             <View style={styles.usernameRow}>
-              <Text style={[styles.usernameTitle, { color: colors.text }]} numberOfLines={1}>{title}</Text>
-              <Ionicons name="chevron-down" size={15} color={colors.text} />
+              <Text style={[styles.usernameTitle, { color: isDark ? '#FFFFFF' : colors.text }]} numberOfLines={1}>{title}</Text>
+              <Ionicons name="chevron-down" size={15} color={isDark ? '#FFFFFF' : colors.text} />
             </View>
           ) : (
-            <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>{title}</Text>
+            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : colors.text }]} numberOfLines={1}>{title}</Text>
           )}
         </View>
 

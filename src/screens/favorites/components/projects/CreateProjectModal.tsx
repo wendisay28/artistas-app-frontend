@@ -1,203 +1,257 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// CreateProjectModal.tsx — Modal para crear / renombrar un proyecto
-// ─────────────────────────────────────────────────────────────────────────────
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal, View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, FlatList,
+  StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, Pressable, Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useThemeStore } from '../../../../store/themeStore';
 
-const EMOJIS = [
-  '💍','🎉','🎸','🎨','🖼️','📸','🌸','🏛️','🎭','🎪',
-  '🌿','✨','🎶','🍾','🕊️','🎠','🌅','🪄','🎀','🏡',
+const ICONS = [
+  'heart', 'star', 'musical-notes', 'color-palette', 'camera',
+  'images', 'flower', 'business', 'theater', 'gift',
+  'leaf', 'sparkles', 'musical-note', 'wine', 'airplane',
+  'car', 'sunny', 'moon', 'ribbon', 'home',
 ];
 
 type Props = {
   visible: boolean;
   initialName?: string;
-  initialEmoji?: string;
+  initialIcon?: string;
   mode: 'create' | 'rename';
-  onConfirm: (name: string, emoji: string) => void;
+  onConfirm: (name: string, icon: string) => void;
   onClose: () => void;
 };
 
 export const CreateProjectModal: React.FC<Props> = ({
-  visible, initialName = '', initialEmoji = '✨', mode, onConfirm, onClose,
+  visible, initialName = '', initialIcon = 'sparkles', mode, onConfirm, onClose,
 }) => {
   const insets = useSafeAreaInsets();
-  const [name, setName]   = useState(initialName);
-  const [emoji, setEmoji] = useState(initialEmoji);
+  const { isDark } = useThemeStore();
+  const [name, setName] = useState(initialName);
+  const [selectedIcon, setSelectedIcon] = useState(initialIcon);
 
+  // Sincronizar estado cuando el modal se abre
   useEffect(() => {
-    if (visible) { setName(initialName); setEmoji(initialEmoji); }
-  }, [visible, initialName, initialEmoji]);
+    if (visible) {
+      setName(initialName);
+      setSelectedIcon(initialIcon);
+    }
+  }, [visible, initialName, initialIcon]);
 
-  const handleConfirm = () => {
+  const handleConfirm = useCallback(() => {
     if (!name.trim()) return;
-    onConfirm(name.trim(), emoji);
+    Keyboard.dismiss(); // Cerramos teclado antes de la acción
+    onConfirm(name.trim(), selectedIcon);
     onClose();
-  };
+  }, [name, selectedIcon, onConfirm, onClose]);
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={false}
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
       <KeyboardAvoidingView
-        style={styles.overlay}
+        style={[styles.root, isDark && styles.rootDark]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
+        {/* Pressable permite cerrar el teclado al tocar fuera de los inputs */}
+        <Pressable style={{ flex: 1 }} onPress={Keyboard.dismiss}>
+          
+          {/* Header con Safe Area */}
+          <View style={[
+            styles.header,
+            isDark && styles.headerDark,
+            { paddingTop: insets.top + 8 },
+          ]}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={[styles.closeBtn, isDark && styles.closeBtnDark]}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+              <Ionicons name="close" size={20} color={isDark ? '#9ca3af' : '#6b7280'} />
+            </TouchableOpacity>
 
-          {/* Handle */}
-          <View style={styles.handle} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>
+            <Text style={[styles.headerTitle, isDark && styles.headerTitleDark]}>
               {mode === 'create' ? 'Nuevo proyecto' : 'Renombrar proyecto'}
             </Text>
-            <TouchableOpacity onPress={onClose} hitSlop={12}>
-              <Ionicons name="close" size={22} color="#6b7280" />
-            </TouchableOpacity>
+
+            <View style={{ width: 36 }} /> 
           </View>
 
-          {/* Emoji selector */}
-          <Text style={styles.label}>Elige un ícono</Text>
-          <FlatList
-            data={EMOJIS}
-            keyExtractor={e => e}
-            numColumns={10}
-            scrollEnabled={false}
-            contentContainerStyle={styles.emojiGrid}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.emojiBtn, item === emoji && styles.emojiBtnActive]}
-                onPress={() => setEmoji(item)}
-              >
-                <Text style={styles.emojiText}>{item}</Text>
-              </TouchableOpacity>
-            )}
-          />
-
-          {/* Nombre */}
-          <Text style={styles.label}>Nombre del proyecto</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Ej: Banda para mi boda"
-            placeholderTextColor="rgba(124,58,237,0.3)"
-            autoFocus
-            maxLength={40}
-          />
-
-          {/* Botón */}
-          <TouchableOpacity
-            onPress={handleConfirm}
-            disabled={!name.trim()}
-            activeOpacity={0.85}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingBottom: insets.bottom + 40 },
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets={true}
           >
-            <LinearGradient
-              colors={['#7c3aed', '#2563eb']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={[styles.btn, !name.trim() && { opacity: 0.4 }]}
-            >
-              <Ionicons name={mode === 'create' ? 'folder-open' : 'checkmark'} size={16} color="#fff" />
-              <Text style={styles.btnText}>
-                {mode === 'create' ? 'Crear proyecto' : 'Guardar cambios'}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
 
-        </View>
+            {/* Selector de Iconos */}
+            <Text style={[styles.label, isDark && styles.labelDark]}>Elige un ícono</Text>
+            <View style={styles.iconGrid}>
+              {ICONS.map(icon => {
+                const isActive = icon === selectedIcon;
+                return (
+                  <TouchableOpacity
+                    key={icon}
+                    style={[
+                      styles.iconBtn,
+                      isDark && styles.iconBtnDark,
+                      isActive && styles.iconBtnActive,
+                      isActive && isDark && styles.iconBtnActiveDark,
+                    ]}
+                    onPress={() => setSelectedIcon(icon)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={icon as any}
+                      size={22}
+                      color={isActive ? '#7c3aed' : isDark ? '#6b7280' : '#9ca3af'}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Input de Nombre */}
+            <Text style={[styles.label, isDark && styles.labelDark]}>
+              Nombre del proyecto
+            </Text>
+            <TextInput
+              style={[styles.input, isDark && styles.inputDark]}
+              value={name}
+              onChangeText={setName}
+              placeholder="Ej: Mi boda, Cumpleaños mamá..."
+              placeholderTextColor={isDark ? 'rgba(167,139,250,0.3)' : 'rgba(124,58,237,0.3)'}
+              selectionColor={isDark ? '#a78bfa' : '#7c3aed'}
+              maxLength={40}
+              returnKeyType="done"
+              onSubmitEditing={handleConfirm}
+              blurOnSubmit={true}
+            />
+
+            {/* Preview Visual */}
+            <View style={[styles.preview, isDark && styles.previewDark]}>
+              <View style={[styles.previewIcon, isDark && styles.previewIconDark]}>
+                <Ionicons name={selectedIcon as any} size={26} color="#7c3aed" />
+              </View>
+              <View style={styles.previewInfo}>
+                <Text style={[styles.previewName, isDark && styles.previewNameDark]} numberOfLines={1}>
+                  {name.trim() || (mode === 'create' ? 'Nombre del proyecto' : 'Sin nombre')}
+                </Text>
+                <Text style={[styles.previewSub, isDark && styles.previewSubDark]}>
+                  0 ítems · Creado ahora
+                </Text>
+              </View>
+            </View>
+
+            {/* Botón Principal */}
+            <TouchableOpacity
+              onPress={handleConfirm}
+              disabled={!name.trim()}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#7c3aed', '#2563eb']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={[styles.btn, !name.trim() && styles.btnDisabled]}
+              >
+                <Ionicons
+                  name={mode === 'create' ? 'folder-open' : 'checkmark'}
+                  size={18}
+                  color="#fff"
+                />
+                <Text style={styles.btnText}>
+                  {mode === 'create' ? 'Crear proyecto' : 'Guardar cambios'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={onClose} style={styles.cancelBtn} activeOpacity={0.7}>
+              <Text style={[styles.cancelText, isDark && styles.cancelTextDark]}>Cancelar</Text>
+            </TouchableOpacity>
+
+          </ScrollView>
+        </Pressable>
       </KeyboardAvoidingView>
     </Modal>
   );
 };
 
+const ICON_SIZE = 52;
+
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    padding: 20,
-    paddingTop: 12,
-  },
-  handle: {
-    alignSelf: 'center',
-    width: 40, height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(124,58,237,0.2)',
-    marginBottom: 16,
-  },
+  root: { flex: 1, backgroundColor: '#faf9ff' },
+  rootDark: { backgroundColor: '#0a0618' },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingBottom: 14, borderBottomWidth: 1,
+    borderBottomColor: 'rgba(167,139,250,0.12)', backgroundColor: '#faf9ff',
   },
-  title: {
-    fontSize: 18,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#1e1b4b',
+  headerDark: { backgroundColor: '#0a0618', borderBottomColor: 'rgba(139,92,246,0.15)' },
+  closeBtn: {
+    width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(124,58,237,0.06)',
   },
+  closeBtnDark: { backgroundColor: 'rgba(255,255,255,0.05)' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#1e1b4b' },
+  headerTitleDark: { color: '#f5f3ff' },
+  scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 24 },
   label: {
-    fontSize: 10,
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: 'rgba(124,58,237,0.5)',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 10,
+    fontSize: 10, fontWeight: '700', color: 'rgba(124,58,237,0.5)',
+    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 12,
   },
-  emojiGrid: {
-    marginBottom: 20,
-    gap: 6,
+  labelDark: { color: 'rgba(167,139,250,0.55)' },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 28 },
+  iconBtn: {
+    width: ICON_SIZE, height: ICON_SIZE, borderRadius: 14, alignItems: 'center',
+    justifyContent: 'center', backgroundColor: 'rgba(124,58,237,0.05)',
+    borderWidth: 1.5, borderColor: 'rgba(124,58,237,0.12)',
   },
-  emojiBtn: {
-    flex: 1,
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-    margin: 2,
-    backgroundColor: 'rgba(124,58,237,0.05)',
-  },
-  emojiBtnActive: {
-    backgroundColor: 'rgba(124,58,237,0.15)',
-    borderWidth: 1.5,
-    borderColor: '#7c3aed',
-  },
-  emojiText: { fontSize: 20 },
+  iconBtnDark: { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' },
+  iconBtnActive: { backgroundColor: 'rgba(124,58,237,0.12)', borderWidth: 2, borderColor: '#7c3aed' },
+  iconBtnActiveDark: { backgroundColor: 'rgba(124,58,237,0.18)', borderColor: '#a78bfa' },
   input: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(167,139,250,0.35)',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 15,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    color: '#1e1b4b',
-    marginBottom: 20,
-    backgroundColor: 'rgba(245,243,255,0.5)',
+    borderWidth: 1.5, borderColor: 'rgba(167,139,250,0.35)', borderRadius: 14,
+    paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#1e1b4b',
+    marginBottom: 24, backgroundColor: 'rgba(245,243,255,0.5)',
   },
+  inputDark: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(167,139,250,0.25)', color: '#f5f3ff' },
+  preview: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 16,
+    backgroundColor: 'rgba(124,58,237,0.04)', borderWidth: 1, borderColor: 'rgba(167,139,250,0.18)',
+    marginBottom: 28,
+  },
+  previewDark: { backgroundColor: 'rgba(124,58,237,0.08)', borderColor: 'rgba(139,92,246,0.22)' },
+  previewIcon: {
+    width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(124,58,237,0.1)',
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)',
+  },
+  previewIconDark: { backgroundColor: 'rgba(124,58,237,0.15)', borderColor: 'rgba(139,92,246,0.3)' },
+  previewInfo: { flex: 1 },
+  previewName: { fontSize: 15, fontWeight: '700', color: '#1e1b4b', marginBottom: 3 },
+  previewNameDark: { color: '#f5f3ff' },
+  previewSub: { fontSize: 12, color: 'rgba(109,40,217,0.45)' },
+  previewSubDark: { color: 'rgba(167,139,250,0.5)' },
   btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 15, borderRadius: 16, elevation: 4,
   },
-  btnText: {
-    fontSize: 15,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#fff',
-  },
+  btnDisabled: { opacity: 0.4 },
+  btnText: { fontSize: 16, fontWeight: '700', color: '#fff' },
+  cancelBtn: { alignItems: 'center', paddingVertical: 16, marginTop: 4 },
+  cancelText: { fontSize: 14, color: '#9ca3af' },
+  cancelTextDark: { color: '#6b7280' },
 });

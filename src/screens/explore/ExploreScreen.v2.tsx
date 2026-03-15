@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useExplore } from '../../hooks/useExplore';
 import { ArtistCard, EventCard, VenueCard, GalleryCard } from './components/SimpleCards';
 import { colors } from '../../constants/colors';
+import { useThemeStore } from '../../store/themeStore';
 
 // Componente CategorySelector inline simple
 const SimpleCategorySelector: React.FC<{
@@ -100,6 +101,7 @@ const MemoizedGalleryCard = memo(GalleryCard);
 const ExploreScreen = () => {
   const insets = useSafeAreaInsets();
   const explore = useExplore();
+  const { isDark } = useThemeStore();
 
   // Memoizar categorías para evitar recreación
   const categories = useMemo(() => [
@@ -177,30 +179,30 @@ const ExploreScreen = () => {
   }, [explore.search]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, isDark && styles.containerDark, { paddingTop: insets.top }]}>
       {/* Header con búsqueda */}
-      <View style={styles.header}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#9333ea" />
+      <View style={[styles.header, isDark && styles.headerDark]}>
+        <View style={[styles.searchContainer, isDark && styles.searchContainerDark]}>
+          <Ionicons name="search" size={20} color={isDark ? '#d1d5db' : '#9333ea'} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, isDark && styles.searchInputDark]}
             placeholder="Buscar artistas, eventos, salas..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={isDark ? '#6b7280' : '#9ca3af'}
             onChangeText={handleSearch}
             defaultValue={explore.filters.query}
           />
           {explore.filters.query && (
             <TouchableOpacity onPress={() => explore.search('')}>
-              <Ionicons name="close-circle" size={20} color="#d1d5db" />
+              <Ionicons name="close-circle" size={20} color={isDark ? '#6b7280' : '#d1d5db'} />
             </TouchableOpacity>
           )}
         </View>
         
         <TouchableOpacity 
-          style={styles.filterBtn}
+          style={[styles.filterBtn, isDark && styles.filterBtnDark]}
           onPress={() => {/* TODO: Abrir panel de filtros */}}
         >
-          <Ionicons name="options" size={20} color="#9333ea" />
+          <Ionicons name="options" size={20} color={isDark ? '#d1d5db' : '#9333ea'} />
         </TouchableOpacity>
       </View>
 
@@ -388,6 +390,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#9333ea',
     fontFamily: 'Inter_500Medium',
+  },
+  
+  // Dark theme styles
+  containerDark: {
+    backgroundColor: '#0a0618',
+  },
+  headerDark: {
+    backgroundColor: '#0a0618',
+    borderColor: 'rgba(139,92,246,0.25)',
+    borderWidth: 1,
+    borderRadius: 20,
+  },
+  searchContainerDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
+  },
+  searchInputDark: {
+    color: '#d1d5db',
+  },
+  filterBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
 });
 

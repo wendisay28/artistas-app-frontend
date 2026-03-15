@@ -15,7 +15,7 @@ import { Spacing } from './spacing';
 import { Radius } from './radius';
 import { Shadow } from './shadows';
 import { Fonts, Typography } from './typography';
-import { LogoStyles, BlobStyles, CardStyles, BackgroundStyles, BrandTypography } from './brand';
+import { LogoStyles, BlobStyles, CardStyles, ButtonStyles, TabStyles, BackgroundStyles, BrandTypography } from './brand';
 
 // Legacy compatibility exports
 export { Colors as colors } from './colors'; // Para compatibilidad con constants/colors.ts
@@ -28,6 +28,8 @@ export const createTheme = () => ({
   shadow: Shadow,
   fonts: Fonts,
   typography: Typography,
+  buttons: ButtonStyles,
+  tabs: TabStyles,
   brand: {
     logo: LogoStyles,
     blob: BlobStyles,

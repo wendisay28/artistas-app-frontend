@@ -5,13 +5,14 @@ import {
   Text,
   StyleSheet,
   Pressable,
-  Image,
+  Image as RNImage,
   ScrollView,
   Dimensions,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Platform,
 } from 'react-native';
+import { Image as ExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -81,7 +82,7 @@ export default function ImageViewerModal({ visible, images, initialIndex = 0, on
         >
           {safeImages.map((uri, i) => (
             <View key={`${uri}-${i}`} style={st.page}>
-              <Image source={{ uri }} style={st.image} resizeMode="contain" />
+              <ExpoImage source={{ uri }} style={st.image} contentFit="contain" />
             </View>
           ))}
         </ScrollView>

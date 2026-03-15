@@ -92,7 +92,6 @@ const getVenueImage = (item: VenueItem) =>
   item.imageUri ?? VENUE_IMAGES[item.type] ?? VENUE_IMAGES['default'];
 
 // ── Glass highlight helper ────────────────────────────────────────────────────
-// Línea de 1px en la parte superior — clave del efecto glass premium
 
 const GlassHighlight = () => (
   <View style={{
@@ -101,7 +100,52 @@ const GlassHighlight = () => (
   }} />
 );
 
-// ── EventGridCard — mismo estilo glass que ArtistCard ────────────────────────
+// ── ArtistGridCard ────────────────────────────────────────────────────────────
+
+export const ArtistGridCard: React.FC<{ item: ArtistItem; onPress?: () => void }> = ({ item, onPress }) => {
+  const isAvail = item.available ?? false;
+  return (
+    <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
+      <GlassHighlight />
+      <View style={grid.imageWrap}>
+        {item.avatarUri ? (
+          <Image
+            source={{ uri: item.avatarUri }}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+          />
+        ) : (
+          <LinearGradient colors={item.gradients} style={StyleSheet.absoluteFill}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={grid.initials}>{item.initials}</Text>
+            </View>
+          </LinearGradient>
+        )}
+        <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
+        <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
+      </View>
+      <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
+      <Text style={[ar.discipline, { marginBottom: 2 }]} numberOfLines={1}>{item.discipline}</Text>
+      <View style={ar.divider} />
+      <View style={ar.statsRow}>
+        <View style={ar.stat}>
+          <Ionicons name="star" size={10} color="#f59e0b" />
+          <Text style={ar.statVal}>{item.rating}</Text>
+        </View>
+        <View style={ar.statDot} />
+        <Text style={ar.works}>{item.works} obras</Text>
+      </View>
+      <View style={[ar.availBadge, { backgroundColor: isAvail ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
+        <View style={[ar.availDot, { backgroundColor: isAvail ? '#16a34a' : '#d97706' }]} />
+        <Text style={[ar.availText, { color: isAvail ? '#15803d' : '#b45309' }]}>
+          {isAvail ? 'Disponible' : 'Ocupado'}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ── EventGridCard ─────────────────────────────────────────────────────────────
 
 export const EventGridCard: React.FC<{ item: Event; onPress?: () => void }> = ({ item, onPress }) => {
   const isAvail = item.availability?.toLowerCase() === 'disponible';
@@ -109,14 +153,12 @@ export const EventGridCard: React.FC<{ item: Event; onPress?: () => void }> = ({
     <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
       <GlassHighlight />
       <View style={grid.imageWrap}>
-        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
         <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
       </View>
       <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
-      <Text style={[ar.discipline, { marginBottom: 2 }]} numberOfLines={1}>
-        {item.date ?? 'Próximamente'}
-      </Text>
+      <Text style={[ar.discipline, { marginBottom: 2 }]} numberOfLines={1}>{item.date ?? 'Próximamente'}</Text>
       <View style={ar.divider} />
       <View style={ar.statsRow}>
         <View style={ar.stat}>
@@ -124,7 +166,7 @@ export const EventGridCard: React.FC<{ item: Event; onPress?: () => void }> = ({
           <Text style={ar.statVal}>{item.rating ?? '—'}</Text>
         </View>
         <View style={ar.statDot} />
-        <Text style={ar.works}>{item.location}</Text>
+        <Text style={ar.works} numberOfLines={1}>{item.location}</Text>
       </View>
       <View style={[ar.availBadge, { backgroundColor: isAvail ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
         <View style={[ar.availDot, { backgroundColor: isAvail ? '#16a34a' : '#d97706' }]} />
@@ -136,7 +178,7 @@ export const EventGridCard: React.FC<{ item: Event; onPress?: () => void }> = ({
   );
 };
 
-// ── VenueGridCard — mismo estilo glass que ArtistCard ────────────────────────
+// ── VenueGridCard ─────────────────────────────────────────────────────────────
 
 export const VenueGridCard: React.FC<{ item: Venue; onPress?: () => void }> = ({ item, onPress }) => {
   const isAvail = item.availability?.toLowerCase() === 'disponible';
@@ -144,7 +186,7 @@ export const VenueGridCard: React.FC<{ item: Venue; onPress?: () => void }> = ({
     <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
       <GlassHighlight />
       <View style={grid.imageWrap}>
-        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
         <View style={[ar.dot, { backgroundColor: isAvail ? '#16a34a' : '#d97706', position: 'absolute', bottom: 6, right: 6 }]} />
       </View>
@@ -159,7 +201,7 @@ export const VenueGridCard: React.FC<{ item: Venue; onPress?: () => void }> = ({
           <Text style={ar.statVal}>{item.rating ?? '—'}</Text>
         </View>
         <View style={ar.statDot} />
-        <Text style={ar.works}>{item.location}</Text>
+        <Text style={ar.works} numberOfLines={1}>{item.location}</Text>
       </View>
       <View style={[ar.availBadge, { backgroundColor: isAvail ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
         <View style={[ar.availDot, { backgroundColor: isAvail ? '#16a34a' : '#d97706' }]} />
@@ -171,7 +213,7 @@ export const VenueGridCard: React.FC<{ item: Venue; onPress?: () => void }> = ({
   );
 };
 
-// ── GalleryGridCard — mismo estilo glass que ArtistCard ──────────────────────
+// ── GalleryGridCard ───────────────────────────────────────────────────────────
 
 export const GalleryGridCard: React.FC<{ item: GalleryItem; onPress?: () => void }> = ({ item, onPress }) => {
   const isAvail = item.forSale !== false;
@@ -179,7 +221,7 @@ export const GalleryGridCard: React.FC<{ item: GalleryItem; onPress?: () => void
     <TouchableOpacity activeOpacity={0.86} style={ar.card} onPress={onPress}>
       <GlassHighlight />
       <View style={grid.imageWrap}>
-        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient colors={['transparent', 'rgba(30,27,75,0.5)']} style={StyleSheet.absoluteFill} />
       </View>
       <Text style={ar.name} numberOfLines={1}>{item.name}</Text>
@@ -205,15 +247,7 @@ export const GalleryGridCard: React.FC<{ item: GalleryItem; onPress?: () => void
   );
 };
 
-const grid = StyleSheet.create({
-  imageWrap: {
-    width: 64, height: 64, borderRadius: 32,
-    overflow: 'hidden', marginBottom: 10,
-    backgroundColor: '#e5e7eb',
-  },
-});
-
-// ── EventCard — Glassmorphism con imagen real ─────────────────────────────────
+// ── EventCard ─────────────────────────────────────────────────────────────────
 
 export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({ item, onPress }) => {
   const { colors, isDark } = useThemeStore();
@@ -222,8 +256,6 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
   return (
     <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
       <GlassHighlight />
-
-      {/* Imagen real con overlay */}
       <View style={styles.imgWrap}>
         <ImageBackground
           source={{ uri: getEventImage(item) }}
@@ -231,14 +263,11 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
           imageStyle={{ borderTopLeftRadius:18, borderTopRightRadius:18 }}
           resizeMode="cover"
         >
-          {/* Overlay gradiente suave */}
           <LinearGradient
             colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.55)']}
             start={{ x:0, y:0 }} end={{ x:0, y:1 }}
             style={StyleSheet.absoluteFill}
           />
-
-          {/* Badge de categoría — glass pill */}
           <View style={styles.catBadge}>
             <BlurView intensity={30} tint="dark" style={styles.catBlur}>
               <View style={styles.catDot} />
@@ -248,10 +277,8 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
         </ImageBackground>
       </View>
 
-      {/* Info inferior — glass */}
       <BlurView intensity={isDark ? 30 : 55} tint={isDark ? 'dark' : 'light'} style={styles.info}>
         <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-
         <View style={styles.metaRow}>
           <Ionicons name="calendar-outline" size={10} color={colors.primary} />
           <Text style={styles.meta}>{item.date}</Text>
@@ -260,7 +287,6 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
           <Ionicons name="location-outline" size={10} color={colors.primary} />
           <Text style={styles.meta} numberOfLines={1}>{item.venue}</Text>
         </View>
-
         <View style={styles.priceRow}>
           <Text style={styles.price}>{item.price}</Text>
           <LinearGradient colors={['#7c3aed','#2563eb']} style={styles.arrowBtn}>
@@ -272,43 +298,7 @@ export const EventCard: React.FC<{ item: EventItem; onPress?: () => void }> = ({
   );
 };
 
-const getEventStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  card: {
-    width:185, marginRight:12, borderRadius:20,
-    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
-    overflow:'hidden',
-    shadowColor: isDark ? '#8b5cf6' : '#6d28d9', 
-    shadowOffset:{width:0, height:8},
-    shadowOpacity:0.16, shadowRadius:20, elevation:6,
-  },
-  imgWrap: { height:140 },
-  img:     { flex:1 },
-
-  // Badge categoría
-  catBadge: {
-    position:'absolute', bottom:10, left:10,
-    borderRadius:20, overflow:'hidden',
-    borderWidth:1, borderColor:'rgba(255,255,255,0.3)',
-  },
-  catBlur: {
-    flexDirection:'row', alignItems:'center', gap:5,
-    paddingHorizontal:9, paddingVertical:4,
-  },
-  catDot:  { width:5, height:5, borderRadius:3, backgroundColor:'#a78bfa' },
-  catText: { fontSize:9, fontFamily:'PlusJakartaSans_700Bold', color:'#fff', letterSpacing:0.8 },
-
-  // Info
-  info:  { padding:12, gap:4 },
-  title: { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:colors.text, lineHeight:18, marginBottom:3 },
-  metaRow: { flexDirection:'row', alignItems:'center', gap:4 },
-  meta:    { fontSize:10.5, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', flex:1 },
-  priceRow:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginTop:6 },
-  price:   { fontSize:14, fontFamily:'PlusJakartaSans_800ExtraBold', color:colors.text },
-  arrowBtn:{ width:28, height:28, borderRadius:14, alignItems:'center', justifyContent:'center' },
-});
-
-// ── ArtistCard — Glassmorphism con foto real ──────────────────────────────────
+// ── ArtistCard ────────────────────────────────────────────────────────────────
 
 export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; photoIndex?: number }> = ({
   item, onPress, photoIndex = 0,
@@ -320,36 +310,22 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
   return (
     <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
       <GlassHighlight />
-
-      {/* Avatar con foto */}
       <View style={styles.avatarWrap}>
         {photoUri ? (
-          <RNImage
-            source={{ uri: photoUri }}
-            style={styles.avatar}
-            resizeMode="cover"
-          />
+          <RNImage source={{ uri: photoUri }} style={styles.avatar} resizeMode="cover" />
         ) : (
           <LinearGradient colors={item.gradients} style={styles.avatar}>
             <Text style={styles.initials}>{item.initials}</Text>
           </LinearGradient>
         )}
-
-        {/* Anillo de disponibilidad */}
         <View style={[styles.ring, { borderColor: item.available ? '#16a34a' : '#d97706' }]} />
-
-        {/* Dot de estado */}
         <View style={[styles.dot, { backgroundColor: item.available ? '#16a34a' : '#d97706' }]} />
       </View>
 
-      {/* Nombre y disciplina */}
       <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
       <Text style={styles.discipline} numberOfLines={1}>{item.discipline}</Text>
-
-      {/* Separador glass */}
       <View style={styles.divider} />
-
-      {/* Rating + obras */}
+      
       <View style={styles.statsRow}>
         <View style={styles.stat}>
           <Ionicons name="star" size={10} color="#f59e0b" />
@@ -359,7 +335,6 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
         <Text style={styles.works}>{item.works} obras</Text>
       </View>
 
-      {/* Badge de disponibilidad */}
       <View style={[styles.availBadge, { backgroundColor: item.available ? 'rgba(22,163,74,0.1)' : 'rgba(217,119,6,0.1)' }]}>
         <View style={[styles.availDot, { backgroundColor: item.available ? '#16a34a' : '#d97706' }]} />
         <Text style={[styles.availText, { color: item.available ? '#15803d' : '#b45309' }]}>
@@ -370,81 +345,7 @@ export const ArtistCard: React.FC<{ item: ArtistItem; onPress?: () => void; phot
   );
 };
 
-const getArtistStyles = (colors: any, isDark: boolean) => StyleSheet.create({
-  card: {
-    width:148, marginRight:12, borderRadius:20,
-    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
-    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
-    overflow:'hidden',
-    shadowColor: isDark ? '#8b5cf6' : '#6d28d9', 
-    shadowOffset:{width:0, height:8},
-    shadowOpacity:0.16, shadowRadius:20, elevation:6,
-  },
-  avatarWrap: {
-    alignSelf:'center', marginTop:8,
-    width:64, height:64, borderRadius:32,
-    position:'relative',
-  },
-  avatar: {
-    width:64, height:64, borderRadius:32,
-    alignItems:'center', justifyContent:'center',
-  },
-  initials: {
-    fontSize:22, fontFamily:'PlusJakartaSans_800ExtraBold',
-    color:'#fff', textTransform:'uppercase',
-  },
-  ring: {
-    position:'absolute', top:-2, left:-2, right:-2, bottom:-2,
-    borderRadius:34, borderWidth:2,
-  },
-  dot: {
-    position:'absolute', bottom:2, right:2,
-    width:12, height:12, borderRadius:6,
-    borderWidth:2, borderColor:'#fff',
-  },
-  name: {
-    fontSize:13, fontFamily:'PlusJakartaSans_700Bold',
-    color:colors.text, textAlign:'center', marginTop:8,
-  },
-  discipline: {
-    fontSize:11, fontFamily:'PlusJakartaSans_500Medium',
-    color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', 
-    textAlign:'center', marginTop:2,
-  },
-  divider: {
-    height:1, backgroundColor:'rgba(124,58,237,0.08)',
-    marginHorizontal:12, marginVertical:8,
-  },
-  statsRow: {
-    flexDirection:'row', alignItems:'center', justifyContent:'center',
-    gap:8, paddingHorizontal:12,
-  },
-  stat: { flexDirection:'row', alignItems:'center', gap:3 },
-  statVal: {
-    fontSize:11, fontFamily:'PlusJakartaSans_600SemiBold',
-    color:colors.text,
-  },
-  statDot: {
-    width:3, height:3, borderRadius:2,
-    backgroundColor:'rgba(124,58,237,0.3)',
-  },
-  works: {
-    fontSize:10, fontFamily:'PlusJakartaSans_500Medium',
-    color:isDark ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
-  },
-  availBadge: {
-    flexDirection:'row', alignItems:'center', gap:4,
-    paddingHorizontal:8, paddingVertical:4,
-    borderRadius:12, marginTop:8, alignSelf:'center',
-  },
-  availDot: { width:4, height:4, borderRadius:2 },
-  availText: {
-    fontSize:9, fontFamily:'PlusJakartaSans_600SemiBold',
-    textTransform:'uppercase', letterSpacing:0.3,
-  },
-});
-
-// ── VenueCard — Glassmorphism con miniatura de imagen ────────────────────────
+// ── VenueCard ─────────────────────────────────────────────────────────────────
 
 export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({ item, onPress }) => {
   const { colors, isDark } = useThemeStore();
@@ -453,37 +354,19 @@ export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({
   return (
     <TouchableOpacity activeOpacity={0.86} style={styles.card} onPress={onPress}>
       <GlassHighlight />
-
-      {/* Icono + nombre */}
       <View style={styles.iconWrap}>
         <LinearGradient colors={item.gradients} style={styles.icon}>
-          <Ionicons name={item.icon} size={20} color="#fff" />
+          <Ionicons name={item.icon as any} size={20} color="#fff" />
         </LinearGradient>
       </View>
-
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
         <Text style={styles.type} numberOfLines={1}>{item.type}</Text>
-
         <View style={styles.sep} />
-        <View style={styles.meta}>
-          <Ionicons name="people-outline" size={10} color={colors.primary} />
-          <Text style={styles.cap}>{item.capacity}</Text>
-        </View>
-        <View style={styles.meta}>
-          <Ionicons name="location-outline" size={10} color={colors.primary} />
-          <Text style={styles.cap}>{item.city}</Text>
-        </View>
+        <View style={styles.meta}><Ionicons name="people-outline" size={10} color={colors.primary} /><Text style={styles.cap}>{item.capacity}</Text></View>
+        <View style={styles.meta}><Ionicons name="location-outline" size={10} color={colors.primary} /><Text style={styles.cap}>{item.city}</Text></View>
       </View>
-
-      {/* Miniatura de imagen circular */}
-      <Image
-        source={{ uri: getVenueImage(item) }}
-        style={styles.thumb}
-        resizeMode="cover"
-      />
-
-      {/* CTA badge — reemplaza el chevron */}
+      <Image source={{ uri: getVenueImage(item) }} style={styles.thumb} contentFit="cover" />
       <View style={styles.ctaBadge}>
         <Text style={styles.ctaText}>Ver</Text>
         <Ionicons name="arrow-forward" size={10} color="#7c3aed" />
@@ -492,112 +375,100 @@ export const VenueCard: React.FC<{ item: VenueItem; onPress?: () => void }> = ({
   );
 };
 
+// ── Estilos ───────────────────────────────────────────────────────────────────
+
+const grid = StyleSheet.create({
+  imageWrap: { width: 64, height: 64, borderRadius: 32, overflow: 'hidden', marginBottom: 10, backgroundColor: '#e5e7eb' },
+  initials: { fontSize: 22, fontFamily: 'PlusJakartaSans_800ExtraBold', color: '#fff', textTransform: 'uppercase' },
+});
+
+const getEventStyles = (colors: any, isDark: boolean) => StyleSheet.create({
+  card: {
+    width:185, marginRight:12, borderRadius:20,
+    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    overflow:'hidden', elevation:6,
+  },
+  imgWrap: { height:140 },
+  img:     { flex:1 },
+  catBadge: { position:'absolute', bottom:10, left:10, borderRadius:20, overflow:'hidden', borderWidth:1, borderColor:'rgba(255,255,255,0.3)' },
+  catBlur: { flexDirection:'row', alignItems:'center', gap:5, paddingHorizontal:9, paddingVertical:4 },
+  catDot:  { width:5, height:5, borderRadius:3, backgroundColor:'#a78bfa' },
+  catText: { fontSize:9, fontFamily:'PlusJakartaSans_700Bold', color:'#fff', letterSpacing:0.8 },
+  info:    { padding:12, gap:4 },
+  title:   { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:colors.text, lineHeight:18, marginBottom:3 },
+  metaRow: { flexDirection:'row', alignItems:'center', gap:4 },
+  meta:    { fontSize:10.5, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', flex:1 },
+  priceRow:{ flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginTop:6 },
+  price:   { fontSize:14, fontFamily:'PlusJakartaSans_800ExtraBold', color:colors.text },
+  arrowBtn:{ width:28, height:28, borderRadius:14, alignItems:'center', justifyContent:'center' },
+});
+
+const getArtistStyles = (colors: any, isDark: boolean) => StyleSheet.create({
+  card: {
+    width:148, marginRight:12, borderRadius:20,
+    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
+    borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
+    overflow:'hidden', elevation:6,
+  },
+  avatarWrap: { alignSelf:'center', marginTop:8, width:64, height:64, borderRadius:32, position:'relative' },
+  avatar: { width:64, height:64, borderRadius:32, alignItems:'center', justifyContent:'center' },
+  initials: { fontSize:22, fontFamily:'PlusJakartaSans_800ExtraBold', color:'#fff', textTransform:'uppercase' },
+  ring: { position:'absolute', top:-2, left:-2, right:-2, bottom:-2, borderRadius:34, borderWidth:2 },
+  dot: { position:'absolute', bottom:2, right:2, width:12, height:12, borderRadius:6, borderWidth:2, borderColor:'#fff' },
+  name: { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:colors.text, textAlign:'center', marginTop:8 },
+  discipline: { fontSize:11, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)', textAlign:'center', marginTop:2 },
+  divider: { height:1, backgroundColor:'rgba(124,58,237,0.08)', marginHorizontal:12, marginVertical:8 },
+  statsRow: { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8, paddingHorizontal:12 },
+  stat: { flexDirection:'row', alignItems:'center', gap:3 },
+  statVal: { fontSize:11, fontFamily:'PlusJakartaSans_600SemiBold', color:colors.text },
+  statDot: { width:3, height:3, borderRadius:2, backgroundColor:'rgba(124,58,237,0.3)' },
+  works: { fontSize:10, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)' },
+  availBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:4, borderRadius:12, marginTop:8, alignSelf:'center' },
+  availDot: { width:4, height:4, borderRadius:2 },
+  availText: { fontSize:9, fontFamily:'PlusJakartaSans_600SemiBold', textTransform:'uppercase', letterSpacing:0.3 },
+});
+
 const getVenueStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   card: {
     width:140, height:100, marginRight:12, borderRadius:16,
     backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.62)',
     borderWidth:1, borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.92)',
-    overflow:'hidden',
-    shadowColor: isDark ? '#8b5cf6' : '#6d28d9', 
-    shadowOffset:{width:0, height:8},
-    shadowOpacity:0.16, shadowRadius:20, elevation:6,
+    overflow:'hidden', elevation:6,
   },
-  iconWrap: {
-    position:'absolute', top:12, left:12,
-    width:36, height:36, borderRadius:18,
-    zIndex:2,
-  },
-  icon: {
-    width:36, height:36, borderRadius:18,
-    alignItems:'center', justifyContent:'center',
-  },
+  iconWrap: { position:'absolute', top:12, left:12, width:36, height:36, borderRadius:18, zIndex:2 },
+  icon: { width:36, height:36, borderRadius:18, alignItems:'center', justifyContent:'center' },
   info: { flex:1, paddingTop:12, paddingLeft:54, paddingRight:12, gap:2 },
-  name: {
-    fontSize:13, fontFamily:'PlusJakartaSans_700Bold',
-    color:colors.text,
-  },
-  type: {
-    fontSize:10, fontFamily:'PlusJakartaSans_500Medium',
-    color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)',
-  },
-  sep: {
-    height:1, backgroundColor:'rgba(124,58,237,0.08)',
-    marginVertical:4,
-  },
+  name: { fontSize:13, fontFamily:'PlusJakartaSans_700Bold', color:colors.text },
+  type: { fontSize:10, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.7)' : 'rgba(109,40,217,0.6)' },
+  sep: { height:1, backgroundColor:'rgba(124,58,237,0.08)', marginVertical:4 },
   meta: { flexDirection:'row', alignItems:'center', gap:4 },
-  cap: {
-    fontSize:9, fontFamily:'PlusJakartaSans_500Medium',
-    color:isDark ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)',
-  },
-  thumb: {
-    position:'absolute', bottom:8, right:8,
-    width:32, height:32, borderRadius:16,
-    borderWidth:2, borderColor:isDark ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.8)',
-  },
-  ctaBadge: {
-    position:'absolute', bottom:6, right:6,
-    backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)',
-    borderRadius:8, paddingHorizontal:6, paddingVertical:3,
-    flexDirection:'row', alignItems:'center', gap:3,
-  },
-  ctaText: {
-    fontSize:8, fontFamily:'PlusJakartaSans_600SemiBold',
-    color:colors.primary,
-  },
+  cap: { fontSize:9, fontFamily:'PlusJakartaSans_500Medium', color:isDark ? 'rgba(167,139,250,0.6)' : 'rgba(109,40,217,0.5)' },
+  thumb: { position:'absolute', bottom:8, right:8, width:32, height:32, borderRadius:16, borderWidth:2, borderColor:isDark ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.8)' },
+  ctaBadge: { position:'absolute', bottom:6, right:6, backgroundColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(124,58,237,0.1)', borderRadius:8, paddingHorizontal:6, paddingVertical:3, flexDirection:'row', alignItems:'center', gap:3 },
+  ctaText: { fontSize:8, fontFamily:'PlusJakartaSans_600SemiBold', color:colors.primary },
 });
 
-// Estilos compartidos para componentes Grid
 const ar = StyleSheet.create({
   card: {
     width:130, alignItems:'center', marginRight:12, borderRadius:22,
     paddingTop:16, paddingBottom:14, paddingHorizontal:10,
     backgroundColor:'rgba(255,255,255,0.62)',
     borderWidth:1, borderColor:'rgba(255,255,255,0.92)',
-    shadowColor:'#6d28d9', shadowOffset:{width:0, height:8},
-    shadowOpacity:0.14, shadowRadius:18, elevation:5,
-    overflow:'hidden',
+    overflow:'hidden', elevation:5,
   },
-  dot: {
-    position:'absolute', bottom:1, right:1,
-    width:12, height:12, borderRadius:6,
-    borderWidth:2, borderColor:'#fff',
-  },
-  name: {
-    fontSize:12, fontFamily:'PlusJakartaSans_700Bold',
-    color:'#1e1b4b', textAlign:'center', marginBottom:2,
-  },
-  discipline: {
-    fontSize:10.5, fontFamily:'PlusJakartaSans_400Regular',
-    color:'rgba(109,40,217,0.5)', textAlign:'center', marginBottom:2,
-  },
-  divider: {
-    width:'80%', height:1, marginVertical:8,
-    backgroundColor:'rgba(124,58,237,0.1)',
-  },
+  dot: { position:'absolute', bottom:1, right:1, width:12, height:12, borderRadius:6, borderWidth:2, borderColor:'#fff' },
+  name: { fontSize:12, fontFamily:'PlusJakartaSans_700Bold', color:'#1e1b4b', textAlign:'center', marginBottom:2 },
+  discipline: { fontSize:10.5, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.5)', textAlign:'center', marginBottom:2 },
+  divider: { width:'80%', height:1, marginVertical:8, backgroundColor:'rgba(124,58,237,0.1)' },
   statsRow: { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8 },
   stat: { flexDirection:'row', alignItems:'center', gap:3 },
-  statVal: {
-    fontSize:11, fontFamily:'PlusJakartaSans_600SemiBold',
-    color:'#1e1b4b',
-  },
-  statDot: {
-    width:3, height:3, borderRadius:2,
-    backgroundColor:'rgba(124,58,237,0.3)',
-  },
-  works: {
-    fontSize:10, fontFamily:'PlusJakartaSans_400Regular',
-    color:'rgba(109,40,217,0.4)',
-  },
-  availBadge: {
-    flexDirection:'row', alignItems:'center', gap:4,
-    paddingHorizontal:8, paddingVertical:4,
-    borderRadius:12, marginTop:8, alignSelf:'center',
-  },
+  statVal: { fontSize:11, fontFamily:'PlusJakartaSans_600SemiBold', color:'#1e1b4b' },
+  statDot: { width:3, height:3, borderRadius:2, backgroundColor:'rgba(124,58,237,0.3)' },
+  works: { fontSize:10, fontFamily:'PlusJakartaSans_400Regular', color:'rgba(109,40,217,0.4)' },
+  availBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:4, borderRadius:12, marginTop:8, alignSelf:'center' },
   availDot: { width:4, height:4, borderRadius:2 },
-  availText: {
-    fontSize:9, fontFamily:'PlusJakartaSans_600SemiBold',
-    textTransform:'uppercase', letterSpacing:0.3,
-  },
+  availText: { fontSize:9, fontFamily:'PlusJakartaSans_600SemiBold', textTransform:'uppercase', letterSpacing:0.3 },
 });
 
 export default EventCard;

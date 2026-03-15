@@ -39,7 +39,7 @@ const getArtistSpecialty = (artist: Artist): string => {
 const getCategoryMeta = (category?: string): { icon: any; label: string } => {
   if (!category) return { icon: 'person-outline', label: 'Artista' };
   const cat = category.toLowerCase();
-  if (cat.includes('fotógrafo') || cat.includes('fotografía')) return { icon: 'camera-outline', label: 'Fotografía' };
+  if (cat.includes('fotógrafo') || cat.includes('fotografia') || cat.includes('fotógrafo')) return { icon: 'camera-outline', label: 'Fotógrafo' };
   if (cat.includes('músico') || cat.includes('música')) return { icon: 'musical-notes-outline', label: 'Música' };
   if (cat.includes('artista') || cat.includes('arte')) return { icon: 'color-palette-outline', label: 'Arte' };
   if (cat.includes('diseñador')) return { icon: 'brush-outline', label: 'Diseño' };

@@ -1,42 +1,95 @@
-// ArtistCardList.tsx — Card de lista para artistas en Favoritos (v3 — todo en uno)
+// ArtistCardList.tsx — Card de lista para artistas en Favoritos
+// Dark mode + botón + Proyecto + sin botón Ver (toda la card es clickeable)
 
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  Platform,
+  View, Text, Pressable, StyleSheet, Platform,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
+import { useThemeStore } from '../../../../store/themeStore';
 import type { Artist } from '../../../../types/explore';
+import { listCardStyles, formatPrice } from './listCardStyles';
+import { servicesService, type Service } from '../../../../services/api/services';
 
-// ─── Helper ──────────────────────────────────────────────────────────────────
-const formatPrice = (price: number) =>
-  price.toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    maximumFractionDigits: 0,
-  });
+const getCategoryMeta = (category?: string): { icon: any; label: string } => {
+  if (!category) return { icon: 'person-outline', label: 'Artista' };
+  const cat = category.toLowerCase();
+  if (cat.includes('fotógrafo') || cat.includes('fotografia')) return { icon: 'camera-outline', label: 'Fotógrafo' };
+  if (cat.includes('músico') || cat.includes('música')) return { icon: 'musical-notes-outline', label: 'Música' };
+  if (cat.includes('artista') || cat.includes('arte')) return { icon: 'color-palette-outline', label: 'Arte' };
+  if (cat.includes('diseñador')) return { icon: 'brush-outline', label: 'Diseño' };
+  if (cat.includes('video') || cat.includes('audiovisual')) return { icon: 'videocam-outline', label: 'Video' };
+  return { icon: 'person-outline', label: category };
+};
 
-// ─── Props ───────────────────────────────────────────────────────────────────
+const getArtistSpecialty = (artist: Artist): string => {
+  // Prioridad: specialty > style > services[0] > categoría
+  if (artist.specialty) return artist.specialty;
+  if (artist.style) return artist.style;
+  if (artist.services && artist.services.length > 0) return artist.services[0];
+  
+  // Fallback a la categoría
+  const cat = getCategoryMeta(
+    typeof artist.category === 'string' ? artist.category : artist.category?.disciplineId
+  );
+  return cat.label;
+};
+
 interface ArtistCardListProps {
   artist: Artist;
+  isSaved?: boolean;
   onPress?: () => void;
   onToggleFavorite?: (id: string) => void;
+  onAddToProject?: (artist: Artist) => void;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// Función para obtener el precio más bajo de los servicios
+const getLowestPrice = (services: Service[]): number | null => {
+  if (!services?.length) return null;
+  const prices = services
+    .map((s: any) => {
+      const raw = s.price ?? s.pricePerHour ?? s.price_per_hour ??
+        s.pricePerSession ?? s.price_per_session ?? s.basePrice ?? s.base_price;
+      const n = typeof raw === 'string' ? parseFloat(raw) : Number(raw);
+      return isNaN(n) || n <= 0 ? null : n;
+    })
+    .filter((p): p is number => p !== null);
+  return prices.length > 0 ? Math.min(...prices) : null;
+};
+
 export const ArtistCardList: React.FC<ArtistCardListProps> = ({
   artist,
+  isSaved = true,
   onPress,
   onToggleFavorite,
+  onAddToProject,
 }) => {
-  const [saved, setSaved] = useState(true);
+  const { isDark } = useThemeStore();
+  const [saved, setSaved] = useState(isSaved);
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoaded, setServicesLoaded] = useState(false);
   const isAvail = artist.availability === 'Disponible';
+
+  // Cargar servicios del artista
+  React.useEffect(() => {
+    const loadServices = async () => {
+      try {
+        const artistServices = await servicesService.getUserServices(artist.id);
+        setServices(artistServices);
+      } catch (error) {
+        console.error('Error loading artist services:', error);
+      } finally {
+        setServicesLoaded(true);
+      }
+    };
+    loadServices();
+  }, [artist.id]);
+  const cat = getCategoryMeta(
+    typeof artist.category === 'string' ? artist.category : artist.category?.disciplineId
+  );
 
   const handleToggleFavorite = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -44,13 +97,25 @@ export const ArtistCardList: React.FC<ArtistCardListProps> = ({
     onToggleFavorite?.(artist.id);
   };
 
+  const handleAddToProject = () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onAddToProject?.(artist);
+  };
+
+  // Calcular el precio más bajo de los servicios
+  const lowestPrice = getLowestPrice(services);
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [s.card, pressed && s.cardPressed]}
+      style={({ pressed }) => [
+        listCardStyles.card,
+        isDark && listCardStyles.cardDark,
+        pressed && listCardStyles.cardPressed,
+      ]}
     >
-      {/* ── IMAGEN ─────────────────────────────────────────────────────────── */}
-      <View style={s.imageContainer}>
+      {/* ── IMAGEN ── */}
+      <View style={listCardStyles.imageContainer}>
         <Image
           source={{ uri: artist.image }}
           style={StyleSheet.absoluteFill}
@@ -58,325 +123,121 @@ export const ArtistCardList: React.FC<ArtistCardListProps> = ({
           transition={200}
         />
 
-        {/* Gradiente inferior */}
         <LinearGradient
           colors={['transparent', 'rgba(30,27,75,0.72)']}
-          style={s.imageGradient}
+          style={listCardStyles.imageGradient}
         />
 
-        {/* Rating — arriba izquierda */}
-        <View style={s.ratingBadge}>
+        {/* Rating top-left */}
+        <View style={listCardStyles.ratingBadge}>
           <Ionicons name="star" size={9} color="#fbbf24" />
-          <Text style={s.ratingText}>{artist.rating}</Text>
+          <Text style={listCardStyles.ratingText}>{artist.rating}</Text>
         </View>
 
-        {/* Corazón — arriba derecha */}
+        {/* Guardado top-right */}
         <Pressable
           onPress={handleToggleFavorite}
           hitSlop={8}
-          style={({ pressed }) => [s.heartBtn, pressed && s.heartBtnPressed]}
+          style={({ pressed }) => [
+            listCardStyles.heartBtn,
+            pressed && { opacity: 0.6 },
+          ]}
         >
           <Ionicons
-            name={saved ? 'heart' : 'heart-outline'}
+            name={saved ? 'bookmark' : 'bookmark-outline'}
             size={15}
-            color={saved ? '#ef4444' : 'rgba(255,255,255,0.75)'}
+            color={saved ? '#a78bfa' : 'rgba(255,255,255,0.75)'}
           />
         </Pressable>
 
-        {/* Disponibilidad — abajo izquierda */}
-        <View style={[s.availBadge, isAvail ? s.availBadgeGreen : s.availBadgeAmber]}>
-          <View style={[s.availDot, { backgroundColor: isAvail ? '#10b981' : '#f59e0b' }]} />
-          <Text style={[s.availText, { color: isAvail ? '#d1fae5' : '#fef3c7' }]}>
+        {/* Disponibilidad bottom-left — siempre efecto espejo blanco */}
+        <View style={[listCardStyles.availBadge, listCardStyles.availBadgeMirror]}>
+          <View style={[listCardStyles.availDot, { backgroundColor: 'rgba(255,255,255,0.9)' }]} />
+          <Text style={[listCardStyles.availText, { color: 'rgba(255,255,255,0.95)' }]}>
             {isAvail ? 'Disponible' : 'Ocupado'}
           </Text>
         </View>
       </View>
 
-      {/* ── INFO (panel derecho) ────────────────────────────────────────────── */}
-      <View style={s.info}>
+      {/* ── INFO ── */}
+      <View style={[listCardStyles.info, isDark && listCardStyles.infoDark]}>
 
         {/* Nombre + verificado */}
-        <View style={s.nameRow}>
-          <Text style={s.name} numberOfLines={1}>{artist.name}</Text>
+        <View style={listCardStyles.nameRow}>
+          <Text style={[listCardStyles.name, isDark && listCardStyles.nameDark]} numberOfLines={1}>
+            {artist.name}
+          </Text>
           {artist.verified && (
             <LinearGradient
               colors={['#7c3aed', '#2563eb']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.verifiedBadge}
-            >
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={listCardStyles.verifiedBadge}>
               <Ionicons name="checkmark" size={8} color="#fff" />
             </LinearGradient>
           )}
         </View>
 
-        {/* Categoría pill */}
-        <View style={s.categoryPill}>
-          <Text style={s.categoryText} numberOfLines={1}>
-            {typeof artist.category === 'string' ? artist.category : 'Artista'}
+        {/* Categoría */}
+        <View style={listCardStyles.metaRow}>
+          <Ionicons name={cat.icon} size={10} color={isDark ? '#a78bfa' : '#7c3aed'} />
+          <Text style={[listCardStyles.subtitle, isDark && listCardStyles.subtitleDark]} numberOfLines={1}>
+            {cat.label}
           </Text>
         </View>
 
-        {/* Ubicación · distancia */}
-        <View style={s.metaRow}>
-          <Ionicons name="location-outline" size={11} color="#7c3aed" />
-          <Text style={s.metaText} numberOfLines={1}>
+        {/* Ubicación */}
+        <View style={listCardStyles.metaRow}>
+          <Ionicons name="location-outline" size={11} color={isDark ? '#6b7280' : '#9ca3af'} />
+          <Text style={[listCardStyles.metaText, isDark && listCardStyles.metaTextDark]} numberOfLines={1}>
             {artist.location}{artist.distance ? ` · ${artist.distance}` : ''}
           </Text>
         </View>
 
-        {/* Experiencia */}
-        {artist.experience && (
-          <View style={s.metaRow}>
-            <Ionicons name="briefcase-outline" size={11} color="#7c3aed" />
-            <Text style={s.metaText} numberOfLines={1}>{artist.experience} exp.</Text>
-          </View>
-        )}
+        {/* Especialidad */}
+        <View style={listCardStyles.metaRow}>
+          <Ionicons name="star-outline" size={11} color={isDark ? '#6b7280' : '#9ca3af'} />
+          <Text style={[listCardStyles.metaText, isDark && listCardStyles.metaTextDark]} numberOfLines={1}>
+            {getArtistSpecialty(artist)}
+          </Text>
+        </View>
 
-        {/* Divisor */}
-        <View style={s.divider} />
+        <View style={[listCardStyles.divider, isDark && listCardStyles.dividerDark]} />
 
-        {/* Footer: precio + botón */}
-        <View style={s.footer}>
-          <View style={s.priceBlock}>
-            <Text style={s.priceLabel}>Desde</Text>
-            <View style={s.priceRow}>
-              <Text style={s.price}>{formatPrice(artist.price)}</Text>
-              <Text style={s.priceUnit}>/h</Text>
+        {/* Footer: precio + botón proyecto */}
+        <View style={listCardStyles.infoBottom}>
+          <View style={{ flexShrink: 1, marginRight: 8 }}>
+            <Text style={[listCardStyles.priceLabel, isDark && listCardStyles.priceLabelDark]}>Desde</Text>
+            <View style={listCardStyles.priceRow}>
+              <Text style={[listCardStyles.price, isDark && listCardStyles.priceDark]}>
+                {servicesLoaded && lowestPrice ? formatPrice(lowestPrice) : '---'}
+              </Text>
+              <Text style={[listCardStyles.priceUnit, isDark && listCardStyles.priceUnitDark]}>
+                {servicesLoaded && lowestPrice ? '/h' : ''}
+              </Text>
             </View>
           </View>
 
+          {/* + Proyecto */}
           <Pressable
-            onPress={onPress}
-            style={({ pressed }) => [s.ctaBtn, pressed && s.ctaBtnPressed]}
+            onPress={handleAddToProject}
+            hitSlop={4}
+            style={({ pressed }) => [
+              listCardStyles.projectBtn,
+              isDark && listCardStyles.projectBtnDark,
+              pressed && { opacity: 0.7 },
+            ]}
           >
-            <LinearGradient
-              colors={['#7c3aed', '#2563eb']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={s.ctaGradient}
-            >
-              <Text style={s.ctaText}>Ver perfil</Text>
-              <Ionicons name="chevron-forward" size={13} color="#fff" />
-            </LinearGradient>
+            <Ionicons
+              name="folder-outline"
+              size={12}
+              color={isDark ? '#fff' : '#7c3aed'}
+            />
+            <Text style={[listCardStyles.projectBtnText, isDark && listCardStyles.projectBtnTextDark]}>
+              + Proyecto
+            </Text>
           </Pressable>
         </View>
       </View>
     </Pressable>
   );
 };
-
-// ─── Styles ──────────────────────────────────────────────────────────────────
-const s = StyleSheet.create({
-
-  /* ── Card wrapper ── */
-  card: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.88)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(167,139,250,0.35)',
-    marginHorizontal: 16,
-    marginVertical: 7,
-    overflow: 'hidden',
-    shadowColor: '#5b21b6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.13,
-    shadowRadius: 18,
-    elevation: 5,
-  },
-  cardPressed: {
-    opacity: 0.96,
-    transform: [{ scale: 0.987 }],
-    shadowOpacity: 0.07,
-  },
-
-  /* ── Imagen ── */
-  imageContainer: {
-    width: 112,
-    alignSelf: 'stretch',         // se estira al alto real del contenido
-    overflow: 'hidden',
-    borderTopLeftRadius: 28,
-    borderBottomLeftRadius: 28,
-  },
-  imageGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 56,
-  },
-  ratingBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  ratingText: {
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 10,
-    color: '#fff',
-  },
-  heartBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.38)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heartBtnPressed: {
-    opacity: 0.6,
-  },
-  availBadge: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 20,
-  },
-  availBadgeGreen: { backgroundColor: 'rgba(16,185,129,0.28)' },
-  availBadgeAmber: { backgroundColor: 'rgba(245,158,11,0.28)' },
-  availDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-  },
-  availText: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    fontSize: 9,
-  },
-
-  /* ── Info panel ── */
-  info: {
-    flex: 1,
-    minWidth: 0,                  // KEY: evita overflow en flex children
-    paddingTop: 13,
-    paddingBottom: 12,
-    paddingHorizontal: 13,
-    overflow: 'hidden',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 4,
-    minWidth: 0,
-  },
-  name: {
-    flex: 1,                      // KEY: shrink correcto con numberOfLines
-    fontFamily: 'PlusJakartaSans_700Bold',
-    fontSize: 14,
-    color: '#1e1b4b',
-    lineHeight: 18,
-  },
-  verifiedBadge: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  categoryPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(124,58,237,0.09)',
-    borderRadius: 20,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginBottom: 6,
-    maxWidth: '100%',
-  },
-  categoryText: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    fontSize: 10,
-    color: '#7c3aed',
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 3,
-    minWidth: 0,
-  },
-  metaText: {
-    flex: 1,
-    fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 11,
-    color: '#6d28d9',
-    lineHeight: 15,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(167,139,250,0.22)',
-    marginVertical: 9,
-  },
-
-  /* ── Footer ── */
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  priceBlock: {
-    flexShrink: 1,
-    marginRight: 8,
-  },
-  priceLabel: {
-    fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 9,
-    color: '#9ca3af',
-    lineHeight: 12,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 1,
-  },
-  price: {
-    fontFamily: 'PlusJakartaSans_800ExtraBold',
-    fontSize: 15,
-    color: '#1e1b4b',
-    lineHeight: 19,
-  },
-  priceUnit: {
-    fontFamily: 'PlusJakartaSans_400Regular',
-    fontSize: 10,
-    color: '#6d28d9',
-    lineHeight: 19,
-  },
-  ctaBtn: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    flexShrink: 0,
-  },
-  ctaBtnPressed: {
-    opacity: 0.8,
-    transform: [{ scale: 0.96 }],
-  },
-  ctaGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  ctaText: {
-    fontFamily: 'PlusJakartaSans_600SemiBold',
-    fontSize: 11,
-    color: '#fff',
-  },
-});
