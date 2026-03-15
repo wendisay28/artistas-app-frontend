@@ -4,7 +4,7 @@
 // El ScrollView interno de SwipeCard maneja el scroll vertical.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, Pressable,
   Platform, ActivityIndicator, TextInput,
@@ -41,7 +41,7 @@ export default function ExploreScreen() {
   const { isDark, toggleTheme } = useThemeStore();
 
   const {
-    selectedCategory, stack,
+    selectedCategory, stack, currentIndex,
     showFilters, setShowFilters,
     showSearch, setShowSearch,
     filters, setFilters,
@@ -52,15 +52,18 @@ export default function ExploreScreen() {
     topCard,
     handleCategoryChange,
     handleNext, handlePrev, handleConnect,
+    getCardFullData,
   } = useExploreScreen();
 
   const webTop = Platform.OS === 'web' ? 67 : 0;
 
-  // Altura de la tarjeta calculada con insets reales (como en modales)
-  const { height: SCREEN_HEIGHT } = require('react-native').Dimensions.get('window');
-  const TAB_BAR_H = 49 + (insets.bottom || 0); // tab bar + safe area inferior
-  const HEADER_H  = (insets.top || webTop) + 56; // status bar + contenido del header
-  const cardHeight = SCREEN_HEIGHT - HEADER_H - TAB_BAR_H - 20;
+  // Memoized — only recalculate when insets change, not on every render
+  const { cardHeight, headerH } = useMemo(() => {
+    const { height: SCREEN_HEIGHT } = require('react-native').Dimensions.get('window');
+    const TAB_BAR_H = 49 + (insets.bottom || 0);
+    const HEADER_H  = (insets.top || webTop) + 56;
+    return { cardHeight: SCREEN_HEIGHT - HEADER_H - TAB_BAR_H - 20, headerH: HEADER_H };
+  }, [insets.bottom, insets.top, webTop]);
 
   // Estilos dinámicos de tema
   const themeContainer = isDark ? s.bgDark   : s.bgLight;
@@ -72,14 +75,27 @@ export default function ExploreScreen() {
   // Cortafuegos: solo usar artistFullData cuando pertenece al artista visible
   const safeFullData = topCard?.id === artistFullDataId ? artistFullData : null;
 
-  // Altura del header para calcular el paddingTop del área de tarjetas
-  const headerH = (insets.top || webTop) + 56;
-
   // ── Contenido de la tarjeta (imagen + panel) ────────────────────────────
+  // isActive=true  → BlurView + video player (top card only)
+  // isActive=false → plain View (pre-rendered background cards, no GPU cost)
+  // cardData: uses live artistFullData for topCard, cache for N+1/N+2
 
-  const renderCardContent = (card: ExploreCard) => {
+  const renderCardContent = (card: ExploreCard, isActive: boolean) => {
+    if (card.type === 'artist') {
+      // Top card uses live artistFullData; background cards use detailsCache
+      const cardData = isActive ? safeFullData : getCardFullData(card.id);
+      return (
+        <ArtistCardContent
+          artist={card as Artist}
+          isFollowing={connectedIds.has(card.id)}
+          onFollow={handleConnect}
+          isActive={isActive}
+          preloadedServices={cardData?.services}
+          preloadedPortfolio={cardData?.portfolioUrls}
+        />
+      );
+    }
     switch (card.type) {
-      case 'artist':  return <ArtistCardContent artist={card as Artist} isFollowing={connectedIds.has(card.id)} onFollow={handleConnect} />;
       case 'event':   return <EventCardContent event={card as Event} />;
       case 'gallery': return <GalleryCardContent item={card as GalleryItem} />;
       case 'venue':   return <VenueCardContent venue={card as Venue} />;
@@ -204,47 +220,53 @@ export default function ExploreScreen() {
             <Ionicons name="albums-outline" size={48} color={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} />
             <Text style={[s.stateTitle, themeText]}>Has visto todo</Text>
           </View>
-        ) : topCard ? (
-          // key={topCard.id} garantiza que al cambiar de artista
-          // SwipeCard + TODO su contenido (incluyendo ArtistDetails) se desmonta/remonta.
-          // Desync de datos es estructuralmente imposible.
-          <SwipeCard
-            key={topCard.id}
-            card={topCard}
-            zIndex={1}
-            height={cardHeight}
-            scrollRef={scrollRef}
-            onDismiss={(_, dir) => dir === 'like' ? handleNext() : handlePrev()}
-          >
-            {/* La tarjeta llena todo el área visible — los detalles quedan DEBAJO del scroll */}
-            <View style={{
-              height: cardHeight,
-              borderRadius: 24,
-              borderWidth: 1,
-              borderColor: isDark ? 'rgba(139,92,246,0.35)' : 'rgba(139,92,246,0.20)',
-              overflow: 'hidden',
-            }}>
-              {renderCardContent(topCard)}
-            </View>
+        ) : (
+          // ── Stack de 3 tarjetas pre-renderizadas (estilo Tinder/Bumble) ──────
+          // Las tarjetas N+1 y N+2 ya están montadas y cargando imágenes
+          // detrás de la actual. Al hacer swipe, aparecen instantáneamente.
+          <View style={{ width: CARD_WIDTH, height: cardHeight, position: 'relative' }}>
+            {[currentIndex + 2, currentIndex + 1, currentIndex].map(idx => {
+              const card = stack[idx];
+              if (!card) return null;
+              const offset = idx - currentIndex; // 0=front, 1=mid, 2=back
+              const isTop  = offset === 0;
+              const cardBorder = isDark ? 'rgba(139,92,246,0.35)' : 'rgba(139,92,246,0.20)';
 
-            {/* Separador visual + pista de scroll */}
-            <View style={s.swipeHint}>
-              <Ionicons
-                name="chevron-down"
-                size={16}
-                color={isDark ? 'rgba(255,255,255,0.35)' : colors.textSecondary}
-              />
-              <Text style={[s.swipeHintText, isDark && { color: 'rgba(255,255,255,0.35)' }]}>
-                Desliza para ver más
-              </Text>
-            </View>
+              return (
+                <SwipeCard
+                  key={card.id}
+                  card={card}
+                  zIndex={10 - offset}
+                  height={cardHeight}
+                  scrollRef={isTop ? scrollRef : undefined}
+                  canGoBack={isTop && currentIndex > 0}
+                  onDismiss={isTop ? (_, dir) => dir === 'like' ? handleNext() : handlePrev() : () => {}}
+                  disabled={!isTop}
+                  cardScale={1 - offset * 0.04}
+                  cardOffsetY={offset * 10}
+                >
+                  <View style={{ height: cardHeight, borderRadius: 24, borderWidth: 1, borderColor: cardBorder, overflow: 'hidden' }}>
+                    {renderCardContent(card, isTop)}
+                  </View>
 
-            {/* Detalles completos — viven con la tarjeta, nunca se dessincronizan */}
-            <View style={s.detailsInner}>
-              {renderDetails(topCard)}
-            </View>
-          </SwipeCard>
-        ) : null}
+                  {isTop && (
+                    <>
+                      <View style={s.swipeHint}>
+                        <Ionicons name="chevron-down" size={16} color={isDark ? 'rgba(255,255,255,0.35)' : colors.textSecondary} />
+                        <Text style={[s.swipeHintText, isDark && { color: 'rgba(255,255,255,0.35)' }]}>
+                          Desliza para ver más
+                        </Text>
+                      </View>
+                      <View style={s.detailsInner}>
+                        {renderDetails(card)}
+                      </View>
+                    </>
+                  )}
+                </SwipeCard>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       {hireModalArtist && (

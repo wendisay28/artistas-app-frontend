@@ -41,6 +41,14 @@ interface SwipeCardProps {
   scrollRef?: React.RefObject<ScrollView>;
   /** Altura calculada dinámicamente con useSafeAreaInsets en el padre */
   height?: number;
+  /** Si false, el swipe a la izquierda hace snap back en lugar de volar */
+  canGoBack?: boolean;
+  /** Deshabilita gestos — para tarjetas pre-renderizadas detrás de la actual */
+  disabled?: boolean;
+  /** Escala visual para el efecto de stack (1.0 = frente, 0.96 = detrás) */
+  cardScale?: number;
+  /** Offset vertical para el efecto de stack */
+  cardOffsetY?: number;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -52,14 +60,19 @@ export default function SwipeCard({
   children,
   scrollRef,
   height = CARD_HEIGHT,
+  canGoBack = false,
+  disabled = false,
+  cardScale = 1,
+  cardOffsetY = 0,
 }: SwipeCardProps) {
   const { isDark } = useThemeStore();
   const swipeX      = useRef(new RNAnimated.Value(0)).current;
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
-  const flyOffRef   = useRef<(direction: SwipeDirection) => void>(undefined);
-  const snapBackRef = useRef<() => void>(undefined);
+  const flyOffRef    = useRef<(direction: SwipeDirection) => void>(undefined);
+  const snapBackRef  = useRef<() => void>(undefined);
+  const canGoBackRef = useRef(canGoBack);
 
   // ── Derived animated values ──────────────────────────────────────────────
 
@@ -117,8 +130,9 @@ export default function SwipeCard({
     }).start();
   }, [swipeX]);
 
-  flyOffRef.current   = flyOff;
-  snapBackRef.current = snapBack;
+  flyOffRef.current    = flyOff;
+  snapBackRef.current  = snapBack;
+  canGoBackRef.current = canGoBack;
 
   // ── PanResponder ─────────────────────────────────────────────────────────
   // Regla: el swipe horizontal toma control solo si |dx| > |dy|
@@ -133,10 +147,12 @@ export default function SwipeCard({
       },
       onMoveShouldSetPanResponder: (_evt, gs) => {
         const inButtonZone = touchStartX.current > CARD_WIDTH * 0.80;
-        // Solo reclamar si el movimiento es claramente horizontal (|dx| > |dy|)
-        // y supera el umbral mínimo de 10px para evitar micro-twitches
-        const isHorizontal = Math.abs(gs.dx) > Math.abs(gs.dy) && Math.abs(gs.dx) > 10;
-        return !inButtonZone && isHorizontal;
+        // Permite diagonal natural (arriba-derecha / abajo-izquierda):
+        // solo se requiere que el componente horizontal sea suficiente
+        // relativo al vertical (ratio 0.6 permite ~59° de inclinación).
+        const isDiagonalOrHorizontal =
+          Math.abs(gs.dx) > Math.abs(gs.dy) * 0.6 && Math.abs(gs.dx) > 10;
+        return !inButtonZone && isDiagonalOrHorizontal;
       },
       onPanResponderMove: (_, gs) => {
         swipeX.setValue(gs.dx);
@@ -145,7 +161,12 @@ export default function SwipeCard({
         if (gs.dx > SWIPE_THRESHOLD) {
           flyOffRef.current?.('like');
         } else if (gs.dx < -SWIPE_THRESHOLD) {
-          flyOffRef.current?.('nope');
+          // Solo volar si hay tarjeta anterior — si no, snap back
+          if (canGoBackRef.current) {
+            flyOffRef.current?.('nope');
+          } else {
+            snapBackRef.current?.();
+          }
         } else {
           snapBackRef.current?.();
         }
@@ -162,25 +183,32 @@ export default function SwipeCard({
 
   return (
     <RNAnimated.View
+      // Background cards: render to hardware bitmap — zero GPU recalculation per frame.
+      // shouldRasterizeIOS   → iOS composites the card as a flat texture
+      // renderToHardwareTextureAndroid → Android equivalent
+      shouldRasterizeIOS={Platform.OS === 'ios' && disabled}
+      renderToHardwareTextureAndroid={Platform.OS === 'android' && disabled}
       style={[
         styles.card,
         isDark ? styles.cardDark : styles.cardLight,
         {
-          height, // altura dinámica desde el padre
+          height,
           zIndex,
-          transform: [
-            { translateX: swipeX },
-            { rotate: cardRotation },
-          ],
-          opacity: cardOpacity,
+          position: 'absolute',
+          transform: disabled
+            ? [{ scale: cardScale }, { translateY: cardOffsetY }]
+            : [{ translateX: swipeX }, { rotate: cardRotation }, { scale: cardScale }, { translateY: cardOffsetY }],
+          opacity: disabled ? 1 : cardOpacity,
+          pointerEvents: disabled ? 'none' : 'auto',
         },
       ]}
-      {...panResponder.panHandlers}
+      {...(disabled ? {} : panResponder.panHandlers)}
     >
       {/* ScrollView interno — maneja scroll vertical, no interfiere con swipe horizontal */}
       <ScrollView
         ref={scrollRef}
         nestedScrollEnabled
+        scrollEnabled={!disabled}
         showsVerticalScrollIndicator={false}
         scrollEventThrottle={16}
         keyboardShouldPersistTaps="handled"
@@ -190,16 +218,16 @@ export default function SwipeCard({
         {children}
       </ScrollView>
 
-      {/* GUARDAR badge — swipe derecha (flota sobre el ScrollView) */}
-      <RNAnimated.View style={[styles.badge, styles.saveBadge, { opacity: likeOpacity }]}>
-        <Ionicons name="bookmark" size={20} color="#10B981" />
-        <Text style={styles.saveText}>Guardar</Text>
+      {/* SIGUIENTE badge — swipe derecha */}
+      <RNAnimated.View style={[styles.badge, styles.nextFwdBadge, { opacity: likeOpacity }]}>
+        <Text style={styles.nextFwdText}>Siguiente</Text>
+        <Ionicons name="arrow-forward" size={18} color="#7c3aed" />
       </RNAnimated.View>
 
-      {/* SIGUIENTE badge — swipe izquierda */}
-      <RNAnimated.View style={[styles.badge, styles.nextBadge, { opacity: nopeOpacity }]}>
-        <Text style={styles.nextText}>Siguiente</Text>
-        <Ionicons name="arrow-forward" size={20} color="#7c3aed" />
+      {/* ANTERIOR badge — swipe izquierda */}
+      <RNAnimated.View style={[styles.badge, styles.prevBadge, { opacity: nopeOpacity }]}>
+        <Ionicons name="arrow-back" size={18} color="#6b7280" />
+        <Text style={styles.prevText}>Anterior</Text>
       </RNAnimated.View>
     </RNAnimated.View>
   );
@@ -251,24 +279,24 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     borderWidth: 2,
   },
-  saveBadge: {
-    left: 16,
-    borderColor: '#10B981',
-    backgroundColor: 'rgba(16,185,129,0.12)',
-  },
-  saveText: {
-    fontSize: 15,
-    fontFamily: 'PlusJakartaSans_700Bold',
-    color: '#10B981',
-  },
-  nextBadge: {
+  nextFwdBadge: {
     right: 16,
     borderColor: '#7c3aed',
     backgroundColor: 'rgba(124,58,237,0.10)',
   },
-  nextText: {
+  nextFwdText: {
     fontSize: 15,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#7c3aed',
+  },
+  prevBadge: {
+    left: 16,
+    borderColor: '#6b7280',
+    backgroundColor: 'rgba(107,114,128,0.10)',
+  },
+  prevText: {
+    fontSize: 15,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    color: '#6b7280',
   },
 });
