@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../../constants/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface MyOfferCardProps {
   offer: {
@@ -46,6 +47,7 @@ export default function MyOfferCard({
   onDelete,
 }: MyOfferCardProps) {
   
+  const { isDark } = useThemeStore();
   const statusConfig = STATUS_CONFIG[offer.status];
 
   const handlePress = () => {
@@ -84,6 +86,7 @@ export default function MyOfferCard({
     <Pressable
       style={({ pressed }) => [
         styles.card,
+        isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' },
         pressed && styles.cardPressed,
       ]}
       onPress={handlePress}
@@ -91,7 +94,7 @@ export default function MyOfferCard({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleRow}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, isDark && { color: '#FFFFFF' }]} numberOfLines={1}>
             {offer.title}
           </Text>
           <View style={[styles.statusBadge, { backgroundColor: statusConfig.color + '20' }]}>
@@ -103,7 +106,7 @@ export default function MyOfferCard({
         </View>
 
         <View style={styles.metaRow}>
-          <Text style={styles.timeText}>{timeAgo(offer.created_date)}</Text>
+          <Text style={[styles.timeText, isDark && { color: '#71717A' }]}>{timeAgo(offer.created_date)}</Text>
           {offer.is_urgent && (
             <>
               <View style={styles.dot} />
@@ -118,7 +121,7 @@ export default function MyOfferCard({
 
       {/* Description */}
       {offer.description && (
-        <Text style={styles.description} numberOfLines={2}>
+        <Text style={[styles.description, isDark && { color: '#A1A1AA' }]} numberOfLines={2}>
           {offer.description}
         </Text>
       )}
@@ -135,14 +138,14 @@ export default function MyOfferCard({
       )}
 
       {/* Stats */}
-      <View style={styles.statsRow}>
+      <View style={[styles.statsRow, isDark && { borderColor: 'rgba(139,92,246,0.15)' }]}>
         <View style={styles.statItem}>
           <Ionicons name="eye-outline" size={18} color={colors.accent} />
-          <Text style={styles.statValue}>{offer.views_count}</Text>
-          <Text style={styles.statLabel}>vistas</Text>
+          <Text style={[styles.statValue, isDark && { color: '#FFFFFF' }]}>{offer.views_count}</Text>
+          <Text style={[styles.statLabel, isDark && { color: '#71717A' }]}>vistas</Text>
         </View>
 
-        <View style={styles.statDivider} />
+        <View style={[styles.statDivider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
 
         <Pressable
           style={({ pressed }) => [
@@ -152,10 +155,10 @@ export default function MyOfferCard({
           onPress={handleViewApplicants}
         >
           <Ionicons name="people-outline" size={18} color={colors.primary} />
-          <Text style={[styles.statValue, { color: colors.primary }]}>
+          <Text style={[styles.statValue, { color: colors.primary }, isDark && { color: '#FFFFFF' }]}>
             {offer.applicants_count}
           </Text>
-          <Text style={styles.statLabel}>aplicantes</Text>
+          <Text style={[styles.statLabel, isDark && { color: '#71717A' }]}>aplicantes</Text>
         </Pressable>
       </View>
 
@@ -164,17 +167,19 @@ export default function MyOfferCard({
         <Pressable
           style={({ pressed }) => [
             styles.actionBtn,
+            isDark && { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.2)' },
             pressed && styles.actionBtnPressed,
           ]}
           onPress={handleEdit}
         >
-          <Ionicons name="create-outline" size={16} color={colors.text} />
-          <Text style={styles.actionBtnText}>Editar</Text>
+          <Ionicons name="create-outline" size={16} color={isDark ? '#FFFFFF' : colors.text} />
+          <Text style={[styles.actionBtnText, isDark && { color: '#FFFFFF' }]}>Editar</Text>
         </Pressable>
 
         <Pressable
           style={({ pressed }) => [
             styles.actionBtn,
+            isDark && { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.2)' },
             pressed && styles.actionBtnPressed,
           ]}
           onPress={onDelete}

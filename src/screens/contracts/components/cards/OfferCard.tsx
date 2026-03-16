@@ -196,7 +196,7 @@ export default function OfferCard({
             </View>
 
             <View style={styles.headerRight}>
-              <Text style={styles.timeText}>{timeAgo(offer.created_date)}</Text>
+              <Text style={[styles.timeText, isDark && { color: '#71717A' }]}>{timeAgo(offer.created_date)}</Text>
               <Pressable
                 hitSlop={8}
                 onPress={handleSavePress}
@@ -279,28 +279,40 @@ export default function OfferCard({
                   style={({ pressed }) => [styles.applyBtn, pressed && styles.btnPressed]}
                   onPress={handleAcceptPress}
                 >
-                  <LinearGradient
-                    colors={['#10b981', '#059669']}
-                    style={styles.applyGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <Text style={styles.applyText}>Aceptar ✓</Text>
-                  </LinearGradient>
+                  {isDark ? (
+                    <View style={[styles.applyGradient, { backgroundColor: 'rgba(16,185,129,0.25)', borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' }]}>
+                      <Text style={styles.applyText}>Aceptar ✓</Text>
+                    </View>
+                  ) : (
+                    <LinearGradient
+                      colors={['#10b981', '#059669']}
+                      style={styles.applyGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={styles.applyText}>Aceptar ✓</Text>
+                    </LinearGradient>
+                  )}
                 </Pressable>
               ) : (
                 <Pressable
                   style={({ pressed }) => [styles.applyBtn, pressed && styles.btnPressed]}
                   onPress={handleApplyPress}
                 >
-                  <LinearGradient
-                    colors={[Colors.primary, Colors.accent ?? Colors.primary]}
-                    style={styles.applyGradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                  >
-                    <Text style={styles.applyText}>Aplicar</Text>
-                  </LinearGradient>
+                  {isDark ? (
+                    <View style={[styles.applyGradient, styles.applyBtnDark]}>
+                      <Text style={styles.applyText}>Aplicar</Text>
+                    </View>
+                  ) : (
+                    <LinearGradient
+                      colors={[Colors.primary, Colors.accent ?? Colors.primary]}
+                      style={styles.applyGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={styles.applyText}>Aplicar</Text>
+                    </LinearGradient>
+                  )}
                 </Pressable>
               )}
             </View>
@@ -506,6 +518,11 @@ const styles = StyleSheet.create({
   applyGradient: {
     paddingHorizontal: 14,
     paddingVertical: 7,
+  },
+  applyBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   applyText: {
     fontSize: 12,

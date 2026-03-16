@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Image as ExpoImage } from 'expo-image';
+import { useThemeStore } from '../../../../store/themeStore';
 
 // Servicios y Tipos (Ajusta las rutas según tu proyecto)
 import { Service as APIService, servicesService } from '../../../../services/api/services';
@@ -43,12 +44,14 @@ const ServiceCard = ({
   onEdit,
   onDelete,
   onHire,
+  isDark,
 }: {
   service: APIService,
   isOwner: boolean,
   onEdit: (s: APIService) => void,
   onDelete: (s: APIService) => void,
   onHire?: (s: APIService) => void,
+  isDark: boolean,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -61,7 +64,7 @@ const ServiceCard = ({
   };
 
   return (
-    <View style={[sc.card, expanded && sc.cardActive]}>
+    <View style={[sc.card, expanded && sc.cardActive, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }, isDark && expanded && { backgroundColor: '#1a0f35', borderColor: 'rgba(124,58,237,0.35)' }]}>
       <TouchableOpacity activeOpacity={0.9} onPress={toggle} style={sc.mainRow} accessibilityLabel={`Servicio: ${service.name}`} accessibilityHint="Presiona para ver más detalles">
         
         {/* IZQUIERDA: VISUAL ESTILO BOOKING */}
@@ -107,34 +110,34 @@ const ServiceCard = ({
             </View>
             <View style={sc.statusRow}>
               <View style={[sc.dotStatus, service.isActive === false && { backgroundColor: '#ef4444' }]} />
-              <Text style={sc.statusText}>{service.isActive !== false ? 'Activo' : 'Inactivo'}</Text>
+              <Text style={[sc.statusText, isDark && { color: '#A1A1AA' }]}>{service.isActive !== false ? 'Activo' : 'Inactivo'}</Text>
             </View>
           </View>
 
-          <Text style={sc.name} numberOfLines={1}>{service.name}</Text>
+          <Text style={[sc.name, isDark && { color: '#FFFFFF' }]} numberOfLines={1}>{service.name}</Text>
 
           <View style={sc.featureRow}>
             <Ionicons name="time-outline" size={14} color="#64748b" />
-            <Text style={sc.featureText}>{service.duration || 'Flexible'}</Text>
+            <Text style={[sc.featureText, isDark && { color: '#A1A1AA' }]}>{service.duration || 'Flexible'}</Text>
           </View>
 
           {!!(service.includedCount && service.unit) && (
             <View style={sc.featureRow}>
               <Ionicons name="layers-outline" size={14} color="#64748b" />
-              <Text style={sc.featureText}>{service.includedCount} {service.unit}</Text>
+              <Text style={[sc.featureText, isDark && { color: '#A1A1AA' }]}>{service.includedCount} {service.unit}</Text>
             </View>
           )}
 
           <View style={sc.priceRow}>
             <View>
-              <Text style={sc.priceLabel}>Precio base</Text>
+              <Text style={[sc.priceLabel, isDark && { color: '#71717A' }]}>Precio base</Text>
               <View style={sc.priceFlex}>
-                <Text style={sc.currency}>$</Text>
-                <Text style={sc.amount}>{priceStr || '---'}</Text>
+                <Text style={[sc.currency, isDark && { color: '#FFFFFF' }]}>$</Text>
+                <Text style={[sc.amount, isDark && { color: '#FFFFFF' }]}>{priceStr || '---'}</Text>
               </View>
             </View>
-            
-            <View style={[sc.cta, { backgroundColor: expanded ? '#7c3aed' : '#f5f3ff' }]}>
+
+            <View style={[sc.cta, { backgroundColor: expanded ? '#7c3aed' : (isDark ? 'rgba(139,92,246,0.12)' : '#f5f3ff') }]}>
               <Ionicons 
                 name={expanded ? "chevron-up" : "chevron-forward"} 
                 size={16} 
@@ -148,27 +151,34 @@ const ServiceCard = ({
       {/* ÁREA EXPANDIBLE */}
       {expanded && (
         <View style={sc.expandedArea}>
-          <View style={sc.separator} />
-          <Text style={sc.descriptionTitle}>Detalles del servicio</Text>
-          <Text style={sc.description}>{service.description || 'Sin descripción disponible.'}</Text>
-          
+          <View style={[sc.separator, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
+          <Text style={[sc.descriptionTitle, isDark && { color: '#FFFFFF' }]}>Detalles del servicio</Text>
+          <Text style={[sc.description, isDark && { color: '#A1A1AA' }]}>{service.description || 'Sin descripción disponible.'}</Text>
+
           {isOwner ? (
             <View style={sc.ownerActions}>
-              <TouchableOpacity onPress={() => onEdit(service)} style={sc.btnEdit} accessibilityLabel="Editar servicio" accessibilityHint="Abre el formulario para editar este servicio">
-                <Ionicons name="pencil-outline" size={16} color="#1e293b" />
-                <Text style={sc.btnEditText}>Editar</Text>
+              <TouchableOpacity onPress={() => onEdit(service)} style={[sc.btnEdit, isDark && { backgroundColor: 'rgba(139,92,246,0.12)', borderColor: 'rgba(139,92,246,0.2)' }]} accessibilityLabel="Editar servicio" accessibilityHint="Abre el formulario para editar este servicio">
+                <Ionicons name="pencil-outline" size={16} color={isDark ? '#FFFFFF' : '#1e293b'} />
+                <Text style={[sc.btnEditText, isDark && { color: '#FFFFFF' }]}>Editar</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => onDelete(service)} style={[sc.btnEdit, sc.btnDelete]} accessibilityLabel="Eliminar servicio" accessibilityHint="Elimina este servicio permanentemente">
+              <TouchableOpacity onPress={() => onDelete(service)} style={[sc.btnEdit, sc.btnDelete, isDark && { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.2)' }]} accessibilityLabel="Eliminar servicio" accessibilityHint="Elimina este servicio permanentemente">
                 <Ionicons name="trash-outline" size={16} color="#ef4444" />
                 <Text style={[sc.btnEditText, { color: '#ef4444' }]}>Eliminar</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity onPress={() => onHire?.(service)} style={sc.hireBtn} accessibilityLabel="Contratar servicio">
-              <LinearGradient colors={['#7c3aed', '#6d28d9']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={sc.hireGradient}>
-                <Ionicons name="briefcase-outline" size={16} color="#fff" />
-                <Text style={sc.hireBtnText}>Contratar este servicio</Text>
-              </LinearGradient>
+              {isDark ? (
+                <View style={[sc.hireGradient, { backgroundColor: 'rgba(255,255,255,0.10)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' }]}>
+                  <Ionicons name="briefcase-outline" size={16} color="#fff" />
+                  <Text style={sc.hireBtnText}>Contratar este servicio</Text>
+                </View>
+              ) : (
+                <LinearGradient colors={['#7c3aed', '#6d28d9']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={sc.hireGradient}>
+                  <Ionicons name="briefcase-outline" size={16} color="#fff" />
+                  <Text style={sc.hireBtnText}>Contratar este servicio</Text>
+                </LinearGradient>
+              )}
             </TouchableOpacity>
           )}
         </View>
@@ -187,6 +197,7 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
   onServicesUpdated,
   onHireService,
 }) => {
+  const { isDark } = useThemeStore();
   const [localServices, setLocalServices] = useState<APIService[]>(services);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingService, setEditingService] = useState<APIService | null>(null);
@@ -292,11 +303,11 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
   };
 
   return (
-    <View style={st.container}>
+    <View style={[st.container, isDark && { backgroundColor: '#0a0618' }]}>
       <View style={st.header}>
         <View>
-          <Text style={st.title}>Servicios Profesionales</Text>
-          <Text style={st.subtitle}>{localServices.length} opciones para contratar</Text>
+          <Text style={[st.title, isDark && { color: '#FFFFFF' }]}>Servicios Profesionales</Text>
+          <Text style={[st.subtitle, isDark && { color: '#71717A' }]}>{localServices.length} opciones para contratar</Text>
         </View>
         {isOwner && (
           <TouchableOpacity 
@@ -314,13 +325,14 @@ export const ServicesSection: React.FC<ServicesSectionProps> = ({
 
       {localServices.map((s, i) => (
         <React.Fragment key={s.id || i}>
-          {i > 0 && <View style={sc.cardDivider} />}
+          {i > 0 && <View style={[sc.cardDivider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />}
           <ServiceCard
             service={s}
             isOwner={isOwner}
             onEdit={(service) => { setEditingService(service); setModalVisible(true); }}
             onDelete={handleDelete}
             onHire={onHireService}
+            isDark={isDark}
           />
         </React.Fragment>
       ))}

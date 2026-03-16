@@ -22,6 +22,7 @@ import { Ionicons }       from '@expo/vector-icons';
 import { Colors, Radius, Spacing } from '../../theme';
 import { auth }           from '../../services/firebase/config';
 import { useAuthStore }   from '../../store/authStore';
+import { useThemeStore }  from '../../store/themeStore';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -131,23 +132,24 @@ const buildMenuOptions = (
 // ── Item de menú ──────────────────────────────────────────────────────────────
 
 const MenuItem: React.FC<{ option: MenuOption }> = ({ option }) => {
+  const { isDark } = useThemeStore();
   const iconColor = option.color ?? Colors.text2;
 
   return (
     <>
-      {option.dividerAbove && <View style={item.divider} />}
+      {option.dividerAbove && <View style={[item.divider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />}
       <TouchableOpacity
         style={item.row}
         onPress={option.onPress}
         activeOpacity={0.6}
       >
         {/* Ícono */}
-        <View style={[item.iconWrap, option.color && { backgroundColor: option.color + '18' }]}>
+        <View style={[item.iconWrap, option.color ? { backgroundColor: option.color + '18' } : (isDark ? { backgroundColor: 'rgba(255,255,255,0.08)' } : undefined)]}>
           <Ionicons name={option.icon} size={17} color={iconColor} />
         </View>
 
         {/* Label */}
-        <Text style={[item.label, option.color && { color: option.color }]} numberOfLines={1}>
+        <Text style={[item.label, option.color ? { color: option.color } : (isDark ? { color: 'rgba(255,255,255,0.85)' } : undefined)]} numberOfLines={1}>
           {option.label}
         </Text>
 
@@ -227,6 +229,7 @@ export default function DrawerPanel({
 }: DrawerPanelProps) {
   const user   = auth.currentUser;
   const logout = useAuthStore((s) => s.logout);
+  const { isDark } = useThemeStore();
 
   const slideAnim   = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -297,6 +300,7 @@ export default function DrawerPanel({
       <Animated.View
         style={[
           styles.drawer,
+          isDark && { backgroundColor: '#0a0618', borderLeftWidth: 1, borderLeftColor: 'rgba(139,92,246,0.2)' },
           { transform: [{ translateX: slideAnim }] },
         ]}
       >
@@ -357,8 +361,8 @@ export default function DrawerPanel({
         </ScrollView>
 
         {/* ── Footer ── */}
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>Artistas App · v1.0</Text>
+        <View style={[styles.footer, isDark && { borderTopColor: 'rgba(139,92,246,0.15)' }]}>
+          <Text style={[styles.footerText, isDark && { color: 'rgba(255,255,255,0.3)' }]}>Artistas App · v1.0</Text>
         </View>
       </Animated.View>
     </Modal>

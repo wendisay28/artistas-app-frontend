@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import ReviewCard from '../../../../components/explore/shared/ReviewCard';
 import { ServicesSection } from './ServicesSection';
 import { PortfolioSection } from './PortfolioSection';
+import { useThemeStore } from '../../../../store/themeStore';
 
 type InnerTab = 'servicios' | 'portafolio' | 'resenas';
 
@@ -50,15 +51,15 @@ export const SobreMiTabs: React.FC<SobreMiTabsProps> = ({
   onPortfolioUpdated,
 }) => {
   const [inner, setInner] = useState<InnerTab>('servicios' as InnerTab);
-
+  const { isDark } = useThemeStore();
 
   return (
-    <View style={styles.tabsCard}>
-      <View style={styles.tabBar}>
+    <View style={[styles.tabsCard, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.18)', borderWidth: 1 }]}>
+      <View style={[styles.tabBar, isDark && { borderBottomColor: 'rgba(139,92,246,0.15)' }]}>
         {INNER_TABS.map((t) => (
           <Pressable
             key={t.key}
-            style={[styles.tabItem, inner === t.key && styles.tabItemActive]}
+            style={[styles.tabItem, inner === t.key && styles.tabItemActive, inner === t.key && isDark && { borderBottomColor: '#a78bfa' }]}
             onPress={() => {
               if (Platform.OS !== 'web') Haptics.selectionAsync();
               setInner(t.key);
@@ -67,16 +68,24 @@ export const SobreMiTabs: React.FC<SobreMiTabsProps> = ({
             <Ionicons
               name={t.icon}
               size={15}
-              color={inner === t.key ? '#7C3AED' : 'rgba(107,114,128,0.35)'}
+              color={inner === t.key
+                ? (isDark ? '#a78bfa' : '#7C3AED')
+                : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(107,114,128,0.35)')}
             />
-            <Text style={[styles.tabLabel, inner === t.key && styles.tabLabelActive]}>
+            <Text style={[
+              styles.tabLabel,
+              inner === t.key && styles.tabLabelActive,
+              { color: inner === t.key
+                ? (isDark ? '#a78bfa' : '#7C3AED')
+                : (isDark ? 'rgba(255,255,255,0.3)' : 'rgba(107,114,128,0.35)') }
+            ]}>
               {t.label}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      <View style={styles.tabContent}>
+      <View style={[styles.tabContent, isDark && { backgroundColor: '#130d2a' }]}>
         {inner === 'servicios' && (
           <ServicesSection
             services={services}
@@ -111,12 +120,12 @@ export const SobreMiTabs: React.FC<SobreMiTabsProps> = ({
               ))}
             </View>
           ) : (
-            <View style={styles.emptyDashed}>
+            <View style={[styles.emptyDashed, isDark && { backgroundColor: 'rgba(124,58,237,0.08)', borderColor: 'rgba(139,92,246,0.2)' }]}>
               <View style={styles.emptyIconWrap}>
                 <Ionicons name="star-outline" size={28} color="rgba(124,58,237,0.3)" />
               </View>
-              <Text style={styles.emptyDashedTitle}>Sin reseñas todavía</Text>
-              <Text style={styles.emptyDashedSub}>
+              <Text style={[styles.emptyDashedTitle, isDark && { color: '#FFFFFF' }]}>Sin reseñas todavía</Text>
+              <Text style={[styles.emptyDashedSub, isDark && { color: 'rgba(167,139,250,0.55)' }]}>
                 Las opiniones de tus clientes aparecerán aquí. ¡Completa trabajos y pide feedback!
               </Text>
 
@@ -128,7 +137,7 @@ export const SobreMiTabs: React.FC<SobreMiTabsProps> = ({
               </View>
 
               {/* Preview review card */}
-              <View style={[styles.previewCard, { opacity: 0.5 }]}>
+              <View style={[styles.previewCard, { opacity: 0.5 }, isDark && { backgroundColor: '#1a0f35', borderColor: 'rgba(139,92,246,0.2)' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                   <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(124,58,237,0.12)', alignItems: 'center', justifyContent: 'center' }}>
                     <Text style={{ fontSize: 11, fontFamily: 'PlusJakartaSans_700Bold', color: 'rgba(124,58,237,0.45)' }}>MG</Text>
