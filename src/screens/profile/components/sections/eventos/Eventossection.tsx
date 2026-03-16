@@ -6,8 +6,9 @@ import { TabBar } from '../../shared';
 import { ManageEventCard } from '../../cards';
 import { Colors, Radius, Spacing } from '../../../../../theme';
 import { EditButton } from '../../shared/EditButton';
+import { useThemeStore } from '../../../../../store/themeStore';
 
-type Props = { 
+type Props = {
   events: ArtistEvent[];
   isOwner?: boolean;
   onEditSection?: () => void;
@@ -24,9 +25,10 @@ const SUB_TABS: Array<{
 
 export const EventosSection: React.FC<Props> = ({ events, isOwner, onEditSection }) => {
   const [sub, setSub] = useState<EventSubTab>('gestionar');
+  const { isDark } = useThemeStore();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isDark && { backgroundColor: '#0a0618' }]}>
       <View style={styles.sectionHeader}>
         <TabBar
           tabs={SUB_TABS}
@@ -42,14 +44,17 @@ export const EventosSection: React.FC<Props> = ({ events, isOwner, onEditSection
       {sub === 'gestionar' && (
         <>
           {/* Create button */}
-          <TouchableOpacity style={styles.createBtn} activeOpacity={0.8}>
+          <TouchableOpacity
+            style={[styles.createBtn, isDark && { backgroundColor: 'rgba(212,168,83,0.05)', borderColor: 'rgba(212,168,83,0.2)' }]}
+            activeOpacity={0.8}
+          >
             <View style={styles.plusIcon}>
               <Text style={styles.plusText}>+</Text>
             </View>
             <Text style={styles.createLabel}>Crear nuevo evento</Text>
           </TouchableOpacity>
 
-          <Text style={styles.sectionLabel}>MIS EVENTOS</Text>
+          <Text style={[styles.sectionLabel, isDark && { color: 'rgba(255,255,255,0.35)' }]}>MIS EVENTOS</Text>
 
           {events.map(event => (
             <ManageEventCard
@@ -66,12 +71,12 @@ export const EventosSection: React.FC<Props> = ({ events, isOwner, onEditSection
       )}
 
       {sub === 'publicados' && events.map(event => (
-        <View key={event.id} style={styles.eventCard}>
-          <Text style={styles.eventTitle}>{event.title}</Text>
-          <Text style={styles.eventDate}>{event.dateLabel}</Text>
-          <Text style={styles.eventLocation}>{event.location}</Text>
+        <View key={event.id} style={[styles.eventCard, isDark && { backgroundColor: '#130d2a', borderColor: 'rgba(139,92,246,0.2)' }]}>
+          <Text style={[styles.eventTitle, isDark && { color: '#f5f3ff' }]}>{event.title}</Text>
+          <Text style={[styles.eventDate, isDark && { color: '#71717A' }]}>{event.dateLabel}</Text>
+          <Text style={[styles.eventLocation, isDark && { color: '#71717A' }]}>{event.location}</Text>
           <View style={[styles.statusBadge, event.status === 'live' && styles.statusLive]}>
-            <Text style={styles.statusText}>{event.status}</Text>
+            <Text style={[styles.statusText, isDark && { color: '#9ca3af' }]}>{event.status}</Text>
           </View>
         </View>
       ))}

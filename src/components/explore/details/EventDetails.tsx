@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../../constants/colors';
+import { useThemeStore } from '../../../store/themeStore';
 import InfoPair from '../shared/InfoPair';
 import ReviewCard from '../shared/ReviewCard';
 import GalleryModal from '../shared/GalleryModal';
@@ -71,6 +72,7 @@ export default function EventDetails({
   onShare,
   onViewDetails,
 }: EventDetailsProps) {
+  const { isDark } = useThemeStore();
   const [activeTab,    setActiveTab]    = useState<'info' | 'gallery' | 'reviews'>('info');
   const [galleryOpen,  setGalleryOpen]  = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -107,7 +109,7 @@ export default function EventDetails({
       <View style={styles.container}>
 
         {/* ══════════ MINI HEADER — igual que ArtistDetails ══════════ */}
-        <View style={styles.miniHeader}>
+        <View style={[styles.miniHeader, isDark && { backgroundColor: '#130d2a', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', shadowOpacity: 0, elevation: 0 }]}>
           {/* Imagen del evento en miniatura */}
           {event.image ? (
             <Image
@@ -122,16 +124,16 @@ export default function EventDetails({
           )}
 
           <View style={styles.headerMeta}>
-            <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
+            <Text style={[styles.eventName, isDark && { color: '#f5f3ff' }]} numberOfLines={1}>{event.name}</Text>
             <View style={styles.headerMetaRow}>
-              <Ionicons name="calendar-outline" size={11} color={colors.textSecondary} />
-              <Text style={styles.headerMetaText} numberOfLines={1}>
+              <Ionicons name="calendar-outline" size={11} color={isDark ? 'rgba(167,139,250,0.5)' : colors.textSecondary} />
+              <Text style={[styles.headerMetaText, isDark && { color: 'rgba(255,255,255,0.45)' }]} numberOfLines={1}>
                 {event.date}{event.time ? ` · ${event.time}` : ''}
               </Text>
             </View>
             <View style={styles.headerMetaRow}>
-              <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
-              <Text style={styles.headerMetaText} numberOfLines={1}>
+              <Ionicons name="location-outline" size={11} color={isDark ? 'rgba(167,139,250,0.5)' : colors.textSecondary} />
+              <Text style={[styles.headerMetaText, isDark && { color: 'rgba(255,255,255,0.45)' }]} numberOfLines={1}>
                 {event.city ?? event.venue}
               </Text>
             </View>
@@ -154,10 +156,10 @@ export default function EventDetails({
         </View>
 
         {/* ══════════ DESCRIPTION ══════════ */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Sobre el evento</Text>
+        <View style={[styles.card, isDark && { backgroundColor: '#130d2a', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', shadowOpacity: 0, elevation: 0 }]}>
+          <Text style={[styles.sectionTitle, isDark && { color: '#f5f3ff' }]}>Sobre el evento</Text>
           <Text
-            style={styles.descText}
+            style={[styles.descText, isDark && { color: '#9ca3af' }]}
             numberOfLines={descExpanded ? undefined : 3}
           >
             {event.description}
@@ -178,59 +180,59 @@ export default function EventDetails({
         </View>
 
         {/* ══════════ EVENT INFO ══════════ */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Detalles del evento</Text>
+        <View style={[styles.card, isDark && { backgroundColor: '#130d2a', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', shadowOpacity: 0, elevation: 0 }]}>
+          <Text style={[styles.sectionTitle, isDark && { color: '#f5f3ff' }]}>Detalles del evento</Text>
           <View style={styles.infoPairs}>
             <InfoPair label="Fecha"   value={event.date} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
             {event.time && (
               <>
                 <InfoPair label="Hora"  value={event.time} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
               </>
             )}
             <InfoPair label="Lugar"   value={event.venue} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
             {event.city && (
               <>
                 <InfoPair label="Ciudad" value={event.city} />
-                <View style={styles.divider} />
+                <View style={[styles.divider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
               </>
             )}
             <InfoPair label="Ubicación"          value={event.location} />
-            <View style={styles.divider} />
+            <View style={[styles.divider, isDark && { backgroundColor: 'rgba(139,92,246,0.15)' }]} />
             <InfoPair label="Tiempo de respuesta" value={event.responseTime} />
           </View>
         </View>
 
         {/* ══════════ STATS ══════════ */}
-        <View style={styles.statsCard}>
+        <View style={[styles.statsCard, isDark && { backgroundColor: '#130d2a', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', shadowOpacity: 0, elevation: 0 }]}>
           <View style={styles.statItem}>
             <Ionicons name="star" size={22} color={colors.starYellow} />
-            <Text style={styles.statValue}>{event.rating}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
+            <Text style={[styles.statValue, isDark && { color: '#f5f3ff' }]}>{event.rating}</Text>
+            <Text style={[styles.statLabel, isDark && { color: 'rgba(167,139,250,0.6)' }]}>Rating</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, isDark && { backgroundColor: 'rgba(139,92,246,0.2)' }]} />
           <View style={styles.statItem}>
             <Ionicons name="chatbubble" size={22} color={colors.primary} />
-            <Text style={styles.statValue}>{event.reviews}</Text>
-            <Text style={styles.statLabel}>Reseñas</Text>
+            <Text style={[styles.statValue, isDark && { color: '#f5f3ff' }]}>{event.reviews}</Text>
+            <Text style={[styles.statLabel, isDark && { color: 'rgba(167,139,250,0.6)' }]}>Reseñas</Text>
           </View>
-          <View style={styles.statDivider} />
+          <View style={[styles.statDivider, isDark && { backgroundColor: 'rgba(139,92,246,0.2)' }]} />
           <View style={styles.statItem}>
             <Ionicons
               name="ticket"
               size={22}
               color={soldOut ? colors.primary : colors.success}
             />
-            <Text style={[styles.statValue, soldOut && { color: colors.primary }]}>
+            <Text style={[styles.statValue, soldOut && { color: colors.primary }, isDark && !soldOut && { color: '#f5f3ff' }]}>
               {soldOut
                 ? 'Agotado'
                 : event.ticketsLeft !== undefined
                   ? event.ticketsLeft
                   : '∞'}
             </Text>
-            <Text style={styles.statLabel}>Entradas</Text>
+            <Text style={[styles.statLabel, isDark && { color: 'rgba(167,139,250,0.6)' }]}>Entradas</Text>
           </View>
         </View>
 
@@ -245,10 +247,10 @@ export default function EventDetails({
         )}
 
         {/* ══════════ TABS ══════════ */}
-        <View style={styles.tabsCard}>
+        <View style={[styles.tabsCard, isDark && { backgroundColor: '#130d2a', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)', shadowOpacity: 0, elevation: 0 }]}>
 
           {/* tab bar */}
-          <View style={styles.tabBar}>
+          <View style={[styles.tabBar, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
             {(
               [
                 { id: 'info',    label: 'Info',    icon: 'information-circle' },
@@ -264,11 +266,12 @@ export default function EventDetails({
                 <Ionicons
                   name={t.icon as any}
                   size={15}
-                  color={activeTab === t.id ? colors.primary : colors.textSecondary}
+                  color={activeTab === t.id ? colors.primary : (isDark ? 'rgba(167,139,250,0.5)' : colors.textSecondary)}
                 />
                 <Text style={[
                   styles.tabLabel,
                   activeTab === t.id && styles.tabLabelActive,
+                  isDark && activeTab !== t.id && { color: 'rgba(167,139,250,0.5)' },
                 ]}>
                   {t.label}
                 </Text>
@@ -280,13 +283,13 @@ export default function EventDetails({
           {activeTab === 'info' && (
             <View style={styles.tabContent}>
               {/* organizer row */}
-              <View style={styles.organizerRow}>
+              <View style={[styles.organizerRow, isDark && { borderBottomColor: 'rgba(139,92,246,0.2)' }]}>
                 <View style={styles.organizerAvatar}>
                   <Ionicons name="person" size={18} color={colors.primary} />
                 </View>
                 <View style={styles.organizerMeta}>
-                  <Text style={styles.organizerLabel}>Organizado por</Text>
-                  <Text style={styles.organizerName}>{event.name}</Text>
+                  <Text style={[styles.organizerLabel, isDark && { color: 'rgba(167,139,250,0.6)' }]}>Organizado por</Text>
+                  <Text style={[styles.organizerName, isDark && { color: '#f5f3ff' }]}>{event.name}</Text>
                 </View>
                 <Ionicons name="checkmark-circle" size={18} color="#818cf8" />
               </View>
@@ -298,9 +301,9 @@ export default function EventDetails({
                   { icon: 'location-outline', text: event.city ?? 'Por confirmar' },
                   { icon: 'walk-outline',     text: '2.5 km' },
                 ].map((item, i) => (
-                  <View key={i} style={styles.infoChip}>
+                  <View key={i} style={[styles.infoChip, isDark && { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(139,92,246,0.2)' }]}>
                     <Ionicons name={item.icon as any} size={15} color={colors.primary} />
-                    <Text style={styles.infoChipText} numberOfLines={1}>{item.text}</Text>
+                    <Text style={[styles.infoChipText, isDark && { color: 'rgba(167,139,250,0.7)' }]} numberOfLines={1}>{item.text}</Text>
                   </View>
                 ))}
               </View>
@@ -356,17 +359,17 @@ export default function EventDetails({
           {/* share */}
           <Pressable
             onPress={onShare}
-            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(139,92,246,0.2)' }, pressed && { opacity: 0.7 }]}
           >
-            <Ionicons name="share-social-outline" size={20} color={colors.text} />
+            <Ionicons name="share-social-outline" size={20} color={isDark ? '#f5f3ff' : colors.text} />
           </Pressable>
 
           {/* detail */}
           <Pressable
             onPress={onViewDetails}
-            style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(139,92,246,0.2)' }, pressed && { opacity: 0.7 }]}
           >
-            <Ionicons name="information-circle-outline" size={20} color={colors.text} />
+            <Ionicons name="information-circle-outline" size={20} color={isDark ? '#f5f3ff' : colors.text} />
           </Pressable>
 
           {/* buy ticket */}

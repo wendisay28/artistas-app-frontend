@@ -129,6 +129,7 @@ export const FeedPost: React.FC<Props> = ({
       addFromHome({
         feedPostId:  post.id,
         image:       post.images?.[0] ?? post.author.avatar ?? '',
+        images:      post.images,
         title:       post.content.slice(0, 80) || post.author.name,
         author:      post.author.name,
         artistId:    (post.author as any).id,

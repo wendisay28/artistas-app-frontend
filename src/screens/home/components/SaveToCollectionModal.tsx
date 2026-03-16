@@ -58,6 +58,7 @@ export default function SaveToCollectionModal({ visible, post, onClose }: Props)
     const inspirationId = addFromHome({
       feedPostId:  post.id,
       image:       post.images?.[0] ?? post.author.avatar ?? '',
+      images:      post.images,
       title:       post.content.slice(0, 80) || post.author.name,
       author:      post.author.name,
       artistId:    post.author.id,

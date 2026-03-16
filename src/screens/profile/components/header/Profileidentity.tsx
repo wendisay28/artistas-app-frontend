@@ -168,14 +168,14 @@ export const ProfileIdentity: React.FC<ProfileIdentityProps> = ({
 
         {/* Botones derecha */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.btnMore} onPress={onMore} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.btnMore, isDark && styles.btnMoreDark]} onPress={onMore} activeOpacity={0.8}>
             <Ionicons name="ellipsis-horizontal" size={16} color="#6d28d9" />
           </TouchableOpacity>
 
           {isOwner ? (
-            <TouchableOpacity style={styles.btnEdit} onPress={onEditProfile} activeOpacity={0.85}>
+            <TouchableOpacity style={[styles.btnEdit, isDark && styles.btnEditDark]} onPress={onEditProfile} activeOpacity={0.85}>
               <Ionicons name="create-outline" size={14} color="#7c3aed" />
-              <Text style={styles.btnEditText}>Editar</Text>
+              <Text style={[styles.btnEditText, isDark && styles.btnEditTextDark]}>Editar</Text>
             </TouchableOpacity>
           ) : (
             <Animated.View style={{ transform: [{ scale: followScale }] }}>
@@ -460,6 +460,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(167,139,250,0.25)',
   },
   btnEditText: { fontSize: 13, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
+  btnEditTextDark: { color: '#a78bfa' },
   btnHire: {
     height: 36, paddingHorizontal: 16, borderRadius: 12,
     flexDirection: 'row', alignItems: 'center', gap: 5,

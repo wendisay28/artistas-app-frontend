@@ -12,6 +12,7 @@ import { Colors } from '../../../../theme/colors';
 import { Radius } from '../../../../theme/radius';
 import { Spacing } from '../../../../theme/spacing';
 import { TabItem } from '../types';
+import { useThemeStore } from '../../../../store/themeStore';
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -25,26 +26,27 @@ type Props = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export const TabBar: React.FC<Props> = ({ tabs, active, onSelect, variant = 'main' }) => {
+  const { isDark } = useThemeStore();
 
   // ── Pill / inner tab bar ──────────────────────────────────────────────────
   if (variant === 'pill') {
     return (
-      <View style={pill.container}>
+      <View style={[pill.container, isDark && { backgroundColor: '#1a1030', borderWidth: 1, borderColor: 'rgba(139,92,246,0.22)' }]}>
         {tabs.map(tab => {
           const isActive = tab.key === active;
           return (
             <TouchableOpacity
               key={tab.key}
-              style={[pill.tab, isActive && pill.tabActive]}
+              style={[pill.tab, isActive && pill.tabActive, isActive && isDark && { backgroundColor: '#130d2a', shadowOpacity: 0.25 }]}
               onPress={() => onSelect(tab.key)}
               activeOpacity={0.7}
             >
               <Ionicons
                 name={isActive ? (tab.iconActive ?? tab.icon) : tab.icon}
                 size={15}
-                color={isActive ? Colors.accent : Colors.text}
+                color={isActive ? Colors.accent : (isDark ? 'rgba(255,255,255,0.4)' : Colors.text)}
               />
-              <Text style={[pill.label, isActive && pill.labelActive]}>
+              <Text style={[pill.label, isDark && !isActive && { color: 'rgba(255,255,255,0.5)' }, isActive && pill.labelActive]}>
                 {tab.label}
               </Text>
             </TouchableOpacity>
@@ -56,7 +58,7 @@ export const TabBar: React.FC<Props> = ({ tabs, active, onSelect, variant = 'mai
 
   // ── Main tab bar (sticky, estilo Instagram) ───────────────────────────────
   return (
-    <View style={main.container}>
+    <View style={[main.container, isDark && { backgroundColor: '#0a0618', borderTopWidth: 1, borderTopColor: 'rgba(139,92,246,0.15)' }]}>
       {tabs.map(tab => {
         const isActive = tab.key === active;
         return (
@@ -69,9 +71,14 @@ export const TabBar: React.FC<Props> = ({ tabs, active, onSelect, variant = 'mai
             <Ionicons
               name={isActive ? (tab.iconActive ?? tab.icon) : tab.icon}
               size={20}
-              color={isActive ? Colors.accent : Colors.textMuted} // Inactivos en gris claro
+              color={isActive ? Colors.accent : (isDark ? 'rgba(255,255,255,0.35)' : Colors.textMuted)}
             />
-            <Text style={[main.label, isActive && main.labelActive]}>
+            <Text style={[
+              main.label,
+              isDark && !isActive && { color: 'rgba(255,255,255,0.35)' },
+              isActive && main.labelActive,
+              isActive && isDark && { color: '#a78bfa' },
+            ]}>
               {tab.label}
             </Text>
             {/* Indicador inferior */}

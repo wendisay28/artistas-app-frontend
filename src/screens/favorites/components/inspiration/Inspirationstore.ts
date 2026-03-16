@@ -25,7 +25,8 @@ export type InspirationSource =
 
 export interface InspirationPost {
   id:           string;
-  image:        string;        // URI de la imagen (obligatoria)
+  image:        string;        // URI de la imagen principal (obligatoria)
+  images?:      string[];      // Todas las imágenes del post (carrusel, source === 'home')
   title:        string;
   description?: string;
   author:       string;        // Nombre del artista o "Yo"
@@ -59,6 +60,7 @@ interface InspirationState {
   addFromHome: (params: {
     feedPostId?: string;
     image:       string;
+    images?:     string[];      // todas las imágenes del post (carrusel)
     title:       string;
     author:      string;
     artistId?:   string;
@@ -139,7 +141,7 @@ export const useInspirationStore = create<InspirationState>()(
         get().posts.some(p => p.feedPostId === feedPostId),
 
       // ── Agregar desde Home ────────────────────────────────────
-      addFromHome: ({ feedPostId, image, title, author, artistId, category, tags, description }) => {
+      addFromHome: ({ feedPostId, image, images, title, author, artistId, category, tags, description }) => {
         const { posts } = get();
 
         // Dedup por feedPostId (más fiable, evita duplicados exactos)
@@ -156,6 +158,7 @@ export const useInspirationStore = create<InspirationState>()(
 
         return get().addPost({
           image,
+          images: images && images.length > 1 ? images : undefined,
           title,
           description,
           author,

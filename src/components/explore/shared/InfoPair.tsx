@@ -5,6 +5,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { colors } from '../../../constants/colors';
+import { useThemeStore } from '../../../store/themeStore';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -25,10 +26,11 @@ export default function InfoPair({
   valueColor,
   style,
 }: InfoPairProps) {
+  const { isDark } = useThemeStore();
   return (
     <View style={[styles.container, style]}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, valueColor ? { color: valueColor } : null]}>
+      <Text style={[styles.label, isDark && styles.labelDark]}>{label}</Text>
+      <Text style={[styles.value, isDark && styles.valueDark, valueColor ? { color: valueColor } : null]}>
         {value}
       </Text>
     </View>
@@ -49,9 +51,11 @@ const styles = StyleSheet.create({
     fontFamily: 'PlusJakartaSans_500Medium',
     color: colors.textSecondary,
   },
+  labelDark: { color: 'rgba(167,139,250,0.65)' },
   value: {
     fontSize: 13,
     fontFamily: 'PlusJakartaSans_600SemiBold',
     color: colors.text,
   },
+  valueDark: { color: '#f5f3ff' },
 });

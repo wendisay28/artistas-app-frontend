@@ -1027,7 +1027,7 @@ export default function ProfileScreen() {
               onMore={viewingAsClient ? undefined : handleMoreOptions}
             />
 
-            <View style={styles.mainTabsContainer}>
+            <View style={[styles.mainTabsContainer, isDark && { backgroundColor: '#0a0618' }]}>
               <TabBar
                 tabs={MAIN_TABS}
                 active={activeMainTab}
@@ -1035,7 +1035,7 @@ export default function ProfileScreen() {
               />
             </View>
 
-            <View style={styles.content}>
+            <View style={[styles.content, isDark && { backgroundColor: '#0a0618' }]}>
               {renderContent()}
             </View>
           </>

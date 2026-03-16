@@ -18,6 +18,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../../constants/colors';
 import { Colors } from '../../../theme';
+import { useThemeStore } from '../../../store/themeStore';
 import {
   getLocalizedCategoryName,
   getLocalizedDisciplineName,
@@ -86,11 +87,14 @@ const CardHeader: React.FC<{
   title: string;
   isOwner?: boolean;
   onEdit?: () => void;
-}> = ({ title }) => (
-  <View style={ch.row}>
-    <Text style={ch.title}>{title}</Text>
-  </View>
-);
+}> = ({ title }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={ch.row}>
+      <Text style={[ch.title, isDark && ch.titleDark]}>{title}</Text>
+    </View>
+  );
+};
 
 const ch = StyleSheet.create({
   row: {
@@ -101,15 +105,19 @@ const ch = StyleSheet.create({
     flex: 1,
     fontSize: 15, fontFamily: 'PlusJakartaSans_700Bold', color: '#1e1b4b',
   },
+  titleDark: { color: '#f5f3ff' },
 });
 
 // ── Glass Card base ───────────────────────────────────────────────────────────
 
-const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style }) => (
-  <View style={[gc.card, style]}>
-    {children}
-  </View>
-);
+const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({ children, style }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[gc.card, isDark && gc.cardDark, style]}>
+      {children}
+    </View>
+  );
+};
 
 const gc = StyleSheet.create({
   card: {
@@ -123,6 +131,10 @@ const gc = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 16,
     elevation: 3,
+  },
+  cardDark: {
+    backgroundColor: 'rgba(10,6,24,0.95)',
+    borderColor: 'rgba(167,139,250,0.3)',
   },
 });
 
@@ -260,24 +272,26 @@ const ExperienceItem: React.FC<{
   period: string;
   description?: string;
   last?: boolean;
-}> = ({ position, company, period, description, last }) => (
-  <View style={[exp.item, !last && exp.itemBorder]}>
-    {/* Dot de timeline */}
-    <View style={exp.dotWrap}>
-      <LinearGradient colors={['#7c3aed', '#2563eb']} style={exp.dot} />
-    </View>
-    <View style={exp.content}>
-      <View style={exp.headerRow}>
-        <Text style={exp.position}>{position}</Text>
-        <View style={exp.periodPill}>
-          <Text style={exp.period}>{period}</Text>
-        </View>
+}> = ({ position, company, period, description, last }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[exp.item, !last && exp.itemBorder]}>
+      <View style={exp.dotWrap}>
+        <LinearGradient colors={['#7c3aed', '#2563eb']} style={exp.dot} />
       </View>
-      <Text style={exp.company}>{company}</Text>
-      {description && <Text style={exp.desc}>{description}</Text>}
+      <View style={exp.content}>
+        <View style={exp.headerRow}>
+          <Text style={[exp.position, isDark && { color: '#f5f3ff' }]}>{position}</Text>
+          <View style={[exp.periodPill, isDark && { backgroundColor: 'rgba(167,139,250,0.15)' }]}>
+            <Text style={exp.period}>{period}</Text>
+          </View>
+        </View>
+        <Text style={[exp.company, isDark && { color: '#a78bfa' }]}>{company}</Text>
+        {description && <Text style={[exp.desc, isDark && { color: '#9ca3af' }]}>{description}</Text>}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const exp = StyleSheet.create({
   item:       { flexDirection: 'row', gap: 12, paddingBottom: 16 },
@@ -313,23 +327,26 @@ const StudyItem: React.FC<{
   year: string;
   details?: string;
   last?: boolean;
-}> = ({ degree, institution, year, details, last }) => (
-  <View style={[st.item, !last && st.itemBorder]}>
-    <View style={st.dotWrap}>
-      <LinearGradient colors={['#7c3aed', '#2563eb']} style={st.dot} />
-    </View>
-    <View style={st.content}>
-      <View style={st.headerRow}>
-        <Text style={st.degree}>{degree}</Text>
-        <View style={st.yearPill}>
-          <Text style={st.year}>{year}</Text>
-        </View>
+}> = ({ degree, institution, year, details, last }) => {
+  const { isDark } = useThemeStore();
+  return (
+    <View style={[st.item, !last && st.itemBorder]}>
+      <View style={st.dotWrap}>
+        <LinearGradient colors={['#7c3aed', '#2563eb']} style={st.dot} />
       </View>
-      <Text style={st.institution}>{institution}</Text>
-      {details && <Text style={st.details}>{details}</Text>}
+      <View style={st.content}>
+        <View style={st.headerRow}>
+          <Text style={[st.degree, isDark && { color: '#f5f3ff' }]}>{degree}</Text>
+          <View style={[st.yearPill, isDark && { backgroundColor: 'rgba(167,139,250,0.15)' }]}>
+            <Text style={st.year}>{year}</Text>
+          </View>
+        </View>
+        <Text style={[st.institution, isDark && { color: '#a78bfa' }]}>{institution}</Text>
+        {details && <Text style={[st.details, isDark && { color: '#9ca3af' }]}>{details}</Text>}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const st = StyleSheet.create({
   item:       { flexDirection: 'row', gap: 12, paddingBottom: 16 },
@@ -358,6 +375,7 @@ const st = StyleSheet.create({
 
 export default function ArtistDetails({ artist, onHire, onMessage, onShare, socialLinks }: ArtistDetailsProps) {
   
+  const { isDark } = useThemeStore();
   const [activeTab,   setActiveTab]   = useState<'services' | 'portfolio' | 'reviews'>('services');
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx,  setGalleryIdx]  = useState(0);
@@ -383,7 +401,7 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
       <View style={styles.container}>
 
         {/* ══ MINI HEADER ══ */}
-        <View style={styles.miniHeader}>
+        <View style={[styles.miniHeader, isDark && styles.miniHeaderDark]}>
           {(artist as any).avatar || artist.image ? (
             <Image source={{ uri: (artist as any).avatar || artist.image }} style={styles.avatar} contentFit="cover" />
           ) : (
@@ -394,15 +412,15 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
 
           <View style={styles.headerMeta}>
             <View style={styles.nameRow}>
-              <Text style={styles.artistName} numberOfLines={1}>{artist.name}</Text>
+              <Text style={[styles.artistName, isDark && { color: '#f5f3ff' }]} numberOfLines={1}>{artist.name}</Text>
               {artist.verified && <Ionicons name="checkmark-circle" size={15} color="#818cf8" />}
             </View>
-            <Text style={styles.artistCategory} numberOfLines={1}>
+            <Text style={[styles.artistCategory, isDark && { color: 'rgba(167,139,250,0.7)' }]} numberOfLines={1}>
               {typeof artist.category === 'string' ? artist.category : 'Artista'}
             </Text>
             <View style={styles.locationRow}>
-              <Ionicons name="location-outline" size={11} color={colors.textSecondary} />
-              <Text style={styles.locationText} numberOfLines={1}>{artist.location}</Text>
+              <Ionicons name="location-outline" size={11} color={isDark ? 'rgba(167,139,250,0.5)' : colors.textSecondary} />
+              <Text style={[styles.locationText, isDark && { color: 'rgba(255,255,255,0.45)' }]} numberOfLines={1}>{artist.location}</Text>
             </View>
           </View>
 
@@ -419,7 +437,7 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
           <CardHeader title="Acerca de mí" />
           {artist.description ? (
             <>
-              <Text style={s.bioText} numberOfLines={bioExpanded ? undefined : 3}>
+              <Text style={[s.bioText, isDark && { color: '#9ca3af' }]} numberOfLines={bioExpanded ? undefined : 3}>
                 {artist.description}
               </Text>
               <Pressable onPress={() => setBioExpanded(p => !p)} style={s.readMoreBtn}>
@@ -632,8 +650,8 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
         </GlassCard>
 
         {/* ══ TABS ══ */}
-        <View style={s.tabsCard}>
-          <View style={s.tabBar}>
+        <View style={[s.tabsCard, isDark && { backgroundColor: '#130d2a', borderWidth: 1, borderColor: 'rgba(139,92,246,0.2)' }]}>
+          <View style={[s.tabBar, isDark && { borderBottomColor: 'rgba(139,92,246,0.15)' }]}>
             {([
               { id: 'services',  label: 'Servicios',  icon: 'briefcase-outline'   },
               { id: 'portfolio', label: 'Portafolio', icon: 'grid-outline'        },
@@ -644,8 +662,8 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
                 style={[s.tabItem, activeTab === t.id && s.tabItemActive]}
                 onPress={() => handleTab(t.id)}
               >
-                <Ionicons name={t.icon as any} size={14} color={activeTab === t.id ? '#7c3aed' : 'rgba(109,40,217,0.35)'} />
-                <Text style={[s.tabLabel, activeTab === t.id && s.tabLabelActive]}>{t.label}</Text>
+                <Ionicons name={t.icon as any} size={14} color={activeTab === t.id ? '#7c3aed' : (isDark ? 'rgba(167,139,250,0.35)' : 'rgba(109,40,217,0.35)')} />
+                <Text style={[s.tabLabel, activeTab === t.id && s.tabLabelActive, isDark && !activeTab.includes(t.id) && { color: 'rgba(167,139,250,0.45)' }]}>{t.label}</Text>
                 {/* Indicador activo en gradiente */}
                 {activeTab === t.id && (
                   <LinearGradient
@@ -708,11 +726,11 @@ export default function ArtistDetails({ artist, onHire, onMessage, onShare, soci
 
         {/* ══ CTA ══ */}
         <View style={styles.ctaRow}>
-          <Pressable onPress={onMessage} style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}>
-            <Ionicons name="chatbubble-outline" size={20} color={colors.text} />
+          <Pressable onPress={onMessage} style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(139,92,246,0.2)' }, pressed && { opacity: 0.7 }]}>
+            <Ionicons name="chatbubble-outline" size={20} color={isDark ? '#f5f3ff' : colors.text} />
           </Pressable>
-          <Pressable onPress={onShare} style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.7 }]}>
-            <Ionicons name="share-social-outline" size={20} color={colors.text} />
+          <Pressable onPress={onShare} style={({ pressed }) => [styles.iconBtn, isDark && { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(139,92,246,0.2)' }, pressed && { opacity: 0.7 }]}>
+            <Ionicons name="share-social-outline" size={20} color={isDark ? '#f5f3ff' : colors.text} />
           </Pressable>
           <Pressable
             onPress={() => {
@@ -740,6 +758,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 18, padding: 14,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+  },
+  miniHeaderDark: {
+    backgroundColor: '#130d2a',
+    borderWidth: 1,
+    borderColor: 'rgba(139,92,246,0.2)',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.background },
   avatarFallback: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },

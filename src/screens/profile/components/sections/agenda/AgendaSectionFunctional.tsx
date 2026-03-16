@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { availabilityApi, ArtistBooking } from '../../../../../services/api/availability';
 import { auth } from '../../../../../services/firebase/config';
+import { useThemeStore } from '../../../../../store/themeStore';
 
 interface Props {
   isOwner?: boolean;
@@ -35,27 +36,28 @@ const formatDate = (dateStr: string) => {
 const BookingCard: React.FC<{
   booking: ArtistBooking;
   isOwner: boolean;
+  isDark: boolean;
   onUpdateStatus: (id: string, status: 'accepted' | 'rejected' | 'cancelled') => void;
-}> = ({ booking, isOwner, onUpdateStatus }) => {
+}> = ({ booking, isOwner, isDark, onUpdateStatus }) => {
   const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
   const canAct = isOwner && booking.status === 'pending';
 
   return (
-    <View style={s.card}>
+    <View style={[s.card, isDark && s.cardDark]}>
       {/* Header */}
       <View style={s.cardHeader}>
         <View style={s.cardInfo}>
-          <Text style={s.cardTitle} numberOfLines={1}>{booking.title}</Text>
+          <Text style={[s.cardTitle, isDark && s.textLight]} numberOfLines={1}>{booking.title}</Text>
           <View style={s.cardMeta}>
             <Ionicons name="calendar-outline" size={11} color="rgba(109,40,217,0.5)" />
-            <Text style={s.cardMetaText}>
+            <Text style={[s.cardMetaText, isDark && s.textMuted]}>
               {formatDate(booking.eventDate)} · {booking.startTime} – {booking.endTime}
             </Text>
           </View>
           {booking.location ? (
             <View style={s.cardMeta}>
               <Ionicons name="location-outline" size={11} color="rgba(109,40,217,0.5)" />
-              <Text style={s.cardMetaText} numberOfLines={1}>{booking.location}</Text>
+              <Text style={[s.cardMetaText, isDark && s.textMuted]} numberOfLines={1}>{booking.location}</Text>
             </View>
           ) : null}
         </View>
@@ -65,7 +67,7 @@ const BookingCard: React.FC<{
       </View>
 
       {booking.clientNotes ? (
-        <Text style={s.notes} numberOfLines={2}>"{booking.clientNotes}"</Text>
+        <Text style={[s.notes, isDark && s.textMuted]} numberOfLines={2}>"{booking.clientNotes}"</Text>
       ) : null}
 
       {booking.price ? (
@@ -85,7 +87,7 @@ const BookingCard: React.FC<{
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity
-            style={s.rejectBtn}
+            style={[s.rejectBtn, isDark && s.rejectBtnDark]}
             onPress={() => onUpdateStatus(booking.id, 'rejected')}
             activeOpacity={0.85}
           >
@@ -99,6 +101,7 @@ const BookingCard: React.FC<{
 };
 
 export const AgendaSectionFunctional: React.FC<Props> = ({ isOwner, onEditSection }) => {
+  const { isDark } = useThemeStore();
   const [bookings, setBookings] = useState<ArtistBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -141,27 +144,27 @@ export const AgendaSectionFunctional: React.FC<Props> = ({ isOwner, onEditSectio
   if (loading) {
     return (
       <View style={s.center}>
-        <Text style={s.loadingText}>Cargando agenda…</Text>
+        <Text style={[s.loadingText, isDark && { color: 'rgba(167,139,250,0.5)' }]}>Cargando agenda…</Text>
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={s.root}
+      style={[s.root, isDark && s.rootDark]}
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadBookings(); }} tintColor="#7c3aed" />}
     >
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.heading}>Mi Agenda</Text>
-          <Text style={s.subheading}>
+          <Text style={[s.heading, isDark && s.textLight]}>Mi Agenda</Text>
+          <Text style={[s.subheading, isDark && { color: 'rgba(167,139,250,0.5)' }]}>
             {bookings.length === 0 ? 'Sin reservas activas' : `${bookings.length} reserva${bookings.length !== 1 ? 's' : ''}`}
           </Text>
         </View>
         {isOwner && onEditSection && (
-          <TouchableOpacity style={s.editBtn} onPress={onEditSection} activeOpacity={0.7}>
+          <TouchableOpacity style={[s.editBtn, isDark && s.editBtnDark]} onPress={onEditSection} activeOpacity={0.7}>
             <Ionicons name="create-outline" size={16} color="#7c3aed" />
           </TouchableOpacity>
         )}
@@ -174,34 +177,34 @@ export const AgendaSectionFunctional: React.FC<Props> = ({ isOwner, onEditSectio
           { label: 'Confirmadas', value: confirmed.length, color: '#16a34a' },
           { label: 'Total', value: bookings.length, color: '#7c3aed' },
         ].map(({ label, value, color }) => (
-          <View key={label} style={s.statCard}>
+          <View key={label} style={[s.statCard, isDark && s.statCardDark]}>
             <Text style={[s.statNum, { color }]}>{value}</Text>
-            <Text style={s.statLabel}>{label}</Text>
+            <Text style={[s.statLabel, isDark && { color: 'rgba(167,139,250,0.5)' }]}>{label}</Text>
           </View>
         ))}
       </View>
 
       {/* Grupos */}
       {pending.length > 0 && (
-        <Section title="Pendientes" icon="time-outline" iconColor="#d97706">
+        <Section title="Pendientes" icon="time-outline" iconColor="#d97706" isDark={isDark}>
           {pending.map(b => (
-            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} onUpdateStatus={handleUpdateStatus} />
+            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} isDark={isDark} onUpdateStatus={handleUpdateStatus} />
           ))}
         </Section>
       )}
 
       {confirmed.length > 0 && (
-        <Section title="Confirmadas" icon="checkmark-circle-outline" iconColor="#16a34a">
+        <Section title="Confirmadas" icon="checkmark-circle-outline" iconColor="#16a34a" isDark={isDark}>
           {confirmed.map(b => (
-            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} onUpdateStatus={handleUpdateStatus} />
+            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} isDark={isDark} onUpdateStatus={handleUpdateStatus} />
           ))}
         </Section>
       )}
 
       {others.length > 0 && (
-        <Section title="Historial" icon="archive-outline" iconColor="#6b7280">
+        <Section title="Historial" icon="archive-outline" iconColor="#6b7280" isDark={isDark}>
           {others.map(b => (
-            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} onUpdateStatus={handleUpdateStatus} />
+            <BookingCard key={b.id} booking={b} isOwner={!!isOwner} isDark={isDark} onUpdateStatus={handleUpdateStatus} />
           ))}
         </Section>
       )}
@@ -209,11 +212,11 @@ export const AgendaSectionFunctional: React.FC<Props> = ({ isOwner, onEditSectio
       {/* Empty */}
       {bookings.length === 0 && (
         <View style={s.empty}>
-          <View style={s.emptyIcon}>
+          <View style={[s.emptyIcon, isDark && { backgroundColor: 'rgba(124,58,237,0.10)', borderColor: 'rgba(124,58,237,0.18)' }]}>
             <Ionicons name="calendar-outline" size={36} color="rgba(124,58,237,0.4)" />
           </View>
-          <Text style={s.emptyTitle}>Sin reservas aún</Text>
-          <Text style={s.emptySub}>
+          <Text style={[s.emptyTitle, isDark && s.textLight]}>Sin reservas aún</Text>
+          <Text style={[s.emptySub, isDark && { color: 'rgba(167,139,250,0.5)' }]}>
             {isOwner
               ? 'Cuando los clientes reserven tus servicios, aparecerán aquí.'
               : 'Tus reservas aparecerán aquí.'}
@@ -226,11 +229,11 @@ export const AgendaSectionFunctional: React.FC<Props> = ({ isOwner, onEditSectio
   );
 };
 
-const Section: React.FC<{ title: string; icon: string; iconColor: string; children: React.ReactNode }> = ({ title, icon, iconColor, children }) => (
+const Section: React.FC<{ title: string; icon: string; iconColor: string; isDark: boolean; children: React.ReactNode }> = ({ title, icon, iconColor, isDark, children }) => (
   <View style={s.section}>
     <View style={s.sectionHeader}>
       <Ionicons name={icon as any} size={14} color={iconColor} />
-      <Text style={s.sectionTitle}>{title}</Text>
+      <Text style={[s.sectionTitle, isDark && s.textLight]}>{title}</Text>
     </View>
     {children}
   </View>
@@ -238,8 +241,13 @@ const Section: React.FC<{ title: string; icon: string; iconColor: string; childr
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#faf9ff' },
+  rootDark: { backgroundColor: '#0a0618' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   loadingText: { fontSize: 14, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(109,40,217,0.5)' },
+
+  // Helpers
+  textLight: { color: '#f5f3ff' },
+  textMuted: { color: '#71717A' },
 
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -252,6 +260,9 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(124,58,237,0.08)',
     alignItems: 'center', justifyContent: 'center',
   },
+  editBtnDark: {
+    backgroundColor: 'rgba(167,139,250,0.12)',
+  },
 
   statsRow: {
     flexDirection: 'row', gap: 10,
@@ -263,6 +274,10 @@ const s = StyleSheet.create({
     paddingVertical: 12, alignItems: 'center',
     shadowColor: '#5b21b6', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.07, shadowRadius: 8, elevation: 2,
+  },
+  statCardDark: {
+    backgroundColor: '#130d2a',
+    borderColor: 'rgba(139,92,246,0.2)',
   },
   statNum: { fontSize: 22, fontFamily: 'PlusJakartaSans_700Bold' },
   statLabel: { fontSize: 10, fontFamily: 'PlusJakartaSans_400Regular', color: 'rgba(109,40,217,0.5)', marginTop: 2 },
@@ -277,6 +292,10 @@ const s = StyleSheet.create({
     padding: 14, marginBottom: 10,
     shadowColor: '#5b21b6', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08, shadowRadius: 10, elevation: 2,
+  },
+  cardDark: {
+    backgroundColor: '#130d2a',
+    borderColor: 'rgba(139,92,246,0.2)',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   cardInfo: { flex: 1, gap: 3 },
@@ -302,6 +321,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 8,
     borderRadius: 10, borderWidth: 1, borderColor: 'rgba(220,38,38,0.25)',
     backgroundColor: 'rgba(220,38,38,0.05)',
+  },
+  rejectBtnDark: {
+    backgroundColor: 'rgba(220,38,38,0.08)',
+    borderColor: 'rgba(220,38,38,0.22)',
   },
   actionText: { fontSize: 12, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff' },
 

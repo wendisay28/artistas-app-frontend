@@ -1,18 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// InspirationCard.tsx — Tarjeta de post inspiracional estilo Pinterest
-// Si un post está en el store ya está guardado → bookmark siempre activo.
-// Presionar bookmark = eliminar de Inspiración.
+// InspirationCard.tsx — Tarjeta estilo Pinterest
+// FIX: importa desde inspirationStore (no Inspirationstore con S mayúscula)
 // ─────────────────────────────────────────────────────────────────────────────
 
 import React from 'react';
-import {
-  View, Text, TouchableOpacity, StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../../store/themeStore';
-import type { InspirationPost } from './Inspirationstore';
+import type { InspirationPost } from '../../../../store/inspirationStore';
 
 type Props = {
   post: InspirationPost;
@@ -36,8 +33,8 @@ const CATEGORY_COLORS: Record<string, [string, string]> = {
   teatro: ['#dc2626', '#ea580c'],
 };
 
-// Altura variable basada en el índice del post para efecto masonry
-const HEIGHTS = [180, 220, 200, 240, 190, 210];
+// Alturas variables para efecto masonry real
+const HEIGHTS = [180, 230, 200, 260, 195, 215, 175, 245];
 const getHeight = (id: string) => {
   const idx = id.charCodeAt(id.length - 1) % HEIGHTS.length;
   return HEIGHTS[idx];
@@ -49,17 +46,18 @@ export const InspirationCard: React.FC<Props> = ({ post, onPress, onBookmarkTogg
 
   return (
     <TouchableOpacity
-      style={[
-        styles.card,
-        isDark && styles.cardDark,
-        { height: getHeight(post.id) },
-      ]}
+      style={[styles.card, isDark && styles.cardDark, { height: getHeight(post.id) }]}
       onPress={onPress}
       activeOpacity={0.9}
     >
-      {/* Imagen de fondo o gradiente */}
+      {/* Imagen o gradiente de fallback */}
       {post.image ? (
-        <Image source={{ uri: post.image }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image
+          source={{ uri: post.image }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          transition={250}
+        />
       ) : (
         <LinearGradient
           colors={categoryColors}
@@ -69,16 +67,17 @@ export const InspirationCard: React.FC<Props> = ({ post, onPress, onBookmarkTogg
         />
       )}
 
-      {/* Overlay para mejor legibilidad */}
+      {/* Overlay oscuro abajo */}
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.7)']}
+        colors={['transparent', 'rgba(0,0,0,0.72)']}
         style={styles.overlay}
       />
 
-      {/* Categoría top-left */}
+      {/* Chip de categoría — arriba izquierda */}
       <LinearGradient
         colors={categoryColors}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
         style={styles.categoryChip}
       >
         <Text style={styles.categoryText}>
@@ -93,23 +92,39 @@ export const InspirationCard: React.FC<Props> = ({ post, onPress, onBookmarkTogg
         </View>
       )}
 
-      {/* Bookmark top-right — siempre activo (todas las tarjetas están guardadas) */}
+      {/* Indicador multi-foto — arriba derecha si hay más de 1 imagen */}
+      {post.images && post.images.length > 1 && (
+        <View style={styles.multiPhotoBadge}>
+          <Ionicons name="copy-outline" size={11} color="#fff" />
+        </View>
+      )}
+
+      {/* Bookmark — arriba derecha, siempre activo */}
       <TouchableOpacity
         style={styles.bookmarkBtn}
         onPress={onBookmarkToggle}
         hitSlop={8}
       >
-        <Ionicons name="bookmark" size={18} color="#fff" />
+        <Ionicons name="bookmark" size={16} color="#fff" />
       </TouchableOpacity>
 
-      {/* Título y autor abajo */}
+      {/* Autor abajo */}
       <View style={styles.contentOverlay}>
-        <Text style={styles.title} numberOfLines={2}>
-          {post.title}
-        </Text>
-        <Text style={styles.author}>
-          {post.source === 'own' ? 'Mi referencia' : `por ${post.author}`}
-        </Text>
+        {post.title ? (
+          <Text style={styles.title} numberOfLines={2}>
+            {post.title}
+          </Text>
+        ) : null}
+        <View style={styles.authorRow}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarLetter}>
+              {(post.source === 'own' ? 'Y' : (post.author || 'A')[0].toUpperCase())}
+            </Text>
+          </View>
+          <Text style={styles.authorText} numberOfLines={1}>
+            {post.source === 'own' ? 'Mi referencia' : post.author || 'Artista'}
+          </Text>
+        </View>
         {post.projectIds.length > 0 && (
           <View style={styles.projectsBadge}>
             <Ionicons name="folder" size={9} color="rgba(255,255,255,0.7)" />
@@ -125,86 +140,120 @@ export const InspirationCard: React.FC<Props> = ({ post, onPress, onBookmarkTogg
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
-    margin: 4,
+    width: '100%',
     borderRadius: 16,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: 'rgba(139,92,246,0.15)',
     overflow: 'hidden',
-    shadowColor: '#5b21b6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    backgroundColor: '#f3f4f6',
+    marginBottom: 0, // el gap lo maneja el padre
   },
   cardDark: {
     backgroundColor: '#130d2a',
-    borderColor: 'rgba(139,92,246,0.15)',
   },
   overlay: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    height: '60%',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '65%',
   },
   categoryChip: {
     position: 'absolute',
-    top: 8, left: 8,
-    paddingHorizontal: 8, paddingVertical: 4,
-    borderRadius: 12,
+    top: 8,
+    left: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
   categoryText: {
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_700Bold',
     color: '#fff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   ownBadge: {
     position: 'absolute',
-    top: 8, left: 8,
-    marginLeft: 70,
-    width: 20, height: 20, borderRadius: 10,
+    top: 8,
+    left: 74,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.85)',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   ownBadgeDark: {
     backgroundColor: 'rgba(19,13,42,0.85)',
   },
+  multiPhotoBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 46,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bookmarkBtn: {
     position: 'absolute',
-    top: 8, right: 8,
-    width: 32, height: 32, borderRadius: 16,
+    top: 8,
+    right: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#7c3aed',
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   contentOverlay: {
     position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    padding: 12, gap: 2,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 10,
+    gap: 4,
   },
   title: {
-    fontSize: 14,
-    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 12,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     color: '#fff',
-    lineHeight: 18,
+    lineHeight: 16,
   },
-  author: {
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  avatarCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(124,58,237,0.75)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarLetter: {
+    fontSize: 9,
+    color: '#fff',
+    fontFamily: 'PlusJakartaSans_700Bold',
+  },
+  authorText: {
     fontSize: 11,
+    color: 'rgba(255,255,255,0.88)',
     fontFamily: 'PlusJakartaSans_500Medium',
-    color: 'rgba(255,255,255,0.75)',
+    flex: 1,
   },
   projectsBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   projectsBadgeText: {
     fontSize: 10,
     fontFamily: 'PlusJakartaSans_500Medium',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.65)',
   },
 });
