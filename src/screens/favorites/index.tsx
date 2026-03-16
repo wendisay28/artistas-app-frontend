@@ -523,15 +523,17 @@ export default function FavoritesScreen() {
           }
         />
       ) : activeTab === 'projects' ? (
-        <>
+        <View style={{ flex: 1 }}>
           <FavoritesHeader activeTab={activeTab} onTabChange={setActiveTab} savedCount={filteredData.length} projectsCount={projects.length} inspirationCount={0} />
-          <ProjectsTab />
-        </>
+          <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+            <ProjectsTab />
+          </View>
+        </View>
       ) : (
-        <>
+        <View style={{ flex: 1 }}>
           <FavoritesHeader activeTab={activeTab} onTabChange={setActiveTab} savedCount={filteredData.length} projectsCount={projects.length} inspirationCount={0} />
           <InspirationTab />
-        </>
+        </View>
       )}
 
       {/* Modal Detalle */}

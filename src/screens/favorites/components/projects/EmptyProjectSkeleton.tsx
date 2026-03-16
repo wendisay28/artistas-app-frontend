@@ -5,7 +5,7 @@
 
 import React from 'react';
 import {
-  View, Text, StyleSheet, Dimensions,
+  View, Text, TouchableOpacity, StyleSheet, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeStore } from '../../../../store/themeStore';
@@ -13,11 +13,19 @@ import { useThemeStore } from '../../../../store/themeStore';
 const { width: SCREEN_W } = Dimensions.get('window');
 const H_PAD = 16;
 
-export const EmptyProjectSkeleton: React.FC = () => {
+type Props = {
+  onCreateProject?: () => void;
+};
+
+export const EmptyProjectSkeleton: React.FC<Props> = ({ onCreateProject }) => {
   const { isDark } = useThemeStore();
 
   return (
-    <View style={[styles.container, isDark && styles.containerDark]}>
+    <TouchableOpacity
+      style={[styles.container, isDark && styles.containerDark]}
+      onPress={onCreateProject}
+      activeOpacity={0.8}
+    >
 
       {/* ── Esqueleto único con borde dashed ── */}
       <View style={[styles.skeletonCard, isDark && styles.skeletonCardDark]}>
@@ -89,7 +97,7 @@ export const EmptyProjectSkeleton: React.FC = () => {
         </View>
       </View>
 
-    </View>
+    </TouchableOpacity>
   );
 };
 

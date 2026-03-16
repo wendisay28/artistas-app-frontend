@@ -12,6 +12,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useThemeStore } from '../../../../store/themeStore';
 import { useListsStore } from '../../../../store/listsStore';
+import { useInspirationStore } from '../../../../store/inspirationStore';
 import type { Project } from '../../../../store/listsStore';
 import type { ExploreCard } from '../../../../types/explore';
 
@@ -29,16 +30,17 @@ export const ProjectCard: React.FC<Props> = ({
 }) => {
   const { isDark } = useThemeStore();
   const { removeFromProject } = useListsStore();
+  const { posts: inspirationPosts } = useInspirationStore();
   const [localExpanded, setLocalExpanded] = useState(false);
   const isExpanded = expanded || localExpanded;
 
-  const images = project.cards
-    .map(i => i.image)
-    .filter(Boolean)
-    .slice(0, 4) as string[];
+  const images = [
+    ...project.cards.map(c => c.image || (c.gallery && c.gallery[0]) || ''),
+    ...project.inspirations.map(id => inspirationPosts.find(p => p.id === id)?.image || ''),
+  ].filter(Boolean).slice(0, 4) as string[];
 
-  const investmentEstimate = project.cards.reduce((total, item) => {
-    const price = typeof (item as any).price === 'number' ? (item as any).price : 0;
+  const investmentEstimate = project.cards.reduce((total, card) => {
+    const price = typeof card.price === 'number' ? card.price : 0;
     return total + price;
   }, 0);
 
@@ -67,11 +69,10 @@ export const ProjectCard: React.FC<Props> = ({
   };
 
   return (
-    <TouchableOpacity
+    <View
       style={[styles.card, isDark && styles.cardDark, isExpanded && styles.cardExpanded]}
-      onPress={onPress}
-      activeOpacity={0.88}
     >
+      <TouchableOpacity onPress={onPress} activeOpacity={0.88}>
       {/* Collage */}
       <View style={styles.collage}>
         {images.length === 0 && (
@@ -148,14 +149,14 @@ export const ProjectCard: React.FC<Props> = ({
 
         {/* Contador de ítems simple */}
         <Text style={[styles.itemCount, isDark && styles.itemCountDark]}>
-          {project.cards.length} {project.cards.length === 1 ? 'ítem' : 'ítems'} guardados
+          {project.cards.length + project.inspirations.length} {project.cards.length + project.inspirations.length === 1 ? 'ítem' : 'ítems'} guardados
         </Text>
 
         {/* Barra de progreso */}
         <View style={[styles.progressBar, isDark && styles.progressBarDark]}>
           <View style={[
             styles.progressFill,
-            { width: `${Math.min((project.cards.length / 10) * 100, 100)}%` },
+            { width: `${Math.min(((project.cards.length + project.inspirations.length) / 10) * 100, 100)}%` },
             isDark && styles.progressFillDark,
           ]} />
         </View>
@@ -164,65 +165,55 @@ export const ProjectCard: React.FC<Props> = ({
         <TouchableOpacity
           style={[styles.expandBtn, isDark && styles.expandBtnDark]}
           onPress={handleToggleExpand}
+          activeOpacity={0.7}
         >
           <Ionicons
             name={isExpanded ? 'chevron-up' : 'chevron-down'}
             size={13}
-            color={isDark ? '#a78bfa' : '#7c3aed'}
+            color={isDark ? '#fff' : '#7c3aed'}
           />
           <Text style={[styles.expandBtnText, isDark && styles.expandBtnTextDark]}>
             {isExpanded ? 'Ocultar ítems' : 'Ver ítems'}
           </Text>
         </TouchableOpacity>
       </View>
+      </TouchableOpacity>
 
-      {/* Lista expandible — vertical, no grid */}
+      {/* Grid horizontal de imágenes */}
       {isExpanded && (
         <View style={[styles.expandedContent, isDark && styles.expandedContentDark]}>
-          <Text style={[styles.expandedTitle, isDark && styles.expandedTitleDark]}>
-            Ítems ({project.cards.length})
-          </Text>
-          {project.cards.length === 0 ? (
+          {project.cards.length === 0 && project.inspirations.length === 0 ? (
             <Text style={[styles.expandedEmpty, isDark && styles.expandedEmptyDark]}>
               No hay ítems en este proyecto
             </Text>
           ) : (
-            project.cards.map((item) => (
-              <View key={item.id} style={[styles.itemRow, isDark && styles.itemRowDark]}>
-                {item.image ? (
-                  <Image source={{ uri: item.image }} style={styles.itemThumb} contentFit="cover" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbRow}>
+              {project.cards.map((card) => {
+                const uri = card.image || (card.gallery && card.gallery[0]) || '';
+                return uri ? (
+                  <Image key={card.id} source={{ uri }} style={styles.thumbImg} contentFit="cover" />
                 ) : (
-                  <View style={[styles.itemThumb, styles.itemThumbPlaceholder, isDark && styles.itemThumbPlaceholderDark]}>
-                    <Ionicons name="image-outline" size={16} color={isDark ? '#a78bfa' : '#7c3aed'} />
+                  <View key={card.id} style={[styles.thumbImg, styles.thumbPlaceholder, isDark && styles.thumbPlaceholderDark]}>
+                    <Ionicons name="image-outline" size={20} color={isDark ? '#a78bfa' : '#7c3aed'} />
                   </View>
-                )}
-                <View style={styles.itemInfo}>
-                  <Text style={[styles.itemName, isDark && styles.itemNameDark]} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-                  {(item as any).price ? (
-                    <Text style={[styles.itemPrice, isDark && styles.itemPriceDark]}>
-                      ${((item as any).price as number).toLocaleString('es-CO')}
-                    </Text>
-                  ) : null}
-                </View>
-                <TouchableOpacity
-                  style={styles.removeItemBtn}
-                  onPress={() =>
-                    Alert.alert('Quitar ítem', `¿Quitar "${item.name}"?`, [
-                      { text: 'Cancelar', style: 'cancel' },
-                      { text: 'Quitar', style: 'destructive', onPress: () => removeFromProject(project.id, item.id) },
-                    ])
-                  }
-                >
-                  <Ionicons name="remove-circle-outline" size={18} color="#ef4444" />
-                </TouchableOpacity>
-              </View>
-            ))
+                );
+              })}
+              {project.inspirations.map((id) => {
+                const post = inspirationPosts.find(p => p.id === id);
+                const uri = post?.image || '';
+                return uri ? (
+                  <Image key={id} source={{ uri }} style={styles.thumbImg} contentFit="cover" />
+                ) : (
+                  <View key={id} style={[styles.thumbImg, styles.thumbPlaceholder, isDark && styles.thumbPlaceholderDark]}>
+                    <Ionicons name="images-outline" size={20} color={isDark ? '#a78bfa' : '#7c3aed'} />
+                  </View>
+                );
+              })}
+            </ScrollView>
           )}
         </View>
       )}
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -296,51 +287,36 @@ const styles = StyleSheet.create({
   expandBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
     paddingVertical: 6, borderRadius: 8,
-    backgroundColor: 'rgba(124,58,237,0.05)',
-    borderWidth: 1, borderColor: 'rgba(124,58,237,0.12)',
+    backgroundColor: 'rgba(124,58,237,0.07)',
+    borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)',
   },
   expandBtnDark: {
-    backgroundColor: 'rgba(139,92,246,0.08)',
-    borderColor: 'rgba(139,92,246,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   expandBtnText: { fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#7c3aed' },
-  expandBtnTextDark: { color: '#a78bfa' },
+  expandBtnTextDark: { color: '#fff' },
 
   expandedContent: {
     borderTopWidth: 1, borderTopColor: 'rgba(167,139,250,0.12)',
-    paddingHorizontal: 12, paddingVertical: 10,
+    paddingVertical: 10,
     backgroundColor: 'rgba(249,250,251,0.5)',
   },
   expandedContentDark: {
     borderTopColor: 'rgba(139,92,246,0.15)',
     backgroundColor: 'rgba(10,6,24,0.5)',
   },
-  expandedTitle: {
-    fontSize: 11, fontFamily: 'PlusJakartaSans_600SemiBold',
-    color: 'rgba(109,40,217,0.6)', marginBottom: 8,
-  },
-  expandedTitleDark: { color: 'rgba(167,139,250,0.7)' },
   expandedEmpty: {
     fontSize: 12, fontFamily: 'PlusJakartaSans_400Regular',
     color: 'rgba(109,40,217,0.4)', textAlign: 'center', paddingVertical: 12,
   },
   expandedEmptyDark: { color: 'rgba(167,139,250,0.4)' },
-  itemRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 7,
-    borderBottomWidth: 1, borderBottomColor: 'rgba(167,139,250,0.06)',
-  },
-  itemRowDark: { borderBottomColor: 'rgba(139,92,246,0.10)' },
-  itemThumb: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#e5e7eb' },
-  itemThumbPlaceholder: {
+  thumbRow: { flexDirection: 'row', gap: 6, paddingHorizontal: 12 },
+  thumbImg: { width: 56, height: 56, borderRadius: 10 },
+  thumbPlaceholder: {
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(124,58,237,0.05)',
+    backgroundColor: 'rgba(124,58,237,0.07)',
+    borderWidth: 1, borderColor: 'rgba(124,58,237,0.15)',
   },
-  itemThumbPlaceholderDark: { backgroundColor: 'rgba(139,92,246,0.08)' },
-  itemInfo: { flex: 1 },
-  itemName: { fontSize: 12, fontFamily: 'PlusJakartaSans_600SemiBold', color: '#1e1b4b', marginBottom: 2 },
-  itemNameDark: { color: '#f5f3ff' },
-  itemPrice: { fontSize: 10, fontFamily: 'PlusJakartaSans_500Medium', color: 'rgba(109,40,217,0.6)' },
-  itemPriceDark: { color: 'rgba(167,139,250,0.7)' },
-  removeItemBtn: { padding: 4 },
+  thumbPlaceholderDark: { backgroundColor: 'rgba(139,92,246,0.1)', borderColor: 'rgba(139,92,246,0.2)' },
 });

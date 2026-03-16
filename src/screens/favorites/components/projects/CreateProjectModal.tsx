@@ -11,7 +11,7 @@ import { useThemeStore } from '../../../../store/themeStore';
 
 const ICONS = [
   'heart', 'star', 'musical-notes', 'color-palette', 'camera',
-  'images', 'flower', 'business', 'theater', 'gift',
+  'images', 'flower', 'business', 'film-outline', 'gift',
   'leaf', 'sparkles', 'musical-note', 'wine', 'airplane',
   'car', 'sunny', 'moon', 'ribbon', 'home',
 ];
