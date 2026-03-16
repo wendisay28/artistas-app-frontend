@@ -345,17 +345,26 @@ export default function CreateOfferModal({
               ]}
               onPress={handleSubmit}
             >
-              <LinearGradient
-                colors={[colors.primary, colors.accent]}
-                style={styles.submitBtnGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name="checkmark" size={20} color="#fff" />
-                <Text style={styles.submitBtnText}>
-                  {editData ? 'Guardar cambios' : 'Publicar oferta'}
-                </Text>
-              </LinearGradient>
+              {isDark ? (
+                <View style={[styles.submitBtnGradient, styles.submitBtnDark]}>
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                  <Text style={styles.submitBtnText}>
+                    {editData ? 'Guardar cambios' : 'Publicar oferta'}
+                  </Text>
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={[colors.primary, colors.accent]}
+                  style={styles.submitBtnGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="checkmark" size={20} color="#fff" />
+                  <Text style={styles.submitBtnText}>
+                    {editData ? 'Guardar cambios' : 'Publicar oferta'}
+                  </Text>
+                </LinearGradient>
+              )}
             </Pressable>
           </View>
         </View>
@@ -623,6 +632,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
+  },
+  submitBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 12,
   },
   submitBtnText: {
     fontSize: 15,

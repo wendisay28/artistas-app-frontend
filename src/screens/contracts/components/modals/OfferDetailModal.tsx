@@ -275,15 +275,22 @@ export default function OfferDetailModal({
               style={({ pressed }) => [styles.applyBtn, pressed && { opacity: 0.9 }]}
               onPress={handleApplyPress}
             >
-              <LinearGradient
-                colors={[Colors.primary, Colors.accent ?? Colors.primary]}
-                style={styles.applyGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Ionicons name="checkmark-circle" size={20} color="#fff" />
-                <Text style={styles.applyBtnText}>Aplicar a esta oferta</Text>
-              </LinearGradient>
+              {isDark ? (
+                <View style={[styles.applyGradient, styles.applyBtnDark]}>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.applyBtnText}>Aplicar a esta oferta</Text>
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={[Colors.primary, Colors.accent ?? Colors.primary]}
+                  style={styles.applyGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.applyBtnText}>Aplicar a esta oferta</Text>
+                </LinearGradient>
+              )}
             </Pressable>
           </View>
 
@@ -513,6 +520,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
+  },
+  applyBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 14,
   },
   applyBtnText: {
     fontSize: 15,

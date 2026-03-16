@@ -17,6 +17,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../../../theme/colors';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface CodeEntryModalProps {
   visible: boolean;
@@ -29,6 +30,7 @@ interface CodeEntryModalProps {
 const VALID_CODE_MIN_LENGTH = 4;
 
 export default function CodeEntryModal({ visible, type, onClose, onConfirm }: CodeEntryModalProps) {
+  const { isDark } = useThemeStore();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -100,15 +102,27 @@ export default function CodeEntryModal({ visible, type, onClose, onConfirm }: Co
             style={styles.confirmBtn}
             activeOpacity={0.85}
           >
-            <LinearGradient colors={gradient} style={styles.confirmGradient}>
-              {loading
-                ? <ActivityIndicator color="#fff" />
-                : <>
-                    <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-                    <Text style={styles.confirmText}>Validar código</Text>
-                  </>
-              }
-            </LinearGradient>
+            {isDark ? (
+              <View style={[styles.confirmGradient, styles.confirmBtnDark]}>
+                {loading
+                  ? <ActivityIndicator color="#fff" />
+                  : <>
+                      <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                      <Text style={styles.confirmText}>Validar código</Text>
+                    </>
+                }
+              </View>
+            ) : (
+              <LinearGradient colors={gradient} style={styles.confirmGradient}>
+                {loading
+                  ? <ActivityIndicator color="#fff" />
+                  : <>
+                      <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                      <Text style={styles.confirmText}>Validar código</Text>
+                    </>
+                }
+              </LinearGradient>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleClose} style={styles.cancelBtn}>
@@ -189,6 +203,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 15,
+  },
+  confirmBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 14,
   },
   confirmText: {
     fontSize: 16,

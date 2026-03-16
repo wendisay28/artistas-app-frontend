@@ -161,21 +161,34 @@ export const CreateProjectModal: React.FC<Props> = ({
               disabled={!name.trim()}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={['#7c3aed', '#2563eb']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.btn, !name.trim() && styles.btnDisabled]}
-              >
-                <Ionicons
-                  name={mode === 'create' ? 'folder-open' : 'checkmark'}
-                  size={18}
-                  color="#fff"
-                />
-                <Text style={styles.btnText}>
-                  {mode === 'create' ? 'Crear proyecto' : 'Guardar cambios'}
-                </Text>
-              </LinearGradient>
+              {isDark ? (
+                <View style={[styles.btn, styles.btnDark, !name.trim() && styles.btnDisabled]}>
+                  <Ionicons
+                    name={mode === 'create' ? 'folder-open' : 'checkmark'}
+                    size={18}
+                    color="#fff"
+                  />
+                  <Text style={styles.btnText}>
+                    {mode === 'create' ? 'Crear proyecto' : 'Guardar cambios'}
+                  </Text>
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={['#7c3aed', '#2563eb']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.btn, !name.trim() && styles.btnDisabled]}
+                >
+                  <Ionicons
+                    name={mode === 'create' ? 'folder-open' : 'checkmark'}
+                    size={18}
+                    color="#fff"
+                  />
+                  <Text style={styles.btnText}>
+                    {mode === 'create' ? 'Crear proyecto' : 'Guardar cambios'}
+                  </Text>
+                </LinearGradient>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={onClose} style={styles.cancelBtn} activeOpacity={0.7}>
@@ -248,6 +261,11 @@ const styles = StyleSheet.create({
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 15, borderRadius: 16, elevation: 4,
+  },
+  btnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   btnDisabled: { opacity: 0.4 },
   btnText: { fontSize: 16, fontWeight: '700', color: '#fff' },

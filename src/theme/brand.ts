@@ -192,10 +192,10 @@ export const ButtonStyles = {
         elevation: 6,
       },
     },
-    // Modo oscuro - glassmorphism con borde
+    // Modo oscuro - glassmorphism con borde (igual que ctaDark en ArtistCardContent)
     dark: {
-      background: 'rgba(255,255,255,0.08)',
-      border: 'rgba(255,255,255,0.15)',
+      background: 'rgba(255,255,255,0.10)',
+      border: 'rgba(255,255,255,0.28)',
       text: '#FFFFFF',
       shadow: {
         shadowColor: '#000000',

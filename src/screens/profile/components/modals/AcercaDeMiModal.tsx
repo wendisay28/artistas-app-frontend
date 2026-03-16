@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useThemeStore } from '../../../../store/themeStore';
 
 interface Props {
   visible: boolean;
@@ -29,6 +30,7 @@ const MAX_CHARS = 300;
 
 export const AcercaDeMiModal = ({ visible, initialValue, onClose, onSave }: Props) => {
   const insets = useSafeAreaInsets();
+  const { isDark } = useThemeStore();
   const [description, setDescription] = useState(initialValue);
   const [focused, setFocused] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -115,23 +117,38 @@ export const AcercaDeMiModal = ({ visible, initialValue, onClose, onSave }: Prop
             </View>
 
             <TouchableOpacity onPress={handleSave} activeOpacity={0.8} disabled={saving || saved}>
-              <LinearGradient
-                colors={saved ? ['#16a34a', '#15803d'] : ['#7c3aed', '#2563eb']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.saveBtn}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : saved ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                    <Ionicons name="checkmark" size={14} color="#fff" />
-                    <Text style={styles.saveBtnText}>Guardado</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.saveBtnText}>Guardar</Text>
-                )}
-              </LinearGradient>
+              {isDark ? (
+                <View style={[styles.saveBtn, styles.saveBtnDark]}>
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : saved ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                      <Text style={styles.saveBtnText}>Guardado</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.saveBtnText}>Guardar</Text>
+                  )}
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={saved ? ['#16a34a', '#15803d'] : ['#7c3aed', '#2563eb']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.saveBtn}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : saved ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                      <Text style={styles.saveBtnText}>Guardado</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.saveBtnText}>Guardar</Text>
+                  )}
+                </LinearGradient>
+              )}
             </TouchableOpacity>
           </View>
 
@@ -251,6 +268,13 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     paddingHorizontal: 18,
     paddingVertical: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   saveBtnText: {
     fontSize: 13,

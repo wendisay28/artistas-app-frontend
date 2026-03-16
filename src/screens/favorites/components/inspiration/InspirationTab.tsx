@@ -347,19 +347,28 @@ onPress={handleUploadConfirm}
 disabled={uploading}
 >
 
-<LinearGradient
-colors={['#7c3aed', '#2563eb']}
-style={styles.saveBtn}
->
-
+{isDark ? (
+<View style={[styles.saveBtn, styles.saveBtnDark]}>
 {uploading
 ? <ActivityIndicator color="#fff"/>
 : <Text style={styles.saveText}>
 Guardar referencia
 </Text>
 }
-
+</View>
+) : (
+<LinearGradient
+colors={['#7c3aed', '#2563eb']}
+style={styles.saveBtn}
+>
+{uploading
+? <ActivityIndicator color="#fff"/>
+: <Text style={styles.saveText}>
+Guardar referencia
+</Text>
+}
 </LinearGradient>
+)}
 
 </TouchableOpacity>
 
@@ -544,6 +553,12 @@ saveBtn: {
 padding: 14,
 borderRadius: 12,
 alignItems: 'center'
+},
+
+saveBtnDark: {
+backgroundColor: 'rgba(255,255,255,0.10)',
+borderWidth: 1,
+borderColor: 'rgba(255,255,255,0.28)',
 },
 
 saveText: {

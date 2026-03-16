@@ -356,16 +356,24 @@ export default function FilterModal({
               ]}
               onPress={handleApply}
             >
-              <LinearGradient
-                colors={[colors.primary, colors.accent]}
-                style={styles.applyBtnGradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Text style={styles.applyBtnText}>
-                  Aplicar filtros {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-                </Text>
-              </LinearGradient>
+              {isDark ? (
+                <View style={[styles.applyBtnGradient, styles.applyBtnDark]}>
+                  <Text style={styles.applyBtnText}>
+                    Aplicar filtros {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+                  </Text>
+                </View>
+              ) : (
+                <LinearGradient
+                  colors={[colors.primary, colors.accent]}
+                  style={styles.applyBtnGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={styles.applyBtnText}>
+                    Aplicar filtros {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+                  </Text>
+                </LinearGradient>
+              )}
             </Pressable>
           </View>
         </View>
@@ -600,6 +608,14 @@ const styles = StyleSheet.create({
   },
   applyBtnGradient: {
     paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  applyBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 12,
   },
   applyBtnText: {
     fontSize: 15,

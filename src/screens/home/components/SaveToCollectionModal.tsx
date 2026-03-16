@@ -220,6 +220,7 @@ export default function SaveToCollectionModal({ visible, post, onClose }: Props)
                 disabled={!selected || saved}
                 style={({ pressed }) => [
                   st.saveBtn,
+                  isDark && selected && !saved && st.saveBtnDark,
                   !selected && st.saveBtnDisabled,
                   pressed && { opacity: 0.85 },
                 ]}
@@ -416,6 +417,13 @@ const st = StyleSheet.create({
     elevation: 4,
   },
   saveBtnDisabled: { backgroundColor: '#d1d5db', shadowOpacity: 0 },
+  saveBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   saveBtnText: {
     fontSize: 14, fontFamily: 'PlusJakartaSans_700Bold', color: '#fff',
   },

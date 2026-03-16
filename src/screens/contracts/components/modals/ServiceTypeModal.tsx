@@ -125,10 +125,17 @@ export default function ServiceTypeModal({
             disabled={!selected}
             activeOpacity={0.85}
           >
-            <LinearGradient colors={['#10b981', '#059669']} style={styles.confirmGradient}>
-              <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
-              <Text style={styles.confirmText}>Aceptar oferta</Text>
-            </LinearGradient>
+            {isDark ? (
+              <View style={[styles.confirmGradient, styles.confirmBtnDark]}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                <Text style={styles.confirmText}>Aceptar oferta</Text>
+              </View>
+            ) : (
+              <LinearGradient colors={['#10b981', '#059669']} style={styles.confirmGradient}>
+                <Ionicons name="checkmark-circle-outline" size={18} color="#fff" />
+                <Text style={styles.confirmText}>Aceptar oferta</Text>
+              </LinearGradient>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleClose} style={styles.cancelBtn}>
@@ -215,6 +222,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 15,
+  },
+  confirmBtnDark: {
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
+    borderRadius: 14,
   },
   confirmText: {
     fontSize: 16,
